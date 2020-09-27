@@ -36,6 +36,22 @@ class Contacts
         return Subscriber::where('user_id', $userId)->first();
     }
 
+    public function createOrUpdate($data)
+    {
+        return $this->instance->updateOrCreate($data);
+    }
+
+    public function getCurrentContact()
+    {
+        $userId = get_current_user_id();
+        if(!$userId) {
+            return false;
+        }
+
+        $user = get_user_by('ID', $userId);
+        return $this->instance->where('user_id', $user->ID)->orWhere('email', $user->user_email)->first();
+    }
+
     public function getInstance()
     {
         return $this->instance;
