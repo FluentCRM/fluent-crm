@@ -1,0 +1,231 @@
+<?php
+
+namespace FluentCrm\App\Http\Controllers;
+
+use FluentCrm\App\Models\Tag;
+use FluentCrm\App\Models\Lists;
+use FluentCrm\App\Services\Helper;
+use FluentCrm\App\Models\Campaign;
+use FluentCrm\App\Models\Subscriber;
+
+class OptionsController extends Controller
+{
+    /**
+     * Get options based on the requested fields.
+     *
+     * @return array options.
+     * @throws \Exception
+     */
+    public function index()
+    {
+        if ($fileds = $this->request->get('fields')) {
+            $options = array_unique(explode(',', $fileds));
+
+            $response = [];
+
+            foreach ($options as $method) {
+                if (method_exists($this, $method)) {
+                    $result = $this->{$method}();
+                    $response = array_merge($response, $result);
+                }
+            }
+
+            return [
+                'options' => $response
+            ];
+        }
+
+        throw new \Exception('Missing requested option names.', 422);
+    }
+
+    /**
+     * Include the countries options.
+     *
+     * @return array
+     */
+    public function countries()
+    {
+        return [
+            'countries' => $this->app->applyFilters('fluentcrm-countries', [])
+        ];
+    }
+
+    /**
+     * Include all the lists.
+     *
+     * @return array
+     */
+    public function lists()
+    {
+        $lists = Lists::select(['id', 'slug', 'title'])->get();
+
+        foreach ($lists as $list) {
+            $list->subscribersCount = Subscriber::filterByLists([$list->id])
+                ->where('status', 'subscribed')
+                ->count();
+
+            $list->totalCount = Subscriber::filterByLists([$list->id])->count();
+        }
+
+        return [
+            'lists' => $lists
+        ];
+    }
+
+    /**
+     * Include all the tags.
+     *
+     * @return array
+     */
+    public function tags()
+    {
+        return [
+            'tags' => Tag::select(['id', 'slug', 'title'])->get()
+        ];
+    }
+
+    /**
+     * Include all the Campaigns.
+     *
+     * @return array
+     */
+    public function campaigns()
+    {
+        return [
+            'campaigns' => Campaign::select('id', 'title')->orderBy('id', 'DESC')->get()
+        ];
+    }
+
+    /**
+     * Include all the EmailSequences.
+     *
+     * @return array
+     */
+    public function email_sequences()
+    {
+        $sequences = [];
+
+        if (defined('FLUENTCAMPAIGN')) {
+            $sequences  = \FluentCampaign\App\Models\Sequence::select('id', 'title')->orderBy('id', 'DESC')->get();
+        }
+
+        return [
+            'email_sequences' => $sequences
+        ];
+    }
+
+    /**
+     * Include subscriber statuses.
+     *
+     * @return array
+     */
+    public function statuses()
+    {
+        $statuses = fluentcrm_subscriber_statuses();
+        $formattedStatues = [];
+
+        foreach ($statuses as $status) {
+            $formattedStatues[] = [
+                'id'    => $status,
+                'slug'  => $status,
+                'title' => ucfirst($status)
+            ];
+        }
+
+        return [
+            'statuses' => $formattedStatues
+        ];
+    }
+
+    /**
+     * Include subscriber editable statuses.
+     *
+     * @return array
+     */
+    public function editable_statuses()
+    {
+        $statuses = fluentcrm_subscriber_statuses();
+        $formattedStatues = [];
+
+        foreach ($statuses as $status) {
+            $formattedStatues[] = [
+                'id'    => $status,
+                'slug'  => $status,
+                'title' => ucfirst($status)
+            ];
+        }
+
+        return [
+            'editable_statuses' => $formattedStatues
+        ];
+    }
+
+    /**
+     * Include subscriber Contact Types.
+     *
+     * @return array
+     */
+    public function contact_types()
+    {
+        $types = fluentcrm_contact_types();
+        $formattedTypes = [];
+
+        foreach ($types as $type) {
+            $formattedTypes[] = [
+                'id'    => $type,
+                'slug'  => $type,
+                'title' => ucfirst($type)
+            ];
+        }
+
+        return [
+            'contact_types' => $formattedTypes
+        ];
+    }
+
+    /**
+     * Include the sample csv url.
+     *
+     * @return array
+     */
+    public function sampleCsv()
+    {
+        return [
+            'sampleCsv' => $this->app['url.assets'] . 'sample.csv'
+        ];
+    }
+
+    public function segments()
+    {
+        $segments = apply_filters('fluentcrm_dynamic_segments', []);
+
+        return [
+            'segments' => $segments
+        ];
+    }
+
+    public function roles()
+    {
+        if (!function_exists('get_editable_roles')) {
+            require_once(ABSPATH . '/wp-admin/includes/user.php');
+        }
+
+        return [
+            'roles' => \get_editable_roles()
+        ];
+    }
+
+    public function profile_sections()
+    {
+        return [
+            'profile_sections' => Helper::getProfileSections()
+        ];
+    }
+
+    public function custom_fields()
+    {
+        return [
+            'custom_fields' => fluentcrm_get_option('contact_custom_fields', [])
+        ];
+    }
+}

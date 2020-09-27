@@ -1,0 +1,13 @@
+{
+    "/admin/js/boot.js": "/admin/js/boot.js",
+    "/admin/css/fluentcrm-admin.css": "/admin/css/fluentcrm-admin.css",
+    "/public/public_pref.css": "/public/public_pref.css",
+    "/admin/css/app_global.css": "/admin/css/app_global.css",
+    "/admin/css/setup-wizard.css": "/admin/css/setup-wizard.css",
+    "/admin/js/global-search.js": "/admin/js/global-search.js",
+    "/admin/js/global_admin.js": "/admin/js/global_admin.js",
+    "/admin/js/setup-wizard.js": "/admin/js/setup-wizard.js",
+    "/admin/js/start.js": "/admin/js/start.js",
+    "/public/public_pref.js": "/public/public_pref.js",
+    "/sample.csv": "/sample.csv"
+}
