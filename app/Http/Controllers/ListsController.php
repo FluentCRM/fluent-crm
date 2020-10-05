@@ -4,6 +4,7 @@ namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\Models\Lists;
 use FluentCrm\App\Models\Subscriber;
+use FluentCrm\Includes\Helpers\Arr;
 use FluentCrm\Includes\Request\Request;
 
 class ListsController extends Controller
@@ -19,8 +20,8 @@ class ListsController extends Controller
         $with = $request->get('with', []);
 
         $order = [
-            'by'    => $request->get('sort_by', 'title'),
-            'order' => $request->get('sort_order', 'ASC')
+            'by'    => $request->get('sort_by', 'id'),
+            'order' => $request->get('sort_order', 'DESC')
         ];
 
         return $this->send(
@@ -52,22 +53,23 @@ class ListsController extends Controller
      */
     public function create(Request $request)
     {
-        $data = $request->all();
+        $allData = $request->all();
 
         if (empty($data['slug'])) {
-            if ($data['title']) {
-                $data['slug'] = $data['title'];
+            if ($allData['title']) {
+                $data['slug'] = $allData['title'];
             }
         }
 
-        $data = $this->validate($data, [
+        $data = $this->validate($allData, [
             'title' => 'required',
             'slug'  => "required|unique:fc_lists,slug"
         ]);
 
         $list = Lists::create([
-            'title' => $data['title'],
-            'slug'  => sanitize_title($data['slug'], 'display')
+            'title' => $allData['title'],
+            'slug'  => sanitize_title($data['slug'], 'display'),
+            'description' => sanitize_text_field(Arr::get($allData, 'description'))
         ]);
 
         do_action('fluentcrm_list_created', $list->id);
@@ -88,12 +90,13 @@ class ListsController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $data = $this->validate($request->all(), [
+        $allData = $this->validate($request->all(), [
             'title' => 'required'
         ]);
 
         $list = Lists::where('id', $id)->update([
-            'title' => $data['title']
+            'title' => $allData['title'],
+            'description' => sanitize_text_field($allData['description']),
         ]);
 
         do_action('fluentcrm_list_updated', $list->id);

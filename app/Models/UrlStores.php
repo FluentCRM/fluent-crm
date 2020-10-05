@@ -9,18 +9,17 @@ class UrlStores extends Model
 
     public static function getUrlSlug($longUrl)
     {
-        $longUrl = esc_url_raw($longUrl);
         $isExist = self::where('url', $longUrl)
-                    ->first();
-        if($isExist) {
+            ->first();
+        if ($isExist) {
             return $isExist->short;
         }
 
         $short = self::getNextShortUrl();
         // otherwise we have to create
         $data = [
-            'url' => $longUrl,
-            'short' => $short,
+            'url'        => $longUrl,
+            'short'      => $short,
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s')
         ];
@@ -32,9 +31,9 @@ class UrlStores extends Model
 
     public static function getNextShortUrl($num = null)
     {
-        if($num == null) {
+        if ($num == null) {
             $lastItem = self::orderBy('id', 'desc')->first();
-            if($lastItem) {
+            if ($lastItem) {
                 $num = $lastItem->id + 1;
             } else {
                 $num = 1;
@@ -43,14 +42,33 @@ class UrlStores extends Model
 
         $num = $num + 4000; // to make it atleast 3 char
 
-        $chars = apply_filters(FLUENTCRM.'_url_charset','0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
+        $chars = apply_filters(FLUENTCRM . '_url_charset', '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
         $string = '';
-        $len = strlen( $chars );
-        while( $num >= $len ) {
-            $mod = bcmod( $num, $len );
-            $num = bcdiv( $num, $len );
-            $string = $chars[ $mod ] . $string;
+        $len = strlen($chars);
+        while ($num >= $len) {
+            if (function_exists('bcmod')) {
+                $mod = bcmod($num, $len);
+            } else {
+                $mod = self::bcmodFallBack($num, $len);
+            }
+            $num = bcdiv($num, $len);
+            $string = $chars[$mod] . $string;
         }
-        return $chars[ intval( $num ) ] . $string;
+        return $chars[intval($num)] . $string;
+    }
+
+    private static function bcmodFallBack($x, $y)
+    {
+        // how many numbers to take at once? carefull not to exceed (int)
+        $take = 5;
+        $mod = '';
+
+        do {
+            $a = (int)$mod . substr($x, 0, $take);
+            $x = substr($x, $take);
+            $mod = $a % $y;
+        } while (strlen($x));
+
+        return (int)$mod;
     }
 }

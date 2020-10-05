@@ -3,11 +3,11 @@
 namespace FluentCrm\App\Services\Funnel;
 
 use FluentCrm\App\Models\Funnel;
+use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\FunnelMetric;
 use FluentCrm\App\Models\FunnelSequence;
 use FluentCrm\App\Models\FunnelSubscriber;
-use FluentCrm\App\Models\Subscriber;
-use FluentCrm\Includes\Helpers\Arr;
 
 class FunnelProcessor
 {
@@ -47,20 +47,22 @@ class FunnelProcessor
         return $this->funnelCache[$id];
     }
 
-    public function startFunnelSequence($funnel, $subscriberData, $funnelSubArgs = [])
+    public function startFunnelSequence($funnel, $subscriberData, $funnelSubArgs = [], $subscriber = false)
     {
-        // it's new so let's create new subscriber
-        $subscriber = FunnelHelper::createOrUpdateContact($subscriberData);
+        if (!$subscriber) {
+            // it's new so let's create new subscriber
+            $subscriber = FunnelHelper::createOrUpdateContact($subscriberData);
 
-        if ($subscriber->status == 'pending') {
-            $subscriber->sendDoubleOptinEmail();
+            if ($subscriber->status == 'pending') {
+                $subscriber->sendDoubleOptinEmail();
+            }
         }
 
         $args = [
             'status' => ($subscriber->status == 'pending') ? 'pending' : 'draft'
         ];
 
-        if($funnelSubArgs) {
+        if ($funnelSubArgs) {
             $args = wp_parse_args($args, $funnelSubArgs);
         }
 

@@ -134,6 +134,7 @@ class CampaignEmail extends Model
     public function getEmailBody()
     {
         $subscriber = $this->subscriber;
+        $subscriber->email_id = $this->id;
 
         if (!$this->is_parsed) {
             $emailBody = $this->getParsedEmailBody();
@@ -149,7 +150,6 @@ class CampaignEmail extends Model
         }
 
         $subscriber->campaign_id = $this->campaign_id;
-        $subscriber->email_id = $this->id;
         $footerText = Arr::get(Helper::getGlobalEmailSettings(), 'email_footer', '');
         $footerText = apply_filters('fluentcrm-parse_campaign_email_text', $footerText, $subscriber);
 

@@ -26,9 +26,11 @@ if (!function_exists('FluentCrmApi')) {
 if (!function_exists('dd')) {
     function dd($data)
     {
-        echo "<pre>";
-        print_r($data);
-        echo "<pre>";
+        foreach (func_get_args() as $arg) {
+            echo "<pre>";
+            print_r($arg);
+            echo "</pre>";
+        }
         die;
     }
 }
@@ -36,9 +38,11 @@ if (!function_exists('dd')) {
 if (!function_exists('ddd')) {
     function ddd($data)
     {
-        echo "<pre>";
-        print_r($data);
-        echo "<pre>";
+        foreach (func_get_args() as $arg) {
+            echo "<pre>";
+            print_r($arg);
+            echo "</pre>";
+        }
     }
 }
 
@@ -310,8 +314,8 @@ function fluentcrm_subscriber_statuses()
 {
     return apply_filters('fluentcrm_subscriber_statuses', [
         'subscribed',
-        'unsubscribed',
         'pending',
+        'unsubscribed',
         'bounced',
         'complained'
     ]);

@@ -23,6 +23,7 @@ class RemoveFromTagBenchmark extends BaseBenchMark
         return [
             'title'       => 'Tag Removed',
             'description' => 'This will run when selected Tags will be removed from a contact',
+            'icon' => fluentCrmMix('images/funnel_icons/tag_removed.svg'),
             'settings'    => [
                 'tags'        => [],
                 'select_type' => 'any',
@@ -43,15 +44,15 @@ class RemoveFromTagBenchmark extends BaseBenchMark
     public function getBlockFields($funnel)
     {
         return [
-            'title'     => 'Remove From Tags',
+            'title'     => 'Tag Removed From Contact',
             'sub_title' => 'This will run when selected Tags will be removed from a contact',
             'fields'    => [
                 'tags'        => [
                     'type'        => 'option_selectors',
-                    'option_key'  => 'lists',
+                    'option_key'  => 'tags',
                     'is_multiple' => true,
-                    'label'       => 'Select Lists',
-                    'placeholder' => 'Select List'
+                    'label'       => 'Select Tags',
+                    'placeholder' => 'Select a Tag'
                 ],
                 'select_type' => [
                     'label'      => 'Run When',

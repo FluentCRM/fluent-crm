@@ -23,6 +23,7 @@ class RemoveFromListBenchmark extends BaseBenchMark
         return [
             'title'       => 'List Removed',
             'description' => 'This will run when selected lists will be removed from a contact',
+            'icon' => fluentCrmMix('images/funnel_icons/list_removed.svg'),
             'settings'    => [
                 'lists'       => [],
                 'select_type' => 'any',
@@ -43,7 +44,7 @@ class RemoveFromListBenchmark extends BaseBenchMark
     public function getBlockFields($funnel)
     {
         return [
-            'title'     => 'Remove From List',
+            'title'     => 'List Removed From Contact',
             'sub_title' => 'This will run when selected lists will be removed from a contact',
             'fields'    => [
                 'lists'       => [
@@ -77,12 +78,12 @@ class RemoveFromListBenchmark extends BaseBenchMark
                     'type'        => 'radio',
                     'options'     => [
                         [
-                            'id'    => 'required',
-                            'title' => '[Essential Point] Select IF this step is required for processing further actions'
-                        ],
-                        [
                             'id'    => 'optional',
                             'title' => '[Optional Point] This is an optional trigger point'
+                        ],
+                        [
+                            'id'    => 'required',
+                            'title' => '[Essential Point] Select IF this step is required for processing further actions'
                         ]
                     ],
                     'inline_help' => 'If you select [Optional Point] it will work as an Optional Trigger otherwise, it will wait for full-fill this action'

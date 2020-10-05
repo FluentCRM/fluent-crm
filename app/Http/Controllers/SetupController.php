@@ -23,7 +23,7 @@ class SetupController extends Controller
 
         $shareEssential = $request->get('share_essentials', 'no');
         if ($shareEssential == 'yes') {
-            fluentcrm_update_option('_crm_share_essential', $shareEssential);
+            fluentcrm_update_option('_fluentcrm_share_essential', $shareEssential);
         }
 
         $optinEmail = $request->get('optin_email', 'no');
@@ -41,32 +41,53 @@ class SetupController extends Controller
         $this->installFluentForm();
         return [
             'ff_config' => [
-                'is_installed' => defined('FLUENTFORM'),
+                'is_installed'     => defined('FLUENTFORM'),
                 'create_form_link' => admin_url('admin.php?page=fluent_forms#add=1')
             ],
-            'message' => __('Fluent Forms has been installed and activated', 'fluentcrm')
+            'message'   => __('Fluent Forms has been installed and activated', 'fluentcrm')
         ];
     }
 
     private function shareEmail($optinEmail)
     {
-        // we will do later
-        // @todo: Please connect with wpmn server
+        $user = get_user_by('ID', get_current_user_id());
+        $data = [
+            'answers'    => [
+                'website' => site_url(),
+                'email'   => $optinEmail,
+                'name'    => $user->display_name
+            ],
+            'questions'  => [
+                'website' => 'website',
+                'email'   => 'email',
+                'name'    => 'name'
+            ],
+            'user'       => [
+                'email' => $optinEmail
+            ],
+            'fb_capture' => 1,
+            'form_id'    => 54
+        ];
+
+        $url = add_query_arg($data, 'https://wpmanageninja.com/');
+
+        wp_remote_post($url);
     }
 
     private function installFluentForm()
     {
         $plugin_id = 'fluentform';
-        $plugin    = [
+        $plugin = [
             'name'      => 'Fluent Forms',
             'repo-slug' => 'fluentform',
             'file'      => 'fluentform.php',
         ];
-        $this->backgroundInstaller( $plugin, $plugin_id );
+        $this->backgroundInstaller($plugin, $plugin_id);
     }
 
-    private function backgroundInstaller($plugin_to_install, $plugin_id) {
-        if ( ! empty( $plugin_to_install['repo-slug'] ) ) {
+    private function backgroundInstaller($plugin_to_install, $plugin_id)
+    {
+        if (!empty($plugin_to_install['repo-slug'])) {
             require_once ABSPATH . 'wp-admin/includes/file.php';
             require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
             require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
@@ -74,22 +95,22 @@ class SetupController extends Controller
 
             WP_Filesystem();
 
-            $skin              = new \Automatic_Upgrader_Skin();
-            $upgrader          = new \WP_Upgrader( $skin );
-            $installed_plugins = array_reduce( array_keys( \get_plugins() ), array( $this, 'associate_plugin_file' ), array() );
-            $plugin_slug       = $plugin_to_install['repo-slug'];
-            $plugin_file       = isset( $plugin_to_install['file'] ) ? $plugin_to_install['file'] : $plugin_slug . '.php';
-            $installed         = false;
-            $activate          = false;
+            $skin = new \Automatic_Upgrader_Skin();
+            $upgrader = new \WP_Upgrader($skin);
+            $installed_plugins = array_reduce(array_keys(\get_plugins()), array($this, 'associate_plugin_file'), array());
+            $plugin_slug = $plugin_to_install['repo-slug'];
+            $plugin_file = isset($plugin_to_install['file']) ? $plugin_to_install['file'] : $plugin_slug . '.php';
+            $installed = false;
+            $activate = false;
 
             // See if the plugin is installed already.
-            if ( isset( $installed_plugins[ $plugin_file ] ) ) {
+            if (isset($installed_plugins[$plugin_file])) {
                 $installed = true;
-                $activate  = ! is_plugin_active( $installed_plugins[ $plugin_file ] );
+                $activate = !is_plugin_active($installed_plugins[$plugin_file]);
             }
 
             // Install this thing!
-            if ( ! $installed ) {
+            if (!$installed) {
                 // Suppress feedback.
                 ob_start();
 
@@ -116,21 +137,21 @@ class SetupController extends Controller
                         )
                     );
 
-                    if ( is_wp_error( $plugin_information ) ) {
-                        throw new \Exception( $plugin_information->get_error_message() );
+                    if (is_wp_error($plugin_information)) {
+                        throw new \Exception($plugin_information->get_error_message());
                     }
 
-                    $package  = $plugin_information->download_link;
-                    $download = $upgrader->download_package( $package );
+                    $package = $plugin_information->download_link;
+                    $download = $upgrader->download_package($package);
 
-                    if ( is_wp_error( $download ) ) {
-                        throw new \Exception( $download->get_error_message() );
+                    if (is_wp_error($download)) {
+                        throw new \Exception($download->get_error_message());
                     }
 
-                    $working_dir = $upgrader->unpack_package( $download, true );
+                    $working_dir = $upgrader->unpack_package($download, true);
 
-                    if ( is_wp_error( $working_dir ) ) {
-                        throw new \Exception( $working_dir->get_error_message() );
+                    if (is_wp_error($working_dir)) {
+                        throw new \Exception($working_dir->get_error_message());
                     }
 
                     $result = $upgrader->install_package(
@@ -147,13 +168,14 @@ class SetupController extends Controller
                         )
                     );
 
-                    if ( is_wp_error( $result ) ) {
-                        throw new \Exception( $result->get_error_message() );
+                    if (is_wp_error($result)) {
+                        throw new \Exception($result->get_error_message());
                     }
 
                     $activate = true;
 
-                } catch ( \Exception $e ) {}
+                } catch (\Exception $e) {
+                }
 
                 // Discard feedback.
                 ob_end_clean();
@@ -162,22 +184,24 @@ class SetupController extends Controller
             wp_clean_plugins_cache();
 
             // Activate this thing.
-            if ( $activate ) {
+            if ($activate) {
                 try {
-                    $result = activate_plugin( $installed ? $installed_plugins[ $plugin_file ] : $plugin_slug . '/' . $plugin_file );
+                    $result = activate_plugin($installed ? $installed_plugins[$plugin_file] : $plugin_slug . '/' . $plugin_file);
 
-                    if ( is_wp_error( $result ) ) {
-                        throw new \Exception( $result->get_error_message() );
+                    if (is_wp_error($result)) {
+                        throw new \Exception($result->get_error_message());
                     }
-                } catch ( \Exception $e ) {}
+                } catch (\Exception $e) {
+                }
             }
         }
     }
 
-    private function associate_plugin_file( $plugins, $key ) {
-        $path                 = explode( '/', $key );
-        $filename             = end( $path );
-        $plugins[ $filename ] = $key;
+    private function associate_plugin_file($plugins, $key)
+    {
+        $path = explode('/', $key);
+        $filename = end($path);
+        $plugins[$filename] = $key;
         return $plugins;
     }
 }

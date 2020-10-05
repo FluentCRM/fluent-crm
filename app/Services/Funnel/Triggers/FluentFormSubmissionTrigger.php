@@ -158,13 +158,9 @@ class FluentFormSubmissionTrigger extends BaseTrigger
         return [
             'update_type'  => [
                 'type'    => 'radio',
-                'label'   => 'If Exist?',
+                'label'   => 'If Contact Already Exist?',
                 'help'    => 'Please specify what will happen if the subscriber already exist in the database',
                 'options' => FunnelHelper::getUpdateOptions()
-            ],
-            'run_only_one' => [
-                'type'        => 'yes_no_check',
-                'check_label' => 'Run this Funnel only once for a subscriber'
             ]
         ];
     }

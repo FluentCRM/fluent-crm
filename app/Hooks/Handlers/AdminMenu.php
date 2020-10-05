@@ -7,7 +7,7 @@ use FluentCrm\App\Services\Helper;
 
 class AdminMenu
 {
-    public $version = '1.0.0';
+    public $version = '1.0.1';
 
     public function init()
     {
@@ -249,7 +249,8 @@ class AdminMenu
             'email_template_designs'    => Helper::getEmailDesignTemplates(),
             'contact_prefixes'          => Helper::getContactPrefixes(),
             'server_time'               => current_time('mysql'),
-            'crm_pro_url'               => 'https://fluentcrm.io/?utm_source=plugin&utm_medium=admin&utm_campaign=promo'
+            'crm_pro_url'               => 'https://fluentcrm.com/?utm_source=plugin&utm_medium=admin&utm_campaign=promo',
+            'require_verify_request'    => apply_filters('fluentcrm_is_require_verify', false)
         ));
     }
 

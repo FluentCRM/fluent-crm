@@ -148,6 +148,32 @@ class Subscriber extends Model
     }
 
     /**
+     * Local scope to filter subscribers by not in tags
+     * @param ModelQueryBuilder $query
+     * @param array $keys
+     * @param string $filterBy id/slug
+     * @return ModelQueryBuilder
+     */
+    public function scopeFilterByNotInTags($query, $keys, $filterBy = 'id')
+    {
+        $prefix = 'fc_';
+        $subQuery = $query->getQuery()
+            ->table($prefix . 'tags')
+            ->innerJoin(
+                $prefix . 'subscriber_pivot',
+                $prefix . 'subscriber_pivot.object_id',
+                '=',
+                $prefix . 'tags.id'
+            )
+            ->where($prefix . 'subscriber_pivot.object_type', 'FluentCrm\App\Models\Tag')
+            ->whereIn($prefix . 'tags.' . $filterBy, $keys)
+            ->groupBy($prefix . 'subscriber_pivot.subscriber_id')
+            ->select($prefix . 'subscriber_pivot.subscriber_id');
+
+        return $query->whereNotIn('id', $query->subQuery($subQuery));
+    }
+
+    /**
      * Local scope to filter subscribers by lists
      * @param ModelQueryBuilder $query
      * @param array $keys
@@ -171,6 +197,32 @@ class Subscriber extends Model
             ->select($prefix . 'subscriber_pivot.subscriber_id');
 
         return $query->whereIn('id', $query->subQuery($subQuery));
+    }
+
+    /**
+     * Local scope to filter subscribers by not in lists
+     * @param ModelQueryBuilder $query
+     * @param array $keys
+     * @param string $filterBy id/slug
+     * @return ModelQueryBuilder
+     */
+    public function scopeFilterByNotInLists($query, $keys, $filterBy = 'id')
+    {
+        $prefix = 'fc_';
+        $subQuery = $query->getQuery()
+            ->table($prefix . 'lists')
+            ->innerJoin(
+                $prefix . 'subscriber_pivot',
+                $prefix . 'subscriber_pivot.object_id',
+                '=',
+                $prefix . 'lists.id'
+            )
+            ->where($prefix . 'subscriber_pivot.object_type', 'FluentCrm\App\Models\Lists')
+            ->whereIn($prefix . 'lists.' . $filterBy, $keys)
+            ->groupBy($prefix . 'subscriber_pivot.subscriber_id')
+            ->select($prefix . 'subscriber_pivot.subscriber_id');
+
+        return $query->whereNotIn('id', $query->subQuery($subQuery));
     }
 
     /**
@@ -343,28 +395,28 @@ class Subscriber extends Model
         $model = static::create($data);
 
         $tagIds = Arr::get($data, 'tags', []);
-
-        $attachableTags = array_combine($tagIds, array_fill(
-            0, count($tagIds), ['object_type' => "FluentCrm\App\Models\\Tag"]
-        ));
-
-        $attachedTagIds = $model->tags()->attach($attachableTags);
-
-        fluentcrm_contact_added_to_tags($attachedTagIds, $model);
+        if($tagIds) {
+            $attachableTags = array_combine($tagIds, array_fill(
+                0, count($tagIds), ['object_type' => "FluentCrm\App\Models\\Tag"]
+            ));
+            $attachedTagIds = $model->tags()->attach($attachableTags);
+            fluentcrm_contact_added_to_tags($attachedTagIds, $model);
+        }
 
         $listIds = Arr::get($data, 'lists', []);
+        if($listIds) {
+            $attachableLists = array_combine($listIds, array_fill(
+                0, count($listIds), ['object_type' => "FluentCrm\App\Models\\Lists"]
+            ));
+            $attachedListIds = $model->lists()->attach($attachableLists);
 
-        $attachableLists = array_combine($listIds, array_fill(
-            0, count($listIds), ['object_type' => "FluentCrm\App\Models\\Lists"]
-        ));
+            fluentcrm_contact_added_to_lists($attachedListIds, $model);
+        }
+
 
         if ($customValues = Arr::get($data, 'custom_values')) {
             $model->syncCustomFieldValues($customValues);
         }
-
-        $attachedListIds = $model->lists()->attach($attachableLists);
-
-        fluentcrm_contact_added_to_lists($attachedListIds, $model);
 
         return $model;
     }
@@ -622,8 +674,9 @@ class Subscriber extends Model
             0, count($newListIds), ['object_type' => 'FluentCrm\App\Models\Lists']
         ));
 
-        if($lists) {
+        if ($lists) {
             $attachedListIds = $this->lists()->attach($lists);
+            $this->load('lists');
             fluentcrm_contact_added_to_lists($attachedListIds, $this);
         }
 
@@ -646,8 +699,9 @@ class Subscriber extends Model
             0, count($newTagIds), ['object_type' => 'FluentCrm\App\Models\Tag']
         ));
 
-        if($tags) {
+        if ($tags) {
             $attachedTagIds = $this->tags()->attach($tags);
+            $this->load('tags');
             fluentcrm_contact_added_to_tags($attachedTagIds, $this);
         }
 

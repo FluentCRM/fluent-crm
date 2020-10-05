@@ -23,6 +23,7 @@ class TagAppliedBenchmark extends BaseBenchMark
         return [
             'title'       => 'Tag Applied',
             'description' => 'This will run when selected Tags will be applied to a contact',
+            'icon' => fluentCrmMix('images/funnel_icons/tag-applied.svg'),
             'settings'    => [
                 'tags'        => [],
                 'select_type' => 'any',

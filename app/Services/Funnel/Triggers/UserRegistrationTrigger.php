@@ -62,7 +62,6 @@ class UserRegistrationTrigger extends BaseTrigger
     {
         return [
             'update_type'  => 'update', // skip_all_actions, skip_update_if_exist
-            'run_only_one' => 'no',
             'user_roles'   => []
         ];
     }
@@ -72,18 +71,14 @@ class UserRegistrationTrigger extends BaseTrigger
         return [
             'update_type'  => [
                 'type'    => 'radio',
-                'label'   => 'If Exist?',
+                'label'   => 'If Contact Already Exist?',
                 'help'    => 'Please specify what will happen if the subscriber already exist in the database',
                 'options' => FunnelHelper::getUpdateOptions()
-            ],
-            'run_only_one' => [
-                'type'        => 'yes_no_check',
-                'check_label' => 'Run this Funnel only once for each subscriber'
             ],
             'user_roles'   => [
                 'type'        => 'multi-select',
                 'is_multiple' => true,
-                'label'       => 'User Roles',
+                'label'       => 'Targeted User Roles',
                 'help'        => 'Select which roles registration will run this automation Funnel',
                 'placeholder' => 'Select Roles',
                 'options'     => FunnelHelper::getUserRoles(),
