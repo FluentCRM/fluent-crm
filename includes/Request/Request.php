@@ -70,20 +70,38 @@ class Request
     {
         $inputs = $this->inputs();
 
+        if (!$key) {
+            return $inputs;
+        }
+
         return Arr::get($inputs, $key, $default);
     }
 
     public function getJson($key = null, $default = null)
     {
-        $data = $this->get($key, $default);
+        if (!$this->json) {
+            $content = file_get_contents('php://input');
 
-        $array = json_decode($data, true);
-
-        if (is_array($array) && json_last_error() == JSON_ERROR_NONE) {
-            return $array;
+            $this->json = json_decode($content, true);
         }
 
-        return $data;
+        if (!$this->json) {
+            $data = $this->get($key, $default);
+
+            $array = json_decode($data, true);
+
+            if (is_array($array) && json_last_error() == JSON_ERROR_NONE) {
+                return $array;
+            }
+
+            return $data;
+        }
+
+        if (is_null($key)) {
+            return $this->json;
+        }
+
+        return Arr::get($this->json, $key, $default);
     }
 
     /**
@@ -256,6 +274,19 @@ class Request
     public function method()
     {
         return $_SERVER['REQUEST_METHOD'];
+    }
+
+    public function isJson()
+    {
+        $haystack = $this->header('CONTENT_TYPE');
+        
+        foreach ((array) ['/json', '+json'] as $needle) {
+            if (mb_strpos($haystack, $needle) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

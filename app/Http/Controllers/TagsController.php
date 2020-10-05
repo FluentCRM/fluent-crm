@@ -3,6 +3,7 @@
 namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\Models\Tag;
+use FluentCrm\Includes\Helpers\Arr;
 use FluentCrm\Includes\Request\Request;
 
 class TagsController extends Controller
@@ -15,8 +16,8 @@ class TagsController extends Controller
     public function index(Request $request)
     {
         $order = [
-            'by'    => $request->get('sort_by', 'title'),
-            'order' => $request->get('sort_order', 'ASC')
+            'by'    => $request->get('sort_by', 'id'),
+            'order' => $request->get('sort_order', 'DESC')
         ];
 
         $tags = Tag::with('subscribers')->orderBy(
@@ -49,10 +50,10 @@ class TagsController extends Controller
      */
     public function create(Request $request)
     {
-        $data = $request->all();
+        $allData = $request->all();
 
         if (empty($data['slug'])) {
-            $data['slug'] = sanitize_title($data['title'], 'display');
+            $data['slug'] = sanitize_title($allData['title'], 'display');
         } else {
             $data['slug'] = sanitize_title($data['slug'], 'display');
         }
@@ -63,8 +64,9 @@ class TagsController extends Controller
         ]);
 
         $tag = Tag::create([
-            'title' => $data['title'],
-            'slug'  => $data['slug']
+            'title' => $allData['title'],
+            'slug'  => $data['slug'],
+            'description' => sanitize_text_field(Arr::get($allData, 'description'))
         ]);
 
         do_action('fluentcrm_tag_created', $tag->id);
@@ -83,12 +85,15 @@ class TagsController extends Controller
      */
     public function store(Request $request, $id)
     {
-        $data = $request->all();
-        $this->validate($data, [
+        $allData = $request->all();
+        $this->validate($allData, [
             'title' => 'required'
         ]);
 
-        $tag = Tag::where('id', $id)->update(['title' => $data['title']]);
+        $tag = Tag::where('id', $id)->update([
+            'title' => $allData['title'],
+            'description' => sanitize_text_field(Arr::get($allData, 'description'))
+        ]);
 
         do_action('fluentcrm_tag_updated', $tag->id);
 

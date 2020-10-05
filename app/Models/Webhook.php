@@ -22,10 +22,17 @@ class Webhook extends Meta
 
     public function getFields()
     {
-        $contactFields = [];
+        $contactFields = [
+            'fields' => [],
+            'custom_fields' => []
+        ];
         
         foreach (Subscriber::mappables() as $key => $column) {
-            $contactFields[] = ['key' => $key, 'field' => $column];
+            $contactFields['fields'][] = ['key' => $key, 'field' => $column];
+        }
+
+        foreach ((new CustomContactField)->getGlobalFields()['fields'] as $field) {
+            $contactFields['custom_fields'][] = ['key' => $field['slug'], 'field' => $field['label']];
         }
 
         return $contactFields;

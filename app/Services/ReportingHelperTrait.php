@@ -30,7 +30,7 @@ trait ReportingHelperTrait
     }
 
     protected function getFrequency($from, $to)
-    {   
+    {
         $numDays = $to->diff($from)->format("%a");
 
         if ($numDays > 62 && $numDays <= 181) {

@@ -290,7 +290,7 @@ class Campaign extends Model
         $campaignEmails = [];
         $updateIds = [];
 
-        $mailHeaders = Helper::getMailHeadersFromSettings($this->settings['mailer_settings']);
+        $mailHeaders = Helper::getMailHeadersFromSettings(Arr::get($this->settings, 'mailer_settings'));
 
         foreach (Subscriber::whereIn('id', $subscriberIds)->get() as $subscriber) {
             if ($subscriber->status != 'subscribed') {

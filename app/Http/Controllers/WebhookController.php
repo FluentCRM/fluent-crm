@@ -11,9 +11,12 @@ class WebhookController extends Controller
 {
     public function index(Webhook $webhook)
     {
+        $fields = $webhook->getFields();
+        
         return [
             'webhooks' => $webhook->latest()->get(),
-            'fields' => $webhook->getFields(),
+            'fields' => $fields['fields'],
+            'custom_fields' => $fields['custom_fields'],
             'schema' => $webhook->getSchema(),
             'lists' => Lists::get(),
             'tags' => Tag::get()

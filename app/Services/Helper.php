@@ -16,7 +16,10 @@ class Helper
         $formatted = [];
         foreach ($urls as $index => $url) {
             $urlSlug = UrlStores::getUrlSlug('http' . $url);
-            $formatted[$replaces[$index]] = site_url('?ns_url=' . $urlSlug);
+
+            $formatted[$replaces[$index]] = add_query_arg([
+                'ns_url' => $urlSlug
+            ], site_url());
         }
         return $formatted;
     }
@@ -45,6 +48,7 @@ class Helper
 
         $trackImageUrl = site_url('?fluentcrm=1&route=open&_e_hash=' . $hash);
         $trackPixelHtml = '<img src="' . $trackImageUrl . '" alt="" />';
+
         if (strpos($emailBody, '{fluent_track_pixel}') !== false) {
             $emailBody = str_replace('{fluent_track_pixel}', $trackPixelHtml, $emailBody);
         } else {

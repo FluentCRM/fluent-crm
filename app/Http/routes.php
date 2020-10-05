@@ -174,7 +174,7 @@ $app->group(function ($app) {
 
     $app->post('reset_db', 'SettingsController@resetDB');
 
-})->prefix('settings')->withPolicy('SettingsPolicy');
+})->prefix('setting')->withPolicy('SettingsPolicy');
 
 $app->group(function ($app) {
 

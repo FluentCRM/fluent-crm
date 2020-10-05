@@ -45,8 +45,15 @@ class OptionsController extends Controller
      */
     public function countries()
     {
+        $countries = $this->app->applyFilters('fluentcrm-countries', []);
+        $formattedCountries = [];
+        foreach ($countries as $country) {
+            $country['id'] = $country['code'];
+            $country['slug'] = $country['code'];
+            $formattedCountries[] = $country;
+        }
         return [
-            'countries' => $this->app->applyFilters('fluentcrm-countries', [])
+            'countries' => $formattedCountries
         ];
     }
 
@@ -146,6 +153,10 @@ class OptionsController extends Controller
     {
         $statuses = fluentcrm_subscriber_statuses();
         $formattedStatues = [];
+
+        $unEditableStatuses = ['bounced', 'complained'];
+
+        $statuses = array_diff($statuses, $unEditableStatuses);
 
         foreach ($statuses as $status) {
             $formattedStatues[] = [

@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Fluent CRM\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-08-28 13:17+0000\n"
+"POT-Creation-Date: 2020-09-29 15:50+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: \n"
@@ -15,1199 +15,1268 @@ msgstr ""
 "X-Generator: Loco https://localise.biz/\n"
 "X-Loco-Version: 2.4.3; wp-5.5"
 
-#: includes/Activator.php:25 app/Hooks/filters.php:14
-msgid "Every 5 minites (FLUENTCRM)"
-msgstr ""
-
-#: app/Http/Controllers/DashboardController.php:26
+#: ../../../../wp-common/fluent-crm/app/Services/Stats.php:17
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:124
 msgid "Lists"
 msgstr ""
 
-#: app/Http/Controllers/DashboardController.php:33
+#: ../../../../wp-common/fluent-crm/app/Services/Stats.php:24
 msgid "Total Contacts"
 msgstr ""
 
-#: app/Http/Controllers/DashboardController.php:40
+#: ../../../../wp-common/fluent-crm/app/Services/Stats.php:31
 msgid "Campaigns"
 msgstr ""
 
-#: app/Http/Controllers/DashboardController.php:47
-#: app/Hooks/Handlers/AdminMenu.php:77
-msgid "Email Library"
+#: ../../../../wp-common/fluent-crm/app/Services/Stats.php:38
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:156
+msgid "Email Templates"
 msgstr ""
 
-#: app/Http/Controllers/DashboardController.php:54
+#: ../../../../wp-common/fluent-crm/app/Services/Stats.php:45
 msgid "Emails Sent"
 msgstr ""
 
-#: app/Http/Controllers/DashboardController.php:64
+#: ../../../../wp-common/fluent-crm/app/Services/Stats.php:57
 msgid "Emails Pending"
 msgstr ""
 
-#: app/Http/Controllers/PurchaseHistoryController.php:38
+#: ../../../../wp-common/fluent-crm/app/Services/AutoSubscribe.php:84
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AutoSubscribeHandler.php:64
+msgid "Subscribe to newsletter"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Services/Helper.php:290
 msgid "Woocommerce Purchase History"
 msgstr ""
 
-#: app/Http/Controllers/PurchaseHistoryController.php:39
+#: ../../../../wp-common/fluent-crm/app/Services/Helper.php:291
 msgid "WooCommerce"
 msgstr ""
 
-#: app/Http/Controllers/PurchaseHistoryController.php:45
+#: ../../../../wp-common/fluent-crm/app/Services/Helper.php:297
 msgid "EDD Purchase History"
 msgstr ""
 
-#: app/Http/Controllers/PurchaseHistoryController.php:46
+#: ../../../../wp-common/fluent-crm/app/Services/Helper.php:298
 msgid "Easy Digital Downloads"
 msgstr ""
 
-#: app/Http/Controllers/PurchaseHistoryController.php:52
+#: ../../../../wp-common/fluent-crm/app/Services/Helper.php:304
 msgid "WPPayForm Purchase History"
 msgstr ""
 
-#: app/Http/Controllers/PurchaseHistoryController.php:53
+#: ../../../../wp-common/fluent-crm/app/Services/Helper.php:305
 msgid "WP Pay Forms"
 msgstr ""
 
-#: app/Http/Controllers/CampaignController.php:252
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/SetupController.php:47
+msgid "Fluent Forms has been installed and activated"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/CampaignController.php:263
 msgid "Selected emails are deleted"
 msgstr ""
 
-#: app/Http/Controllers/CampaignController.php:270
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/CampaignController.php:282
 msgid "Your campaign email has been scheduled"
 msgstr ""
 
-#: app/Http/Controllers/CampaignController.php:283
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/CampaignController.php:296
 msgid "Email Sending has been started"
 msgstr ""
 
-#: app/Http/Controllers/SettingsController.php:47
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/SettingsController.php:50
 msgid "Settings Updated"
 msgstr ""
 
-#: app/Http/Controllers/TemplateController.php:79
-#: app/Http/Controllers/TemplateController.php:99
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/SettingsController.php:230
+msgid "Settings has been updated"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/TemplateController.php:90
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/TemplateController.php:112
 msgid "Template successfully updated"
 msgstr ""
 
-#: app/Http/Controllers/SubscriberController.php:206
-msgid "Provided email already assigned to another subscriber"
-msgstr ""
-
-#: app/Http/Controllers/SubscriberController.php:353
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/SubscriberController.php:333
 msgid "Note successfully deleted"
 msgstr ""
 
-#: app/Http/Controllers/TagsController.php:139
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/TagsController.php:142
 msgid "Successfully removed the tag."
 msgstr ""
 
-#: app/Hooks/Handlers/AdminMenu.php:13 app/Hooks/Handlers/AdminMenu.php:14
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:26
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:27
 msgid "FluentCRM"
 msgstr ""
 
-#: app/Hooks/Handlers/AdminMenu.php:40
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:109
 msgid "Dashboard"
 msgstr ""
 
-#: app/Hooks/Handlers/AdminMenu.php:45
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:114
 msgid "Contacts"
 msgstr ""
 
-#: app/Hooks/Handlers/AdminMenu.php:50
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:119
 msgid "All Contacts"
 msgstr ""
 
-#: app/Hooks/Handlers/AdminMenu.php:55
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:129
+msgid "Tags"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:134
 msgid "Segments"
 msgstr ""
 
-#: app/Hooks/Handlers/AdminMenu.php:62
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:141
 msgid "Email Campaigns"
 msgstr ""
 
-#: app/Hooks/Handlers/AdminMenu.php:67
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:146
 msgid "All Campaigns"
 msgstr ""
 
-#: app/Hooks/Handlers/AdminMenu.php:72
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:151
 msgid "Email Sequences"
 msgstr ""
 
-#: app/Hooks/Handlers/AdminMenu.php:84
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:163
+msgid "Forms"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:168
 msgid "Funnels"
 msgstr ""
 
-#: app/Hooks/Handlers/AdminMenu.php:89
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:173
 msgid "Settings"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:16
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:16
 msgid "Afghanistan"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:20
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:20
 msgid "Åland Islands"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:24
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:24
 msgid "Albania"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:28
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:28
 msgid "Algeria"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:32
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:32
 msgid "American Samoa"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:36
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:36
 msgid "Andorra"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:40
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:40
 msgid "Angola"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:44
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:44
 msgid "Anguilla"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:48
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:48
 msgid "Antarctica"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:52
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:52
 msgid "Antigua and Barbuda"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:56
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:56
 msgid "Argentina"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:60
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:60
 msgid "Armenia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:64
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:64
 msgid "Aruba"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:68
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:68
 msgid "Australia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:72
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:72
 msgid "Austria"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:76
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:76
 msgid "Azerbaijan"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:80
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:80
 msgid "Bahamas"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:84
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:84
 msgid "Bahrain"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:88
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:88
 msgid "Bangladesh"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:92
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:92
 msgid "Barbados"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:96
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:96
 msgid "Belarus"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:100
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:100
 msgid "Belgium"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:104
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:104
 msgid "Belau"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:108
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:108
 msgid "Belize"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:112
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:112
 msgid "Benin"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:116
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:116
 msgid "Bermuda"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:120
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:120
 msgid "Bhutan"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:124
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:124
 msgid "Bolivia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:128
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:128
 msgid "Bonaire, Saint Eustatius and Saba"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:132
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:132
 msgid "Bosnia and Herzegovina"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:136
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:136
 msgid "Botswana"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:140
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:140
 msgid "Bouvet Island"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:144
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:144
 msgid "Brazil"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:148
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:148
 msgid "British Indian Ocean Territory"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:152
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:152
 msgid "British Virgin Islands"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:156
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:156
 msgid "Brunei"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:160
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:160
 msgid "Bulgaria"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:164
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:164
 msgid "Burkina Faso"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:168
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:168
 msgid "Burundi"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:172
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:172
 msgid "Cambodia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:176
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:176
 msgid "Cameroon"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:180
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:180
 msgid "Canada"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:184
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:184
 msgid "Cape Verde"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:188
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:188
 msgid "Cayman Islands"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:192
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:192
 msgid "Central African Republic"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:196
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:196
 msgid "Chad"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:200
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:200
 msgid "Chile"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:204
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:204
 msgid "China"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:208
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:208
 msgid "Christmas Island"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:212
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:212
 msgid "Cocos (Keeling) Islands"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:216
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:216
 msgid "Colombia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:220
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:220
 msgid "Comoros"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:224
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:224
 msgid "Congo (Brazzaville)"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:228
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:228
 msgid "Congo (Kinshasa)"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:232
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:232
 msgid "Cook Islands"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:236
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:236
 msgid "Costa Rica"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:240
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:240
 msgid "Croatia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:244
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:244
 msgid "Cuba"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:248
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:248
 msgid "Cura&ccedil;ao"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:252
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:252
 msgid "Cyprus"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:256
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:256
 msgid "Czech Republic"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:260
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:260
 msgid "Denmark"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:264
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:264
 msgid "Djibouti"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:268
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:268
 msgid "Dominica"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:272
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:272
 msgid "Dominican Republic"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:276
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:276
 msgid "Ecuador"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:280
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:280
 msgid "Egypt"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:284
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:284
 msgid "El Salvador"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:288
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:288
 msgid "Equatorial Guinea"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:292
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:292
 msgid "Eritrea"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:296
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:296
 msgid "Estonia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:300
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:300
 msgid "Ethiopia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:304
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:304
 msgid "Falkland Islands"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:308
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:308
 msgid "Faroe Islands"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:312
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:312
 msgid "Fiji"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:316
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:316
 msgid "Finland"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:320
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:320
 msgid "France"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:324
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:324
 msgid "French Guiana"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:328
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:328
 msgid "French Polynesia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:332
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:332
 msgid "French Southern Territories"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:336
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:336
 msgid "Gabon"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:340
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:340
 msgid "Gambia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:344
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:344
 msgid "Georgia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:348
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:348
 msgid "Germany"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:352
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:352
 msgid "Ghana"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:356
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:356
 msgid "Gibraltar"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:360
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:360
 msgid "Greece"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:364
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:364
 msgid "Greenland"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:368
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:368
 msgid "Grenada"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:372
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:372
 msgid "Guadeloupe"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:376
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:376
 msgid "Guam"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:380
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:380
 msgid "Guatemala"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:384
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:384
 msgid "Guernsey"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:388
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:388
 msgid "Guinea"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:392
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:392
 msgid "Guinea-Bissau"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:396
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:396
 msgid "Guyana"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:400
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:400
 msgid "Haiti"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:404
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:404
 msgid "Heard Island and McDonald Islands"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:408
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:408
 msgid "Honduras"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:412
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:412
 msgid "Hong Kong"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:416
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:416
 msgid "Hungary"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:420
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:420
 msgid "Iceland"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:424
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:424
 msgid "India"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:428
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:428
 msgid "Indonesia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:432
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:432
 msgid "Iran"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:436
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:436
 msgid "Iraq"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:440
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:440
 msgid "Ireland"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:444
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:444
 msgid "Isle of Man"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:448
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:448
 msgid "Israel"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:452
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:452
 msgid "Italy"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:456
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:456
 msgid "Ivory Coast"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:460
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:460
 msgid "Jamaica"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:464
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:464
 msgid "Japan"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:468
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:468
 msgid "Jersey"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:472
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:472
 msgid "Jordan"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:476
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:476
 msgid "Kazakhstan"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:480
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:480
 msgid "Kenya"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:484
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:484
 msgid "Kiribati"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:488
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:488
 msgid "Kuwait"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:492
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:492
 msgid "Kyrgyzstan"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:496
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:496
 msgid "Laos"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:500
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:500
 msgid "Latvia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:504
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:504
 msgid "Lebanon"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:508
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:508
 msgid "Lesotho"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:512
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:512
 msgid "Liberia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:516
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:516
 msgid "Libya"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:520
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:520
 msgid "Liechtenstein"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:524
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:524
 msgid "Lithuania"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:528
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:528
 msgid "Luxembourg"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:532
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:532
 msgid "Macao S.A.R., China"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:536
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:536
 msgid "Macedonia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:540
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:540
 msgid "Madagascar"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:544
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:544
 msgid "Malawi"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:548
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:548
 msgid "Malaysia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:552
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:552
 msgid "Maldives"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:556
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:556
 msgid "Mali"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:560
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:560
 msgid "Malta"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:564
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:564
 msgid "Marshall Islands"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:568
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:568
 msgid "Martinique"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:572
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:572
 msgid "Mauritania"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:576
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:576
 msgid "Mauritius"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:580
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:580
 msgid "Mayotte"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:584
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:584
 msgid "Mexico"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:588
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:588
 msgid "Micronesia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:592
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:592
 msgid "Moldova"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:596
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:596
 msgid "Monaco"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:600
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:600
 msgid "Mongolia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:604
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:604
 msgid "Montenegro"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:608
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:608
 msgid "Montserrat"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:612
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:612
 msgid "Morocco"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:616
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:616
 msgid "Mozambique"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:620
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:620
 msgid "Myanmar"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:624
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:624
 msgid "Namibia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:628
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:628
 msgid "Nauru"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:632
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:632
 msgid "Nepal"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:636
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:636
 msgid "Netherlands"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:640
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:640
 msgid "New Caledonia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:644
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:644
 msgid "New Zealand"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:648
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:648
 msgid "Nicaragua"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:652
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:652
 msgid "Niger"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:656
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:656
 msgid "Nigeria"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:660
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:660
 msgid "Niue"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:664
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:664
 msgid "Norfolk Island"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:668
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:668
 msgid "Northern Mariana Islands"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:672
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:672
 msgid "North Korea"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:676
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:676
 msgid "Norway"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:680
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:680
 msgid "Oman"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:684
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:684
 msgid "Pakistan"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:688
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:688
 msgid "Palestinian Territory"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:692
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:692
 msgid "Panama"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:696
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:696
 msgid "Papua New Guinea"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:700
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:700
 msgid "Paraguay"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:704
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:704
 msgid "Peru"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:708
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:708
 msgid "Philippines"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:712
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:712
 msgid "Pitcairn"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:716
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:716
 msgid "Poland"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:720
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:720
 msgid "Portugal"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:724
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:724
 msgid "Puerto Rico"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:728
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:728
 msgid "Qatar"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:732
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:732
 msgid "Reunion"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:736
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:736
 msgid "Romania"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:740
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:740
 msgid "Russia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:744
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:744
 msgid "Rwanda"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:748
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:748
 msgid "Saint Barth&eacute;lemy"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:752
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:752
 msgid "Saint Helena"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:756
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:756
 msgid "Saint Kitts and Nevis"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:760
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:760
 msgid "Saint Lucia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:764
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:764
 msgid "Saint Martin (French part)"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:768
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:768
 msgid "Saint Martin (Dutch part)"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:772
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:772
 msgid "Saint Pierre and Miquelon"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:776
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:776
 msgid "Saint Vincent and the Grenadines"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:780
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:780
 msgid "San Marino"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:784
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:784
 msgid "S&atilde;o Tom&eacute; and Pr&iacute;ncipe"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:788
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:788
 msgid "Saudi Arabia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:792
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:792
 msgid "Senegal"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:796
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:796
 msgid "Serbia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:800
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:800
 msgid "Seychelles"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:804
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:804
 msgid "Sierra Leone"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:808
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:808
 msgid "Singapore"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:812
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:812
 msgid "Slovakia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:816
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:816
 msgid "Slovenia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:820
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:820
 msgid "Solomon Islands"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:824
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:824
 msgid "Somalia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:828
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:828
 msgid "South Africa"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:832
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:832
 msgid "South Georgia/Sandwich Islands"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:836
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:836
 msgid "South Korea"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:840
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:840
 msgid "South Sudan"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:844
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:844
 msgid "Spain"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:848
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:848
 msgid "Sri Lanka"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:852
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:852
 msgid "Sudan"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:856
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:856
 msgid "Suriname"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:860
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:860
 msgid "Svalbard and Jan Mayen"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:864
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:864
 msgid "Swaziland"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:868
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:868
 msgid "Sweden"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:872
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:872
 msgid "Switzerland"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:876
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:876
 msgid "Syria"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:880
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:880
 msgid "Taiwan"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:884
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:884
 msgid "Tajikistan"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:888
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:888
 msgid "Tanzania"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:892
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:892
 msgid "Thailand"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:896
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:896
 msgid "Timor-Leste"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:900
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:900
 msgid "Togo"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:904
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:904
 msgid "Tokelau"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:908
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:908
 msgid "Tonga"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:912
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:912
 msgid "Trinidad and Tobago"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:916
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:916
 msgid "Tunisia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:920
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:920
 msgid "Turkey"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:924
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:924
 msgid "Turkmenistan"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:928
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:928
 msgid "Turks and Caicos Islands"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:932
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:932
 msgid "Tuvalu"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:936
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:936
 msgid "Uganda"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:940
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:940
 msgid "Ukraine"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:944
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:944
 msgid "United Arab Emirates"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:948
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:948
 msgid "United Kingdom (UK)"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:952
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:952
 msgid "United States (US)"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:956
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:956
 msgid "United States (US) Minor Outlying Islands"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:960
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:960
 msgid "United States (US) Virgin Islands"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:964
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:964
 msgid "Uruguay"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:968
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:968
 msgid "Uzbekistan"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:972
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:972
 msgid "Vanuatu"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:976
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:976
 msgid "Vatican"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:980
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:980
 msgid "Venezuela"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:984
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:984
 msgid "Vietnam"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:988
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:988
 msgid "Wallis and Futuna"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:992
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:992
 msgid "Western Sahara"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:996
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:996
 msgid "Samoa"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:1000
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:1000
 msgid "Yemen"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:1004
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:1004
 msgid "Zambia"
 msgstr ""
 
-#: app/Hooks/Handlers/CountryNames.php:1008
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:1008
 msgid "Zimbabwe"
 msgstr ""
 
-#: app/Hooks/Handlers/ExternalPages.php:152
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:162
 msgid "I no longer want to receive these emails"
 msgstr ""
 
-#: app/Hooks/Handlers/ExternalPages.php:153
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:163
 msgid "I never signed up for this email list"
 msgstr ""
 
-#: app/Hooks/Handlers/ExternalPages.php:154
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:164
 msgid "The emails are inappropriate"
 msgstr ""
 
-#: app/Hooks/Handlers/ExternalPages.php:155
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:165
 msgid "The emails are spam"
 msgstr ""
 
-#: app/Hooks/Handlers/ExternalPages.php:157
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:168
 msgid "Other (fill in reason below)"
 msgstr ""
 
-#: app/Hooks/Handlers/ExternalPages.php:182
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:197
 msgid "Sorry, Email does not match with the database entry"
 msgstr ""
 
-#: app/Hooks/Handlers/ExternalPages.php:202
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:223
 msgid "You are successfully unsubscribed form the email list"
 msgstr ""
 
-#: app/Hooks/Handlers/SupportTicketsProviders.php:11
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:406
+msgid "Sorry! No subscriber found in the database"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:433
+msgid "Email is not valid. Please provide a valid email"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:441
+msgid ""
+"The new email has been used to another account. Please use a new email "
+"address"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:460
+#, php-format
+msgid ""
+"A conformation email has been sent to %s. Please confirm your email address "
+"to resubscribe with changed email address"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:480
+#, php-format
+msgid ""
+"A conformation email has been sent to %s. Please confirm your email address "
+"to resubscribe"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:485
+msgid "Your provided information has been successfully updated"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/SupportTicketsProviders.php:11
 msgid "Support Tickets by Awesome Support"
 msgstr ""
 
-#: app/Hooks/Handlers/SupportTicketsProviders.php:12
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/SupportTicketsProviders.php:12
 msgid "Awesome Support"
 msgstr ""
 
-#: app/Hooks/Handlers/FormSubmissions.php:11
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/FormSubmissions.php:11
 msgid "Form Submissions (Fluent Forms)"
 msgstr ""
 
-#: app/Hooks/Handlers/FormSubmissions.php:12
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/FormSubmissions.php:12
 msgid "Fluent Forms"
 msgstr ""
 
-#: app/Hooks/Handlers/PurchaseHistory.php:34
-#: app/Hooks/Handlers/PurchaseHistory.php:68
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/PurchaseHistory.php:34
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/PurchaseHistory.php:68
 msgid "View Order Details"
 msgstr ""
 
-#: app/views/admin/setup_wizard.php:6
+#: ../../../../wp-common/fluent-crm/app/views/admin/setup_wizard.php:6
 msgid "FluentCRM - Setup Wizard"
 msgstr ""
 
-#: app/views/external/confirmation.php:8
+#: ../../../../wp-common/fluent-crm/app/views/external/confirmation.php:8
 msgid "Email Confirmation"
 msgstr ""
 
-#: app/views/external/unsubscribe.php:8
-msgid "Unsubscribe"
+#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:8
+#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:26
+msgid "Update your preferences"
 msgstr ""
 
-#: app/views/external/unsubscribe.php:32
+#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:33
+#: ../../../../wp-common/fluent-crm/app/views/external/unsubscribe.php:32
 msgid "Your Email Address"
 msgstr ""
 
-#: app/views/external/unsubscribe.php:36
+#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:37
+msgid "First Name"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:41
+msgid "Last Name"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:47
+msgid "Mailing List Groups"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:56
+msgid "Update Profile"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/views/external/unsubscribe.php:8
+msgid "Unsubscribe"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/views/external/unsubscribe.php:36
 msgid "Please let us know a reason"
 msgstr ""
 
 #. Name of the plugin
-msgid "Fluent CRM"
+msgid "FluentCRM - Marketing Automation For WordPress"
 msgstr ""
 
 #. Description of the plugin
@@ -1216,9 +1285,9 @@ msgstr ""
 
 #. URI of the plugin
 #. Author URI of the plugin
-msgid "https://fluentcrm.io"
+msgid "https://fluentcrm.com"
 msgstr ""
 
 #. Author of the plugin
-msgid "WPManageNinja Team"
+msgid "Fluent CRM"
 msgstr ""

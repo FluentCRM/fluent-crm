@@ -105,14 +105,16 @@ class SubscriberController extends Controller
             ]);
         }
 
-        $subscribers = Subscriber::where('id', $subscriberIds)->get();
+        $subscribers = Subscriber::whereIn('id', $subscriberIds)->get();
 
         foreach ($subscribers as $subscriber) {
             $oldValue = $subscriber->{$column};
             if ($oldValue != $value) {
                 $subscriber->{$column} = $value;
                 $subscriber->save();
-                do_action('fluentcrm_subscriber_' . $column . '_to_' . $value, $subscriber, $oldValue);
+                if(in_array($column, ['status', 'contact_type'])) {
+                    do_action('fluentcrm_subscriber_' . $column . '_to_' . $value, $subscriber, $oldValue);
+                }
             }
         }
 
@@ -203,8 +205,9 @@ class SubscriberController extends Controller
         }
 
         $subscriber->fill($data);
-
         $subscriber->save();
+
+        do_action('fluentcrm_contact_updated', $subscriber, $data);
 
         if ($customValues = Arr::get($data, 'custom_values')) {
             $subscriber->syncCustomFieldValues($customValues);

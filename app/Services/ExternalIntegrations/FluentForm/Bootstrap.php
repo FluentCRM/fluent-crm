@@ -260,7 +260,6 @@ class Bootstrap extends IntegrationManager
         $subscriber = Subscriber::where('email', $contact['email'])->first();
 
         if ($subscriber && Arr::isTrue($data, 'skip_if_exists')) {
-
             $this->addLog(
                 $feed['settings']['name'],
                 'info',
@@ -268,7 +267,6 @@ class Bootstrap extends IntegrationManager
                 $form->id,
                 $entry->id
             );
-
         }
 
         if ($subscriber) {
@@ -284,9 +282,11 @@ class Bootstrap extends IntegrationManager
 
         if (!$subscriber) {
             $contact['source'] = 'FluentForms';
-            
+
             if (Arr::isTrue($data, 'double_opt_in')) {
                 $contact['status'] = 'pending';
+            } else {
+                $contact['status'] = 'subscribed';
             }
 
             if ($listId = Arr::get($data, 'list_id')) {
@@ -316,17 +316,15 @@ class Bootstrap extends IntegrationManager
 
             if ($listId = Arr::get($data, 'list_id')) {
                 $lists = [$listId];
-                $lists = array_combine($lists, array_fill(
-                    0, count($lists), ['object_type' => 'FluentCrm\App\Models\Lists']
-                ));
-                $subscriber->lists()->sync($lists, false);
+                $subscriber->attachLists($lists);
             }
 
             if ($tags = Arr::get($data, 'tag_ids')) {
-                $tags = array_combine($tags, array_fill(
-                    0, count($tags), ['object_type' => 'FluentCrm\App\Models\Tag']
-                ));
-                $subscriber->tags()->sync($tags, false);
+                $subscriber->attachTags($tags);
+            }
+
+            if (Arr::isTrue($data, 'double_opt_in') && ( $subscriber->status == 'pending' || $subscriber->status == 'unsubscribed' )) {
+                $subscriber->sendDoubleOptinEmail();
             }
 
             $this->addLog(

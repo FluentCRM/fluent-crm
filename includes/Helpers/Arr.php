@@ -283,6 +283,8 @@ class Arr
     public static function isTrue($array, $key)
     {
         $value = self::get($array, $key);
-        return $value == 'true' || $value === true || $value == 'yes';
+        $isFalse = !$value || $value =='false' || $value =='0';
+
+        return !$isFalse;
     }
 }

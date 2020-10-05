@@ -130,18 +130,24 @@ class ExternalPages
 
     public function unsubscribePage()
     {
-        if (!($campaignEmailId = $this->request->get('ce_id'))) {
-            return;
+        $campaignEmailId = $this->request->get('ce_id');
+
+
+        if ($campaignEmailId) {
+            $campaignEmailId = intval($campaignEmailId);
+
+            $campaignEmail = CampaignEmail::where('id', $campaignEmailId)->first();
+
+            if (!$campaignEmail) {
+                echo 'Sorry! This is not a valid unsubscribe url';
+                wp_die();
+            }
+        } else {
+            $campaignEmail = (object)[
+                'id' => 0
+            ];
         }
 
-        $campaignEmailId = intval($campaignEmailId);
-
-        $campaignEmail = CampaignEmail::where('id', $campaignEmailId)->first();
-
-        if (!$campaignEmail) {
-            echo 'Sorry! This is not a valid unsubscribe url';
-            wp_die();
-        }
 
         $businessSettings = fluentcrmGetGlobalSettings('business_settings', []);
 
@@ -188,11 +194,21 @@ class ExternalPages
             }
         }
 
-        $campaignEmail = CampaignEmail::where('id', $emailId)->first();
+        if ($emailId) {
+            $campaignEmail = CampaignEmail::where('id', $emailId)->first();
+            if (!$campaignEmail || $campaignEmail->email_address != $emailAddress || !$subscriber) {
+                wp_send_json_error([
+                    'message' => __('Sorry, Email does not match with the database entry', 'fluentcrm')
+                ], 423);
+            }
+            $subscriber = Subscriber::where('id', $campaignEmail->subscriber_id)->first();
+        } else {
+            $campaignEmail = false;
+            $subscriber = Subscriber::where('email', $emailAddress)->first();
+        }
 
-        $subscriber = Subscriber::where('id', $campaignEmail->subscriber_id)->first();
 
-        if (!$campaignEmail || $campaignEmail->email_address != $emailAddress || !$subscriber) {
+        if (!$subscriber) {
             wp_send_json_error([
                 'message' => __('Sorry, Email does not match with the database entry', 'fluentcrm')
             ], 423);
@@ -206,18 +222,20 @@ class ExternalPages
             do_action('fluentcrm_subscriber_status_to_unsubscribed', $subscriber, $oldStatus);
         }
 
-        if ($reason) {
+        if ($reason && $campaignEmail) {
             fluentcrm_update_subscriber_meta(
                 $campaignEmail->subscriber_id, 'unsubscribe_reason', $reason
             );
         }
 
-        CampaignUrlMetric::maybeInsert([
-            'campaign_id'   => $campaignEmail->campaign_id,
-            'subscriber_id' => $campaignEmail->subscriber_id,
-            'type'          => 'unsubscribe',
-            'ip_address'    => FluentCrm()->request->getIp()
-        ]);
+        if ($campaignEmail) {
+            CampaignUrlMetric::maybeInsert([
+                'campaign_id'   => $campaignEmail->campaign_id,
+                'subscriber_id' => $campaignEmail->subscriber_id,
+                'type'          => 'unsubscribe',
+                'ip_address'    => FluentCrm()->request->getIp()
+            ]);
+        }
 
         wp_send_json_success([
             'message' => __('You are successfully unsubscribed form the email list', 'fluentcrm')
@@ -304,7 +322,13 @@ class ExternalPages
             return;
         }
 
-        if (!($hash = $this->request->get('hash'))) {
+        $postData = $this->request->get();
+
+        if (empty($postData['email'])) {
+            $postData = $this->request->getJson();
+        }
+
+        if (empty($hash = $this->request->get('hash'))) {
             return;
         }
 
@@ -312,7 +336,7 @@ class ExternalPages
             return;
         }
 
-        $validator = FluentCrm('validator')->make($this->request->get(), [
+        $validator = FluentCrm('validator')->make((array) $postData, [
             'email' => 'required|email'
         ])->validate();
 
@@ -323,15 +347,27 @@ class ExternalPages
             ], 422);
         }
 
-        $this->request->merge([
-            'tags'   => $webhook->value['tags'],
-            'lists'  => $webhook->value['lists'],
-            'status' => $webhook->value['status']
-        ]);
+        $subscriber = new Subscriber;
 
-        $subscriber = (new Subscriber)->updateOrCreate(
-            $this->request->all(), false, true, true
+        $customColumns = array_map(function($field) {
+            return $field['slug'];
+        }, fluentcrm_get_option('contact_custom_fields', []));
+        
+        $customFields = Arr::only($postData, $customColumns);
+
+        $mainFields = Arr::only($postData, $subscriber->getFillable());
+
+        $data = array_merge(
+            $mainFields,
+            ['custom_values' => $customFields],
+            [
+                'tags'   => $webhook->value['tags'],
+                'lists'  => $webhook->value['lists'],
+                'status' => $webhook->value['status']
+            ]
         );
+
+        $subscriber = $subscriber->updateOrCreate($data, false, false, true);
 
         $message = $subscriber->wasRecentlyCreated ? 'Created' : 'updated';
 

@@ -70,12 +70,12 @@ abstract class BaseBenchMark
             'type'        => 'radio',
             'options'     => [
                 [
-                    'id'    => 'required',
-                    'title' => '[Essential Point] Select IF this step is required for processing further actions'
-                ],
-                [
                     'id'    => 'optional',
                     'title' => '[Optional Point] This is an optional trigger point'
+                ],
+                [
+                    'id'    => 'required',
+                    'title' => '[Essential Point] Select IF this step is required for processing further actions'
                 ]
             ],
             'inline_help' => 'If you select [Optional Point] it will work as an Optional Trigger otherwise, it will wait for full-fill this action'

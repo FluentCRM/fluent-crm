@@ -32,7 +32,7 @@ class Handler
             $this->processing();
             $this->handleFailedLog();
             $this->startedAt = microtime(true);
-            foreach ((new CampaignEmailIterator($campaignId)) as $emailCollection) {
+            foreach ((new CampaignEmailIterator($campaignId, 100)) as $emailCollection) {
                 $this->updateProcessTime();
                 $this->sendEmails($emailCollection);
             }
@@ -256,10 +256,18 @@ class Handler
         $templateData = [
             'preHeader'   => '',
             'email_body'  => $emailBody,
-            'footer_text' => ''
+            'footer_text' => '',
+            'config'      => Helper::getTemplateConfig($config['design_template'])
         ];
 
-        $emailBody = apply_filters('fluentcrm-email-design-template-' . $config['design_template'], $emailBody, $templateData, false, $subscriber);
+        $emailBody = apply_filters(
+            'fluentcrm-email-design-template-' . $config['design_template'],
+            $emailBody,
+            $templateData,
+            false,
+            $subscriber
+        );
+
 
         $data = [
             'to'      => [
