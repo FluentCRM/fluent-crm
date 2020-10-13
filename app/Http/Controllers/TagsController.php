@@ -20,13 +20,11 @@ class TagsController extends Controller
             'order' => $request->get('sort_order', 'DESC')
         ];
 
-        $tags = Tag::with('subscribers')->orderBy(
-            $order['by'], $order['order']
-        )->get()->each(function ($tag) {
-            $tag->totalCount = $tag->subscribers->count();
-            $tag->subscribersCount = $tag->subscribers->where('status', 'subscribed')->count();
-            unset($tag->subscribers);
-        });
+        $tags = Tag::orderBy($order['by'], $order['order'])->paginate();
+
+        foreach ($tags as $tag) {
+            $tag->subscribersCount = $tag->countByStatus('subscribed');
+        }
 
         return $this->send([
             'tags' => $tags
@@ -139,7 +137,7 @@ class TagsController extends Controller
         do_action('fluentcrm_tag_deleted', $tagId);
 
         return $this->sendSuccess([
-            'message' => __('Successfully removed the tag.', 'fluentcrm')
+            'message' => __('Successfully removed the tag.', 'fluent-crm')
         ]);
     }
 }

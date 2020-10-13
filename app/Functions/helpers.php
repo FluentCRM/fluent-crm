@@ -218,9 +218,17 @@ function fluentcrm_update_option($optionName, $value)
 
 }
 
-function fluentcrm_get_campaign_meta($objectId, $key)
+function fluentcrm_get_campaign_meta($objectId, $key, $returnValue = false)
 {
-    return fluentcrm_get_meta($objectId, 'FluentCrm\App\Models\Campaign', $key);
+    $item = fluentcrm_get_meta($objectId, 'FluentCrm\App\Models\Campaign', $key);
+    if($returnValue) {
+        if($item) {
+            return $item->value;
+        }
+        return false;
+    }
+
+    return $item;
 }
 
 function fluentcrm_update_campaign_meta($objectId, $key, $value)

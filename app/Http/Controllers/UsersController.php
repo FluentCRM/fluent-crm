@@ -3,6 +3,7 @@
 namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\Models\Subscriber;
+use FluentCrm\App\Services\Helper;
 use FluentCrm\Includes\Request\Request;
 
 class UsersController extends Controller
@@ -75,22 +76,11 @@ class UsersController extends Controller
     {
         $subscribers = [];
         foreach ($users as $user) {
-            $subscriber = [
-                'user_id' => $user->ID,
-                'email'   => $user->user_email,
-                'source'  => 'wp_users'
-            ];
-
-            $firstName = get_user_meta($user->ID, 'first_name', true);
-            $lastName = get_user_meta($user->ID, 'last_name', true);
-            if ($firstName) {
-                $subscriber['first_name'] = ucwords($firstName);
+            $subscriber = Helper::getWPMapUserInfo($user);
+            $subscriber['source'] = 'wp_users';
+            if ($subscriber['email']) {
+                $subscribers[] = $subscriber;
             }
-            if ($lastName) {
-                $subscriber['last_name'] = ucwords($lastName);
-            }
-
-            $subscribers[] = $subscriber;
         }
 
         return Subscriber::import(

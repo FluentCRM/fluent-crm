@@ -18,12 +18,16 @@ class Handler
 
     protected $emailLimitPerSecond = 0;
 
-    protected $maximumProcessingTime = 20;
+    protected $maximumProcessingTime = 50;
 
     protected $dispatchedWithinOneSecond = 0;
 
     public function handle($campaignId = null)
     {
+        if( apply_filters('fluentcrm_disable_email_processing', false )) {
+            return false;
+        }
+
         try {
             $this->campaignId = $campaignId;
             if ($this->isProcessing()) {
@@ -32,7 +36,13 @@ class Handler
             $this->processing();
             $this->handleFailedLog();
             $this->startedAt = microtime(true);
-            foreach ((new CampaignEmailIterator($campaignId, 100)) as $emailCollection) {
+            $startedTimeStamp = time();
+
+            foreach ((new CampaignEmailIterator($campaignId, 30)) as $emailCollection) {
+                if(time() - $startedTimeStamp > $this->maximumProcessingTime) {
+                    update_option(FLUENTCRM . '_is_sending_emails', null);
+                    return; // we don't want to run the process for more than 50 seconds
+                }
                 $this->updateProcessTime();
                 $this->sendEmails($emailCollection);
             }
@@ -113,6 +123,7 @@ class Handler
         if ($sentIds) {
             CampaignEmail::whereIn('id', $sentIds)->whereNot('status', 'failed')->update([
                 'status'     => 'sent',
+                'email_body' => '',
                 'updated_at' => current_time('mysql')
             ]);
         }

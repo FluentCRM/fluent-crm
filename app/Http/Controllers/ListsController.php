@@ -23,13 +23,14 @@ class ListsController extends Controller
             'by'    => $request->get('sort_by', 'id'),
             'order' => $request->get('sort_order', 'DESC')
         ];
+        $lists = Lists::orderBy($order['by'], $order['order'])->get()->each(function ($list) {
+            $list->totalCount = $list->totalCount();
+            $list->subscribersCount = $list->countByStatus('subscribed');
+        });
 
-        return $this->send(
-            Lists::orderBy($order['by'], $order['order'])->get()->each(function ($list) {
-                $list->totalCount = $list->subscribers()->count();
-                $list->subscribersCount = Subscriber::filterByLists([$list->id])->where('status', 'subscribed')->count();
-            })
-        );
+        return $this->send([
+            'lists' => $lists
+        ]);
     }
 
     /**

@@ -47,7 +47,7 @@ class SettingsController extends Controller
         );
 
         return $this->sendSuccess([
-            'message' => __('Settings Updated', 'fluentcrm')
+            'message' => __('Settings Updated', 'fluent-crm')
         ]);
     }
 
@@ -227,7 +227,7 @@ class SettingsController extends Controller
         fluentcrm_update_option('comment_form_subscribe_settings', $commentSettings);
 
         return [
-            'message' => __('Settings has been updated', 'fluentcrm')
+            'message' => __('Settings has been updated', 'fluent-crm')
         ];
     }
 }

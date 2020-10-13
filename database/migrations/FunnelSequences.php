@@ -18,17 +18,17 @@ class FunnelSequences
 
         $table = $wpdb->prefix . 'fc_funnel_sequences';
 
-        $indexPrefix = $wpdb->prefix . 'fc_index_';
+        $indexPrefix = $wpdb->prefix . 'fc_fq_';
 
         if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
             $sql = "CREATE TABLE $table (
                 `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
                 `funnel_id` BIGINT UNSIGNED NULL,
-                `action_name` VARCHAR(255) NULL,
-                `type` VARCHAR(255) DEFAULT 'sequence',
-                `title` VARCHAR(255) NULL,
-                `description` VARCHAR(255) NULL,
-                `status` VARCHAR(255) NULL DEFAULT 'draft',
+                `action_name` VARCHAR(192) NULL,
+                `type` VARCHAR(50) DEFAULT 'sequence',
+                `title` VARCHAR(192) NULL,
+                `description` VARCHAR(192) NULL,
+                `status` VARCHAR(50) NULL DEFAULT 'draft',
                 `conditions` TEXT,
                 `settings` TEXT,
                 `note` TEXT,
@@ -38,8 +38,8 @@ class FunnelSequences
                 `created_by` BIGINT UNSIGNED NULL,
                 `created_at` TIMESTAMP NULL,
                 `updated_at` TIMESTAMP NULL,
-                INDEX `{$indexPrefix}_funnel_sequence_status_idx` (`status` ASC),
-                INDEX `{$indexPrefix}_funnel_id_idx` (`funnel_id` ASC)
+                INDEX `{$indexPrefix}_fs_idx` (`status` ASC),
+                INDEX `{$indexPrefix}_fid_idx` (`funnel_id` ASC)
             ) $charsetCollate;";
 
             dbDelta($sql);

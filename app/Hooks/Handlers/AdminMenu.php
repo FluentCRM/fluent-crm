@@ -7,7 +7,7 @@ use FluentCrm\App\Services\Helper;
 
 class AdminMenu
 {
-    public $version = '1.0.1';
+    public $version = FLUENTCRM_PLUGIN_VERSION;
 
     public function init()
     {
@@ -23,8 +23,8 @@ class AdminMenu
     {
         $permission = 'manage_options';
         add_menu_page(
-            __('FluentCRM', 'fluentcrm'),
-            __('FluentCRM', 'fluentcrm'),
+            __('FluentCRM', 'fluent-crm'),
+            __('FluentCRM', 'fluent-crm'),
             $permission,
             'fluentcrm-admin',
             array($this, 'render'),
@@ -70,8 +70,8 @@ class AdminMenu
 
         add_submenu_page(
             'fluentcrm-admin',
-            __('Funnels', 'fluentform'),
-            __('Funnels', 'fluentform'),
+            __('Automations', 'fluentform'),
+            __('Automations', 'fluentform'),
             $permission,
             'fluentcrm-admin#/funnels',
             array($this, 'render')
@@ -106,74 +106,83 @@ class AdminMenu
         $menuItems = [
             [
                 'key'       => 'dashboard',
-                'label'     => __('Dashboard', 'fluentcrm'),
+                'label'     => __('Dashboard', 'fluent-crm'),
                 'permalink' => $urlBase
             ],
             [
                 'key'       => 'contacts',
-                'label'     => __('Contacts', 'fluentcrm'),
+                'label'     => __('Contacts', 'fluent-crm'),
                 'permalink' => $urlBase . 'subscribers',
                 'sub_items' => [
                     [
                         'key'       => 'all_contacts',
-                        'label'     => __('All Contacts', 'fluentcrm'),
+                        'label'     => __('All Contacts', 'fluent-crm'),
                         'permalink' => $urlBase . 'subscribers'
                     ],
                     [
                         'key'       => 'lists',
-                        'label'     => __('Lists', 'fluentcrm'),
+                        'label'     => __('Lists', 'fluent-crm'),
                         'permalink' => $urlBase . 'contact-groups/lists'
                     ],
                     [
                         'key'       => 'tags',
-                        'label'     => __('Tags', 'fluentcrm'),
+                        'label'     => __('Tags', 'fluent-crm'),
                         'permalink' => $urlBase . 'contact-groups/tags'
                     ],
                     [
                         'key'       => 'dynamic_segments',
-                        'label'     => __('Segments', 'fluentcrm'),
+                        'label'     => __('Segments', 'fluent-crm'),
                         'permalink' => $urlBase . 'contact-groups/dynamic-segments'
                     ]
                 ]
             ],
             [
                 'key'       => 'campaigns',
-                'label'     => __('Email Campaigns', 'fluentcrm'),
+                'label'     => __('Email Campaigns', 'fluent-crm'),
                 'permalink' => $urlBase . 'email/campaigns',
                 'sub_items' => [
                     [
                         'key'       => 'all_campaigns',
-                        'label'     => __('All Campaigns', 'fluentcrm'),
+                        'label'     => __('All Campaigns', 'fluent-crm'),
                         'permalink' => $urlBase . 'email/campaigns'
                     ],
                     [
                         'key'       => 'email_sequences',
-                        'label'     => __('Email Sequences', 'fluentcrm'),
+                        'label'     => __('Email Sequences', 'fluent-crm'),
                         'permalink' => $urlBase . 'email/sequences'
                     ],
                     [
                         'key'       => 'email_templates',
-                        'label'     => __('Email Templates', 'fluentcrm'),
+                        'label'     => __('Email Templates', 'fluent-crm'),
                         'permalink' => $urlBase . 'email/templates'
                     ]
                 ]
             ],
             [
                 'key'       => 'forms',
-                'label'     => __('Forms', 'fluentcrm'),
+                'label'     => __('Forms', 'fluent-crm'),
                 'permalink' => $urlBase . 'forms'
             ],
             [
                 'key'       => 'funnels',
-                'label'     => __('Funnels', 'fluentcrm'),
+                'label'     => __('Automations', 'fluent-crm'),
                 'permalink' => $urlBase . 'funnels'
             ],
             [
                 'key'       => 'settings',
-                'label'     => __('Settings', 'fluentcrm'),
+                'label'     => __('Settings', 'fluent-crm'),
                 'permalink' => $urlBase . 'settings'
             ]
         ];
+
+        if(!defined('FLUENTCAMPAIGN')) {
+            $menuItems[] = [
+                'key' => 'get_pro',
+                'label' => 'Get Pro',
+                'permalink' => 'https://fluentcrm.com',
+                'class' => 'pro_link'
+            ];
+        }
 
         $app['view']->render('admin.menu_page', [
             'menuItems' => $menuItems,

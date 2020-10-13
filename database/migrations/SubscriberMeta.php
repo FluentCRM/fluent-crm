@@ -25,13 +25,13 @@ class SubscriberMeta
                 `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
                 `subscriber_id` BIGINT UNSIGNED NOT NULL,
                 `created_by` BIGINT UNSIGNED NOT NULL,
-                `object_type` VARCHAR(255) DEFAULT 'option',
-                `key` VARCHAR(255) NOT NULL,
+                `object_type` VARCHAR(50) DEFAULT 'option',
+                `key` VARCHAR(192) NOT NULL,
                 `value` LONGTEXT NULL,
                 `created_at` TIMESTAMP NULL,
                 `updated_at` TIMESTAMP NULL,
-                INDEX `{$indexPrefix}_subscriber_meta_id_idx` (`subscriber_id` ASC),
-                INDEX `{$indexPrefix}_subscriber_object_type_idx` (`object_type` ASC)
+                INDEX `{$indexPrefix}_s_meta_id_idx` (`subscriber_id` ASC),
+                INDEX `{$indexPrefix}_s_ot_idx` (`object_type` ASC)
             ) $charsetCollate;";
 
             dbDelta($sql);

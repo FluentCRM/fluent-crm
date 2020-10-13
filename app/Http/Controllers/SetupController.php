@@ -44,7 +44,7 @@ class SetupController extends Controller
                 'is_installed'     => defined('FLUENTFORM'),
                 'create_form_link' => admin_url('admin.php?page=fluent_forms#add=1')
             ],
-            'message'   => __('Fluent Forms has been installed and activated', 'fluentcrm')
+            'message'   => __('Fluent Forms has been installed and activated', 'fluent-crm')
         ];
     }
 

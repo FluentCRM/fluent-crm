@@ -81,7 +81,7 @@ class AutoSubscribe
     {
         $defaults = [
             'status'         => 'no',
-            'checkbox_label' => __('Subscribe to newsletter', 'fluentcrm'),
+            'checkbox_label' => __('Subscribe to newsletter', 'fluent-crm'),
             'auto_checked'   => 'no',
             'target_list'    => '',
             'show_only_new'  => 'yes',

@@ -20,8 +20,8 @@ class Tags
         if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
             $sql = "CREATE TABLE $table (
                 `id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
-                `title` VARCHAR(255) NOT NULL,
-                `slug` VARCHAR(255) NOT NULL,
+                `title` VARCHAR(192) NOT NULL,
+                `slug` VARCHAR(192) NOT NULL,
                 `description` TINYTEXT NULL,
                 `created_at` TIMESTAMP NULL,
                 `updated_at` TIMESTAMP NULL

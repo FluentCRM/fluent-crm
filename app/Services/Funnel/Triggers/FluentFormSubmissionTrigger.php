@@ -59,20 +59,20 @@ class FluentFormSubmissionTrigger extends BaseTrigger
 
         $subtitle = 'This Funnel will be initiated when a new form submission will happen.';
 
-        if($formId) {
-            $subtitle .= ' Use shortcode <b> [fluentform id="'.$formId.'"] </b> to show the form in your WordPress page/posts. <a target="_blank" href="'.admin_url('admin.php?page=fluent_forms&route=editor&form_id='.$formId).'">Edit The Form</a>';
+        if ($formId) {
+            $subtitle .= ' Use shortcode <b> [fluentform id="' . $formId . '"] </b> to show the form in your WordPress page/posts. <a target="_blank" href="' . admin_url('admin.php?page=fluent_forms&route=editor&form_id=' . $formId) . '">Edit The Form</a>';
         }
 
         return [
             'title'     => 'New Fluent Forms Submission Funnel',
             'sub_title' => $subtitle,
             'fields'    => [
-                'form_id'             => [
+                'form_id'                  => [
                     'type'    => 'reload_field_selection',
                     'label'   => 'Select your form',
                     'options' => $this->getForms($funnel)
                 ],
-                'primary_fields'                => [
+                'primary_fields'           => [
                     'label'         => 'Map Primary Data',
                     'type'          => 'form-group-mapper',
                     'value_options' => $valueOptions,
@@ -80,7 +80,7 @@ class FluentFormSubmissionTrigger extends BaseTrigger
                     'remote_label'  => 'Form Field',
                     'fields'        => FunnelHelper::getPrimaryContactFieldMaps()
                 ],
-                'other_fields' => [
+                'other_fields'             => [
                     'label'         => 'Map Other Data',
                     'type'          => 'form-many-drop-down-mapper',
                     'value_options' => $valueOptions,
@@ -91,7 +91,7 @@ class FluentFormSubmissionTrigger extends BaseTrigger
                         FunnelHelper::getSecondaryContactFieldMaps()
                     )
                 ],
-                'subscription_status' => [
+                'subscription_status'      => [
                     'type'        => 'option_selectors',
                     'option_key'  => 'editable_statuses',
                     'is_multiple' => false,
@@ -99,12 +99,12 @@ class FluentFormSubmissionTrigger extends BaseTrigger
                     'placeholder' => 'Select Status'
                 ],
                 'subscription_status_info' => [
-                    'type' => 'html',
-                    'info' => '<b>An Automated double-optin email will be sent if the contact is new or not subscribed already</b>',
-                    'dependency'  => [
-                        'depends_on'    => 'subscription_status',
-                        'operator' => '=',
-                        'value'    => 'pending'
+                    'type'       => 'html',
+                    'info'       => '<b>An Automated double-optin email will be sent if the contact is new or not subscribed already</b>',
+                    'dependency' => [
+                        'depends_on' => 'subscription_status',
+                        'operator'   => '=',
+                        'value'      => 'pending'
                     ]
                 ]
             ]
@@ -137,7 +137,7 @@ class FluentFormSubmissionTrigger extends BaseTrigger
 
         foreach ($formFields as $inputKey => $input) {
             $formattedInputs[] = [
-                'id'    => '{inputs.'.$inputKey.'}',
+                'id'    => '{inputs.' . $inputKey . '}',
                 'title' => $input['admin_label']
             ];
         }
@@ -148,20 +148,20 @@ class FluentFormSubmissionTrigger extends BaseTrigger
     public function getFunnelConditionDefaults($funnel)
     {
         return [
-            'update_type'  => 'update', // skip_all_actions, skip_update_if_exist
-            'run_only_one' => 'no'
+            'run_only_one' => 'yes'
         ];
     }
 
     public function getConditionFields($funnel)
     {
         return [
-            'update_type'  => [
-                'type'    => 'radio',
-                'label'   => 'If Contact Already Exist?',
-                'help'    => 'Please specify what will happen if the subscriber already exist in the database',
+            'run_only_one' => [
+                'type'    => 'yes_no_check',
+                'label'   => '',
+                'check_label' => 'Run this automation only once per contact',
+                'help'    => 'If you enable this then this will run only once per customer',
                 'options' => FunnelHelper::getUpdateOptions()
-            ]
+            ],
         ];
     }
 
@@ -175,7 +175,7 @@ class FluentFormSubmissionTrigger extends BaseTrigger
         $processedValues['primary_fields']['ip'] = '{submission.ip}';
 
         $processedValues = ShortCodeParser::parse($processedValues, $insertId, $formData);
-        if(!is_email(Arr::get($processedValues, 'primary_fields.email'))) {
+        if (!is_email(Arr::get($processedValues, 'primary_fields.email'))) {
             return;
         }
 
@@ -184,9 +184,9 @@ class FluentFormSubmissionTrigger extends BaseTrigger
         $subscriberData['custom_values'] = [];
 
         foreach (Arr::get($processedValues, 'other_fields', []) as $otherField) {
-            if(!empty($otherField['field_key']) && !empty($otherField['field_value'])) {
+            if (!empty($otherField['field_key']) && !empty($otherField['field_value'])) {
                 $key = $otherField['field_key'];
-                if(strpos($key, '.')) {
+                if (strpos($key, '.')) {
                     $subscriberData['custom_values'][str_replace('custom.', '', $key)] = $otherField['field_value'];
                 } else {
                     $subscriberData[$key] = $otherField['field_value'];
@@ -202,11 +202,11 @@ class FluentFormSubmissionTrigger extends BaseTrigger
 
         $subscriberData['status'] = $processedValues['subscription_status'];
 
-        if(!empty($subscriberData['country'])) {
+        if (!empty($subscriberData['country'])) {
             $countries = getFluentFormCountryList();
             $countries = array_flip($countries);
-            if(isset($countries[$subscriberData['country']])) {
-                $subscriberData['country'] =$countries[$subscriberData['country']];
+            if (isset($countries[$subscriberData['country']])) {
+                $subscriberData['country'] = $countries[$subscriberData['country']];
             } else {
                 unset($subscriberData['country']);
             }
@@ -223,15 +223,12 @@ class FluentFormSubmissionTrigger extends BaseTrigger
     {
         $conditions = $funnel->conditions;
         // check update_type
-        $updateType = Arr::get($conditions, 'update_type');
+        $isOnlyOne = Arr::get($conditions, 'run_only_one') != 'no';
 
         $subscriber = FunnelHelper::getSubscriber($subscriberData['email']);
-        if ($updateType == 'skip_all_if_exist') {
-            return false;
-        }
 
         // check run_only_one
-        if ($subscriber && FunnelHelper::ifAlreadyInFunnel($funnel->id, $subscriber->id)) {
+        if ($isOnlyOne && $subscriber && FunnelHelper::ifAlreadyInFunnel($funnel->id, $subscriber->id)) {
             return false;
         }
 

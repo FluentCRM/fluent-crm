@@ -66,12 +66,12 @@ class OptionsController extends Controller
     {
         $lists = Lists::select(['id', 'slug', 'title'])->get();
 
-        foreach ($lists as $list) {
-            $list->subscribersCount = Subscriber::filterByLists([$list->id])
-                ->where('status', 'subscribed')
-                ->count();
+        $withCount = (array) $this->request->get('with_count', []);
 
-            $list->totalCount = Subscriber::filterByLists([$list->id])->count();
+        if($withCount && in_array('lists', $withCount)) {
+            foreach ($lists as $list) {
+                $list->subscribersCount = $list->countByStatus('subscribed');
+            }
         }
 
         return [

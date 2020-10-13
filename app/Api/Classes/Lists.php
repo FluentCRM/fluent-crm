@@ -2,7 +2,7 @@
 
 namespace FluentCrm\App\Api\Classes;
 
-use FluentCrm\App\models\Lists as CrmLists;
+use FluentCrm\App\Models\Lists as CrmLists;
 
 class Lists
 {
@@ -24,6 +24,37 @@ class Lists
     public function getInstance()
     {
         return $this->instance;
+    }
+
+    public function importBulk($lists)
+    {
+        $newLists = [];
+        foreach ($lists as $list) {
+            if (!$list['title']) {
+                continue;
+            }
+
+            if(empty($list['slug'])) {
+                $list['slug'] = sanitize_title($list['title'], 'display');
+            } else {
+                $list['slug'] = sanitize_title($list['slug'], 'display');
+            }
+
+            $list['slug']  = sanitize_text_field($list['slug']);
+
+            $list = \FluentCrm\App\Models\Lists::updateOrCreate(
+                [
+                    'slug' => $list['slug'],
+                    'title' => sanitize_text_field($list['title'])
+                ],
+                ['slug' => $list['slug']]
+            );
+            do_action('fluentcrm_list_created', $list->id);
+
+            $newLists[] = $list;
+        }
+
+        return $newLists;
     }
 
     public function __call($method, $params)

@@ -80,6 +80,7 @@ class CsvController extends Controller
 
         $customFieldKeys = $this->customFieldKeys();
         $subscribers = [];
+        $skipped = [];
         foreach ($records as $record) {
             if (!array_filter($record)) {
                 continue;
@@ -105,14 +106,29 @@ class CsvController extends Controller
                 return $this->sendError(['email' => "The email field is required."], 422);
             }
 
-            if (is_email($subscriber['email'])) {
+            $subscriber['email'] = trim($subscriber['email']);
+
+            if ($subscriber['email'] && is_email($subscriber['email'])) {
                 $subscribers[] = $subscriber;
+            } else {
+                $skipped[] = $subscriber;
             }
         }
 
+        if(!isset($inputs['tags'])) {
+            $inputs['tags'] = [];
+        }
+
+        if(!isset($inputs['lists'])) {
+            $inputs['lists'] = [];
+        }
+
+        $totalInput = count($subscribers);
         $result = Subscriber::import(
             $subscribers, $inputs['tags'], $inputs['lists'], $inputs['update'], $status
         );
+
+        $totalSkipped = count($result['skips']) + count($skipped);
 
         $completed = $offset + count($records);
         $totalCount = count($allRecords);
@@ -125,8 +141,16 @@ class CsvController extends Controller
             'total' => $totalCount,
             'completed' => $completed,
             'total_page' => ceil($totalCount / $processPerRequest),
+            'skipped' => $totalSkipped,
+            'invalid_contacts' => $skipped,
+            'skipped_contacts' => $result['skips'],
+            'invalid_email_counts' => count($skipped),
+            'inserted' => count($result['inserted']),
+            'updated' => count($result['updated']),
             'has_more' => $hasMore,
-            'last_page' => $page
+            'last_page' => $page,
+            'tags' => $inputs['tags'],
+            'lists' => $inputs['lists']
         ]);
     }
 

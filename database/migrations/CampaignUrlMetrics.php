@@ -24,7 +24,7 @@ class CampaignUrlMetrics
                 `url_id` BIGINT UNSIGNED NULL,
                 `campaign_id` BIGINT UNSIGNED NULL,
                 `subscriber_id` BIGINT UNSIGNED NULL,
-                `type` VARCHAR(255) NULL DEFAULT 'click',  /*view/click*/
+                `type` VARCHAR(50) NULL DEFAULT 'click',  /*view/click*/
                 `ip_address` VARCHAR(30) NULL,
                 `country` VARCHAR(40) NULL,
                 `city` VARCHAR(40) NULL,

@@ -23,8 +23,8 @@ class Subscriber extends Model
         'last_name',
         'user_id',
         'email',
-        'status',
-        'contact_type',
+        'status', // pending / subscribed / bounced / unsubscribed; Default: subscriber
+        'contact_type', // lead / customer
         'address_line_1',
         'address_line_2',
         'postal_code',
@@ -395,7 +395,7 @@ class Subscriber extends Model
         $model = static::create($data);
 
         $tagIds = Arr::get($data, 'tags', []);
-        if($tagIds) {
+        if ($tagIds) {
             $attachableTags = array_combine($tagIds, array_fill(
                 0, count($tagIds), ['object_type' => "FluentCrm\App\Models\\Tag"]
             ));
@@ -404,7 +404,7 @@ class Subscriber extends Model
         }
 
         $listIds = Arr::get($data, 'lists', []);
-        if($listIds) {
+        if ($listIds) {
             $attachableLists = array_combine($listIds, array_fill(
                 0, count($listIds), ['object_type' => "FluentCrm\App\Models\\Lists"]
             ));
@@ -454,7 +454,7 @@ class Subscriber extends Model
      */
     public function getPhotoAttribute()
     {
-        if($this->attributes['avatar']) {
+        if ($this->attributes['avatar']) {
             return $this->attributes['avatar'];
         }
         return fluentcrmGravatar($this->attributes['email']);
@@ -506,7 +506,8 @@ class Subscriber extends Model
         $strictStatuses = fluentcrm_strict_statues();
 
         $newContactCustomFields = [];
-
+        $newRecords = [];
+        $skips = [];
         foreach ($data as $item) {
             $item['hash'] = md5($item['email']);
             if (isset($existingSubscribers[$item['email']])) {
@@ -515,15 +516,19 @@ class Subscriber extends Model
                 } else if ($newStatus) {
                     $item['status'] = $newStatus;
                 }
+
                 unset($item['source']);
 
                 if ($customValues = Arr::get($item, 'custom_values')) {
                     $existingSubscribers[$item['email']]->syncCustomFieldValues($customValues, false);
                 }
-
                 unset($item['custom_values']);
                 $updateables[] = $item;
             } else {
+                if (isset($newRecords[$item['email']])) {
+                    $skips[] = $item;
+                    continue;
+                }
                 $extraValues = [
                     'created_at' => fluentCrmTimestamp()
                 ];
@@ -534,6 +539,8 @@ class Subscriber extends Model
                 if ($customValues = Arr::get($item, 'custom_values')) {
                     $newContactCustomFields[$item['email']] = $customValues;
                 }
+
+                $newRecords[$item['email']] = 1;
 
                 unset($item['custom_values']);
                 $insertables[] = array_merge($item, $extraValues);
@@ -548,16 +555,15 @@ class Subscriber extends Model
             /*
              * Add custom Fields if available
              */
-            if($newContactCustomFields) {
+            if ($newContactCustomFields) {
                 foreach ($insertedModels as $insertedModel) {
-                    if(isset($newContactCustomFields[$insertedModel->email])) {
+                    if (isset($newContactCustomFields[$insertedModel->email])) {
                         $insertedModel->syncCustomFieldValues(
                             $newContactCustomFields[$insertedModel->email], false
                         );
                     }
                 }
             }
-
         }
 
         if ($shouldUpdate) {
@@ -583,13 +589,17 @@ class Subscriber extends Model
             }
         }
 
+        do_action('fluentcrm_contacts_imported_bulk', $insertedModels);
+        do_action('fluentcrm_contacts_updated_bulk', $updatedModels);
+
         return [
             'inserted' => $insertedModels,
-            'updated'  => $updatedModels
+            'updated'  => $updatedModels,
+            'skips'    => $skips
         ];
     }
 
-    public function updateOrCreate($data, $forceUpdate = false, $deleteOtherValues = true, $sync = false)
+    public function updateOrCreate($data, $forceUpdate = false, $deleteOtherValues = false, $sync = false)
     {
         $subscriberData = static::explodeFullName($data);
         $subscriberData = array_filter(Arr::only($subscriberData, $this->getFillable()));
@@ -605,15 +615,31 @@ class Subscriber extends Model
             }
         }
 
+        $isNew = true;
+        $oldStatus = '';
+        if($exist) {
+            $isNew = false;
+            $oldStatus = $exist->status;
+        }
+
         if (!empty($data['status'])) {
             $status = $data['status'];
             if ($forceUpdate) {
                 $subscriberData['status'] = $status;
             } else if ($exist && $exist->status == 'subscribed') {
                 unset($subscriberData['status']);
+            } else if ($exist && in_array($exist->status, ['bounced', 'complained'])) {
+                unset($subscriberData['status']);
             } else {
                 $subscriberData['status'] = $status;
             }
+        }
+
+        $isSubscribed = false;
+        if(($exist && $exist->status != 'subscribed') && (!empty($subscriberData['status']) && $subscriberData['status']) == 'subscribed') {
+            $isSubscribed = true;
+        } else if(!$exist && (!empty($subscriberData['status']) && $subscriberData['status']) == 'subscribed') {
+            $isSubscribed = true;
         }
 
         if ($exist) {
@@ -630,6 +656,16 @@ class Subscriber extends Model
 
         if ($customValues = Arr::get($data, 'custom_values')) {
             $exist->syncCustomFieldValues($customValues, $deleteOtherValues);
+        }
+
+        if($isSubscribed) {
+            do_action('fluentcrm_subscriber_status_to_subscribed', $exist, $oldStatus);
+        }
+
+        if($isNew) {
+            do_action('fluentcrm_contact_created', $exist);
+        } else {
+            do_action('fluentcrm_contact_updated', $exist);
         }
 
         return $exist;
@@ -659,7 +695,7 @@ class Subscriber extends Model
 
     public function attachLists($listIds)
     {
-        if(!$listIds) {
+        if (!$listIds) {
             return $this;
         }
 
@@ -685,7 +721,7 @@ class Subscriber extends Model
 
     public function attachTags($tagIds)
     {
-        if(!$tagIds) {
+        if (!$tagIds) {
             return $this;
         }
         $existingTags = $this->tags;
@@ -710,7 +746,7 @@ class Subscriber extends Model
 
     public function detachLists($listIds)
     {
-        if(!$listIds) {
+        if (!$listIds) {
             return $this;
         }
         $existingLists = $this->lists;
@@ -721,8 +757,9 @@ class Subscriber extends Model
 
         $validListIds = array_intersect($listIds, $existingListIds);
 
-        if($validListIds) {
+        if ($validListIds) {
             $this->lists()->detach($validListIds);
+            $this->load('lists');
             fluentcrm_contact_removed_from_lists($validListIds, $this);
         }
 
@@ -733,7 +770,7 @@ class Subscriber extends Model
 
     public function detachTags($tagsIds)
     {
-        if(!$tagsIds) {
+        if (!$tagsIds) {
             return $this;
         }
 
@@ -745,12 +782,12 @@ class Subscriber extends Model
 
         $validTagIds = array_intersect($tagsIds, $existingTagIds);
 
-        if($validTagIds) {
+        if ($validTagIds) {
             $this->tags()->detach($validTagIds);
+            $this->load('tags');
             fluentcrm_contact_removed_from_tags($validTagIds, $this);
         }
 
         return $this;
-
     }
 }

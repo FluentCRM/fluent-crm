@@ -18,7 +18,7 @@ class FunnelMetrics
 
         $table = $wpdb->prefix . 'fc_funnel_metrics';
 
-        $indexPrefix = $wpdb->prefix . 'fc_index_';
+        $indexPrefix = $wpdb->prefix . 'fc_fmx_';
 
         if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
             $sql = "CREATE TABLE $table (
@@ -32,8 +32,8 @@ class FunnelMetrics
                 `notes` TEXT NULL,
                 `created_at` TIMESTAMP NULL,
                 `updated_at` TIMESTAMP NULL,
-                INDEX `{$indexPrefix}_metrics_funnel_idx` (`funnel_id` ASC),
-                INDEX `{$indexPrefix}_metrics_sequence_idx` (`subscriber_id` ASC)
+                INDEX `{$indexPrefix}_m_idx` (`funnel_id` ASC),
+                INDEX `{$indexPrefix}_ms__idx` (`subscriber_id` ASC)
             ) $charsetCollate;";
             dbDelta($sql);
         }

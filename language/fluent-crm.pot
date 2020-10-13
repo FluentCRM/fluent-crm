@@ -1,9 +1,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: Fluent CRM\n"
+"Project-Id-Version: FluentCRM - Marketing Automation For WordPress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-09-29 15:50+0000\n"
+"POT-Creation-Date: 2020-10-07 18:07+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: \n"
@@ -13,155 +13,24 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Loco https://localise.biz/\n"
-"X-Loco-Version: 2.4.3; wp-5.5"
+"X-Loco-Version: 2.4.3; wp-5.5.1"
 
-#: ../../../../wp-common/fluent-crm/app/Services/Stats.php:17
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:124
-msgid "Lists"
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:519
+#, php-format
+msgid ""
+"A conformation email has been sent to %s. Please confirm your email address "
+"to resubscribe"
 msgstr ""
 
-#: ../../../../wp-common/fluent-crm/app/Services/Stats.php:24
-msgid "Total Contacts"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Services/Stats.php:31
-msgid "Campaigns"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Services/Stats.php:38
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:156
-msgid "Email Templates"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Services/Stats.php:45
-msgid "Emails Sent"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Services/Stats.php:57
-msgid "Emails Pending"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Services/AutoSubscribe.php:84
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AutoSubscribeHandler.php:64
-msgid "Subscribe to newsletter"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Services/Helper.php:290
-msgid "Woocommerce Purchase History"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Services/Helper.php:291
-msgid "WooCommerce"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Services/Helper.php:297
-msgid "EDD Purchase History"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Services/Helper.php:298
-msgid "Easy Digital Downloads"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Services/Helper.php:304
-msgid "WPPayForm Purchase History"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Services/Helper.php:305
-msgid "WP Pay Forms"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Http/Controllers/SetupController.php:47
-msgid "Fluent Forms has been installed and activated"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Http/Controllers/CampaignController.php:263
-msgid "Selected emails are deleted"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Http/Controllers/CampaignController.php:282
-msgid "Your campaign email has been scheduled"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Http/Controllers/CampaignController.php:296
-msgid "Email Sending has been started"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Http/Controllers/SettingsController.php:50
-msgid "Settings Updated"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Http/Controllers/SettingsController.php:230
-msgid "Settings has been updated"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Http/Controllers/TemplateController.php:90
-#: ../../../../wp-common/fluent-crm/app/Http/Controllers/TemplateController.php:112
-msgid "Template successfully updated"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Http/Controllers/SubscriberController.php:333
-msgid "Note successfully deleted"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Http/Controllers/TagsController.php:142
-msgid "Successfully removed the tag."
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:26
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:27
-msgid "FluentCRM"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:109
-msgid "Dashboard"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:114
-msgid "Contacts"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:119
-msgid "All Contacts"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:129
-msgid "Tags"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:134
-msgid "Segments"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:141
-msgid "Email Campaigns"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:146
-msgid "All Campaigns"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:151
-msgid "Email Sequences"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:163
-msgid "Forms"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:168
-msgid "Funnels"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:173
-msgid "Settings"
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:499
+#, php-format
+msgid ""
+"A conformation email has been sent to %s. Please confirm your email address "
+"to resubscribe with changed email address"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:16
 msgid "Afghanistan"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:20
-msgid "Åland Islands"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:24
@@ -170,6 +39,14 @@ msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:28
 msgid "Algeria"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:146
+msgid "All Campaigns"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:119
+msgid "All Contacts"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:32
@@ -216,6 +93,14 @@ msgstr ""
 msgid "Austria"
 msgstr ""
 
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:168
+msgid "Automations"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/SupportTicketsProviders.php:12
+msgid "Awesome Support"
+msgstr ""
+
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:76
 msgid "Azerbaijan"
 msgstr ""
@@ -240,12 +125,12 @@ msgstr ""
 msgid "Belarus"
 msgstr ""
 
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:100
-msgid "Belgium"
-msgstr ""
-
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:104
 msgid "Belau"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:100
+msgid "Belgium"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:108
@@ -320,6 +205,10 @@ msgstr ""
 msgid "Cameroon"
 msgstr ""
 
+#: ../../../../wp-common/fluent-crm/app/Services/Stats.php:31
+msgid "Campaigns"
+msgstr ""
+
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:180
 msgid "Canada"
 msgstr ""
@@ -372,12 +261,20 @@ msgstr ""
 msgid "Congo (Kinshasa)"
 msgstr ""
 
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:114
+msgid "Contacts"
+msgstr ""
+
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:232
 msgid "Cook Islands"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:236
 msgid "Costa Rica"
+msgstr ""
+
+#. Description of the plugin
+msgid "CRM and Email Newsletter Plugin for WordPress"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:240
@@ -400,6 +297,10 @@ msgstr ""
 msgid "Czech Republic"
 msgstr ""
 
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:109
+msgid "Dashboard"
+msgstr ""
+
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:260
 msgid "Denmark"
 msgstr ""
@@ -416,8 +317,16 @@ msgstr ""
 msgid "Dominican Republic"
 msgstr ""
 
+#: ../../../../wp-common/fluent-crm/app/Services/Helper.php:302
+msgid "Easy Digital Downloads"
+msgstr ""
+
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:276
 msgid "Ecuador"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Services/Helper.php:301
+msgid "EDD Purchase History"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:280
@@ -426,6 +335,39 @@ msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:284
 msgid "El Salvador"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:141
+msgid "Email Campaigns"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/views/external/confirmation.php:8
+msgid "Email Confirmation"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:472
+msgid "Email is not valid. Please provide a valid email"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/CampaignController.php:297
+msgid "Email Sending has been started"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:151
+msgid "Email Sequences"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Services/Stats.php:38
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:156
+msgid "Email Templates"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Services/Stats.php:57
+msgid "Emails Pending"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Services/Stats.php:45
+msgid "Emails Sent"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:288
@@ -458,6 +400,43 @@ msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:316
 msgid "Finland"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:37
+msgid "First Name"
+msgstr ""
+
+#. Author of the plugin
+msgid "Fluent CRM"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/FormSubmissions.php:12
+msgid "Fluent Forms"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/SetupController.php:47
+msgid "Fluent Forms has been installed and activated"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:26
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:27
+msgid "FluentCRM"
+msgstr ""
+
+#. Name of the plugin
+msgid "FluentCRM - Marketing Automation For WordPress"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/views/admin/setup_wizard.php:6
+msgid "FluentCRM - Setup Wizard"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/FormSubmissions.php:11
+msgid "Form Submissions (Fluent Forms)"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:163
+msgid "Forms"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:320
@@ -556,8 +535,21 @@ msgstr ""
 msgid "Hong Kong"
 msgstr ""
 
+#. URI of the plugin
+#. Author URI of the plugin
+msgid "https://fluentcrm.com"
+msgstr ""
+
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:416
 msgid "Hungary"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:170
+msgid "I never signed up for this email list"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:169
+msgid "I no longer want to receive these emails"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:420
@@ -640,6 +632,10 @@ msgstr ""
 msgid "Laos"
 msgstr ""
 
+#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:41
+msgid "Last Name"
+msgstr ""
+
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:500
 msgid "Latvia"
 msgstr ""
@@ -664,6 +660,11 @@ msgstr ""
 msgid "Liechtenstein"
 msgstr ""
 
+#: ../../../../wp-common/fluent-crm/app/Services/Stats.php:17
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:124
+msgid "Lists"
+msgstr ""
+
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:524
 msgid "Lithuania"
 msgstr ""
@@ -682,6 +683,10 @@ msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:540
 msgid "Madagascar"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:47
+msgid "Mailing List Groups"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:544
@@ -808,20 +813,28 @@ msgstr ""
 msgid "Norfolk Island"
 msgstr ""
 
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:668
-msgid "Northern Mariana Islands"
-msgstr ""
-
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:672
 msgid "North Korea"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:668
+msgid "Northern Mariana Islands"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:676
 msgid "Norway"
 msgstr ""
 
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/SubscriberController.php:333
+msgid "Note successfully deleted"
+msgstr ""
+
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:680
 msgid "Oman"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:175
+msgid "Other (fill in reason below)"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:684
@@ -856,6 +869,10 @@ msgstr ""
 msgid "Pitcairn"
 msgstr ""
 
+#: ../../../../wp-common/fluent-crm/app/views/external/unsubscribe.php:36
+msgid "Please let us know a reason"
+msgstr ""
+
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:716
 msgid "Poland"
 msgstr ""
@@ -888,6 +905,10 @@ msgstr ""
 msgid "Rwanda"
 msgstr ""
 
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:784
+msgid "S&atilde;o Tom&eacute; and Pr&iacute;ncipe"
+msgstr ""
+
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:748
 msgid "Saint Barth&eacute;lemy"
 msgstr ""
@@ -904,12 +925,12 @@ msgstr ""
 msgid "Saint Lucia"
 msgstr ""
 
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:764
-msgid "Saint Martin (French part)"
-msgstr ""
-
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:768
 msgid "Saint Martin (Dutch part)"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:764
+msgid "Saint Martin (French part)"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:772
@@ -920,16 +941,24 @@ msgstr ""
 msgid "Saint Vincent and the Grenadines"
 msgstr ""
 
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:996
+msgid "Samoa"
+msgstr ""
+
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:780
 msgid "San Marino"
 msgstr ""
 
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:784
-msgid "S&atilde;o Tom&eacute; and Pr&iacute;ncipe"
-msgstr ""
-
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:788
 msgid "Saudi Arabia"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:134
+msgid "Segments"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/CampaignController.php:264
+msgid "Selected emails are deleted"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:792
@@ -938,6 +967,18 @@ msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:796
 msgid "Serbia"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:173
+msgid "Settings"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/SettingsController.php:230
+msgid "Settings has been updated"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/SettingsController.php:50
+msgid "Settings Updated"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:800
@@ -968,6 +1009,15 @@ msgstr ""
 msgid "Somalia"
 msgstr ""
 
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:445
+msgid "Sorry! No subscriber found in the database"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:202
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:214
+msgid "Sorry, Email does not match with the database entry"
+msgstr ""
+
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:828
 msgid "South Africa"
 msgstr ""
@@ -992,8 +1042,21 @@ msgstr ""
 msgid "Sri Lanka"
 msgstr ""
 
+#: ../../../../wp-common/fluent-crm/app/Services/AutoSubscribe.php:84
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AutoSubscribeHandler.php:64
+msgid "Subscribe to newsletter"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/TagsController.php:142
+msgid "Successfully removed the tag."
+msgstr ""
+
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:852
 msgid "Sudan"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/SupportTicketsProviders.php:11
+msgid "Support Tickets by Awesome Support"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:856
@@ -1020,6 +1083,10 @@ msgstr ""
 msgid "Syria"
 msgstr ""
 
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/AdminMenu.php:129
+msgid "Tags"
+msgstr ""
+
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:880
 msgid "Taiwan"
 msgstr ""
@@ -1032,8 +1099,27 @@ msgstr ""
 msgid "Tanzania"
 msgstr ""
 
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/TemplateController.php:90
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/TemplateController.php:112
+msgid "Template successfully updated"
+msgstr ""
+
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:892
 msgid "Thailand"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:171
+msgid "The emails are inappropriate"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:172
+msgid "The emails are spam"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:480
+msgid ""
+"The new email has been used to another account. Please use a new email "
+"address"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:896
@@ -1050,6 +1136,10 @@ msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:908
 msgid "Tonga"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Services/Stats.php:24
+msgid "Total Contacts"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:912
@@ -1104,6 +1194,19 @@ msgstr ""
 msgid "United States (US) Virgin Islands"
 msgstr ""
 
+#: ../../../../wp-common/fluent-crm/app/views/external/unsubscribe.php:8
+msgid "Unsubscribe"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:56
+msgid "Update Profile"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:8
+#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:26
+msgid "Update your preferences"
+msgstr ""
+
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:964
 msgid "Uruguay"
 msgstr ""
@@ -1128,6 +1231,11 @@ msgstr ""
 msgid "Vietnam"
 msgstr ""
 
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/PurchaseHistory.php:34
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/PurchaseHistory.php:68
+msgid "View Order Details"
+msgstr ""
+
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:988
 msgid "Wallis and Futuna"
 msgstr ""
@@ -1136,12 +1244,41 @@ msgstr ""
 msgid "Western Sahara"
 msgstr ""
 
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:996
-msgid "Samoa"
+#: ../../../../wp-common/fluent-crm/app/Services/Helper.php:295
+msgid "WooCommerce"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Services/Helper.php:294
+msgid "Woocommerce Purchase History"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Services/Helper.php:309
+msgid "WP Pay Forms"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Services/Helper.php:308
+msgid "WPPayForm Purchase History"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:1000
 msgid "Yemen"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:242
+msgid "You are successfully unsubscribed form the email list"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Http/Controllers/CampaignController.php:283
+msgid "Your campaign email has been scheduled"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:33
+#: ../../../../wp-common/fluent-crm/app/views/external/unsubscribe.php:32
+msgid "Your Email Address"
+msgstr ""
+
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:524
+msgid "Your provided information has been successfully updated"
 msgstr ""
 
 #: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:1004
@@ -1152,142 +1289,6 @@ msgstr ""
 msgid "Zimbabwe"
 msgstr ""
 
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:162
-msgid "I no longer want to receive these emails"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:163
-msgid "I never signed up for this email list"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:164
-msgid "The emails are inappropriate"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:165
-msgid "The emails are spam"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:168
-msgid "Other (fill in reason below)"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:197
-msgid "Sorry, Email does not match with the database entry"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:223
-msgid "You are successfully unsubscribed form the email list"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:406
-msgid "Sorry! No subscriber found in the database"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:433
-msgid "Email is not valid. Please provide a valid email"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:441
-msgid ""
-"The new email has been used to another account. Please use a new email "
-"address"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:460
-#, php-format
-msgid ""
-"A conformation email has been sent to %s. Please confirm your email address "
-"to resubscribe with changed email address"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:480
-#, php-format
-msgid ""
-"A conformation email has been sent to %s. Please confirm your email address "
-"to resubscribe"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/ExternalPages.php:485
-msgid "Your provided information has been successfully updated"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/SupportTicketsProviders.php:11
-msgid "Support Tickets by Awesome Support"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/SupportTicketsProviders.php:12
-msgid "Awesome Support"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/FormSubmissions.php:11
-msgid "Form Submissions (Fluent Forms)"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/FormSubmissions.php:12
-msgid "Fluent Forms"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/PurchaseHistory.php:34
-#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/PurchaseHistory.php:68
-msgid "View Order Details"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/views/admin/setup_wizard.php:6
-msgid "FluentCRM - Setup Wizard"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/views/external/confirmation.php:8
-msgid "Email Confirmation"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:8
-#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:26
-msgid "Update your preferences"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:33
-#: ../../../../wp-common/fluent-crm/app/views/external/unsubscribe.php:32
-msgid "Your Email Address"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:37
-msgid "First Name"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:41
-msgid "Last Name"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:47
-msgid "Mailing List Groups"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/views/external/manage_subscription.php:56
-msgid "Update Profile"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/views/external/unsubscribe.php:8
-msgid "Unsubscribe"
-msgstr ""
-
-#: ../../../../wp-common/fluent-crm/app/views/external/unsubscribe.php:36
-msgid "Please let us know a reason"
-msgstr ""
-
-#. Name of the plugin
-msgid "FluentCRM - Marketing Automation For WordPress"
-msgstr ""
-
-#. Description of the plugin
-msgid "CRM and Email Newsletter Plugin for WordPress"
-msgstr ""
-
-#. URI of the plugin
-#. Author URI of the plugin
-msgid "https://fluentcrm.com"
-msgstr ""
-
-#. Author of the plugin
-msgid "Fluent CRM"
+#: ../../../../wp-common/fluent-crm/app/Hooks/Handlers/CountryNames.php:20
+msgid "Åland Islands"
 msgstr ""

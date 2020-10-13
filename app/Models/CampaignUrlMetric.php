@@ -54,7 +54,22 @@ class CampaignUrlMetric extends Model
             ->get();
 
         foreach ($stats as $stat) {
-            $stat->label = ucfirst($stat->type) . ' Rate';
+            $stat->is_percent = true;
+            $stat->label = ucfirst($stat->type) . ' Rate' . ' ('.$stat->total.')';
+        }
+
+        $revenue = fluentcrm_get_campaign_meta($campaignId, '_campaign_revenue');
+
+        if($revenue && $revenue->value) {
+            $data = (array) $revenue->value;
+            foreach ($data as $currency => $cents) {
+                if($cents) {
+                    $stats[] = [
+                        'label' => 'Revenue ('.$currency.')',
+                        'total' => number_format($cents / 100, 2)
+                    ];
+                }
+            }
         }
 
         return $stats;

@@ -2,6 +2,7 @@
 
 namespace FluentCrm\App\Services\ExternalIntegrations\FluentForm;
 
+use FluentCrm\App\Models\CustomContactField;
 use FluentForm\App\Services\Integrations\IntegrationManager;
 use FluentForm\Framework\Foundation\Application;
 use FluentForm\Framework\Helpers\ArrayHelper;
@@ -39,12 +40,12 @@ class Bootstrap extends IntegrationManager
     public function pushIntegration($integrations, $formId)
     {
         $integrations[$this->integrationKey] = [
-            'title' => $this->title . ' Integration',
-            'logo' => $this->logo,
-            'is_active' => $this->isConfigured(),
-            'configure_title' => 'Configuration required!',
-            'global_configure_url' => '#',
-            'configure_message' => 'FluentCRM is not configured yet! Please configure your FluentCRM api first',
+            'title'                 => $this->title . ' Integration',
+            'logo'                  => $this->logo,
+            'is_active'             => $this->isConfigured(),
+            'configure_title'       => 'Configuration required!',
+            'global_configure_url'  => '#',
+            'configure_message'     => 'FluentCRM is not configured yet! Please configure your FluentCRM api first',
             'configure_button_text' => 'Set FluentCRM'
         ];
         return $integrations;
@@ -53,135 +54,143 @@ class Bootstrap extends IntegrationManager
     public function getIntegrationDefaults($settings, $formId)
     {
         return [
-            'name' => '',
-            'first_name' => '',
-            'last_name' => '',
-            'full_name' => '',
-            'email' => '',
-            'other_fields' => [
+            'name'           => '',
+            'first_name'     => '',
+            'last_name'      => '',
+            'full_name'      => '',
+            'email'          => '',
+            'other_fields'   => [
                 [
                     'item_value' => '',
-                    'label' => ''
+                    'label'      => ''
                 ]
             ],
-            'list_id' => '',
-            'tag_ids' => [],
+            'list_id'        => '',
+            'tag_ids'        => [],
             'skip_if_exists' => false,
-            'double_opt_in' => false,
-            'conditionals' => [
+            'double_opt_in'  => false,
+            'conditionals'   => [
                 'conditions' => [],
-                'status' => false,
-                'type' => 'all'
+                'status'     => false,
+                'type'       => 'all'
             ],
-            'enabled' => true
+            'enabled'        => true
         ];
     }
 
     public function getSettingsFields($settings, $formId)
     {
+
+        $fieldOptions = [];
+
+        foreach (Subscriber::mappables() as $key => $column) {
+            $fieldOptions[$key] = $column;
+        }
+
+        foreach ((new CustomContactField)->getGlobalFields()['fields'] as $field) {
+            $fieldOptions[$field['slug']] = $field['label'];
+        }
+
+        unset($fieldOptions['email']);
+        unset($fieldOptions['first_name']);
+        unset($fieldOptions['last_name']);
+
+
         return [
-            'fields' => [
+            'fields'              => [
                 [
-                    'key' => 'name',
-                    'label' => 'Feed Name',
-                    'required' => true,
+                    'key'         => 'name',
+                    'label'       => 'Feed Name',
+                    'required'    => true,
                     'placeholder' => 'Your Feed Name',
-                    'component' => 'text'
+                    'component'   => 'text'
                 ],
                 [
-                    'key' => 'list_id',
-                    'label' => 'FluentCRM List',
+                    'key'         => 'list_id',
+                    'label'       => 'FluentCRM List',
                     'placeholder' => 'Select FluentCRM List',
-                    'tips' => 'Select the FluentCRM List you would like to add your contacts to.',
-                    'component' => 'select',
-                    'required' => true,
-                    'options' => $this->getLists(),
+                    'tips'        => 'Select the FluentCRM List you would like to add your contacts to.',
+                    'component'   => 'select',
+                    'required'    => true,
+                    'options'     => $this->getLists(),
                 ],
                 [
-                    'key' => 'CustomFields',
-                    'require_list' => false,
-                    'label' => 'Primary Fields',
-                    'tips' => 'Associate your FluentCRM merge tags to the appropriate Fluent Form fields by selecting the appropriate form field from the list.',
-                    'component' => 'map_fields',
+                    'key'                => 'CustomFields',
+                    'require_list'       => false,
+                    'label'              => 'Primary Fields',
+                    'tips'               => 'Associate your FluentCRM merge tags to the appropriate Fluent Form fields by selecting the appropriate form field from the list.',
+                    'component'          => 'map_fields',
                     'field_label_remote' => 'FluentCRM Field',
-                    'field_label_local' => 'Form Field',
-                    'primary_fileds' => [
+                    'field_label_local'  => 'Form Field',
+                    'primary_fileds'     => [
                         [
-                            'key' => 'email',
-                            'label' => 'Email Address',
-                            'required' => true,
+                            'key'           => 'email',
+                            'label'         => 'Email Address',
+                            'required'      => true,
                             'input_options' => 'emails'
                         ],
                         [
-                            'key' => 'first_name',
+                            'key'   => 'first_name',
                             'label' => 'First Name'
                         ],
                         [
-                            'key' => 'last_name',
+                            'key'   => 'last_name',
                             'label' => 'Last Name'
                         ],
                         [
-                            'key' => 'full_name',
-                            'label' => 'Full Name',
+                            'key'       => 'full_name',
+                            'label'     => 'Full Name',
                             'help_text' => 'If First Name & Last Name is not available full name will be used to get first name and last name'
                         ]
                     ]
                 ],
                 [
-                    'key' => 'other_fields',
-                    'require_list' => false,
-                    'label' => 'Other Fields',
-                    'tips' => 'Select which Fluent Form fields pair with their<br /> respective FlunentCRM fields.',
-                    'component' => 'dropdown_many_fields',
+                    'key'                => 'other_fields',
+                    'require_list'       => false,
+                    'label'              => 'Other Fields',
+                    'tips'               => 'Select which Fluent Form fields pair with their<br /> respective FlunentCRM fields.',
+                    'component'          => 'dropdown_many_fields',
                     'field_label_remote' => 'FluentCRM Field',
-                    'field_label_local' => 'Form Field',
-                    'options' => [
-                        'address_line_1' => 'Address Line 1',
-                        'address_line_2' => 'Address Line 2',
-                        'city' => 'City',
-                        'state' => 'State',
-                        'postal_code' => 'ZIP code',
-                        'country' => 'Country',
-                        'phone' => 'Phone'
-                    ]
+                    'field_label_local'  => 'Form Field',
+                    'options'            => $fieldOptions
                 ],
                 [
-                    'key' => 'tag_ids',
+                    'key'          => 'tag_ids',
                     'require_list' => false,
-                    'label' => 'Contact Tags',
-                    'component' => 'select',
-                    'is_multiple' => true,
-                    'options' => $this->getTags()
+                    'label'        => 'Contact Tags',
+                    'component'    => 'select',
+                    'is_multiple'  => true,
+                    'options'      => $this->getTags()
                 ],
                 [
-                    'key' => 'skip_if_exists',
-                    'require_list' => false,
+                    'key'            => 'skip_if_exists',
+                    'require_list'   => false,
                     'checkbox_label' => 'Skip if contact already exist in FluentCRM',
-                    'component' => 'checkbox-single'
+                    'component'      => 'checkbox-single'
                 ],
                 [
-                    'key' => 'double_opt_in',
-                    'require_list' => false,
+                    'key'            => 'double_opt_in',
+                    'require_list'   => false,
                     'checkbox_label' => 'Enable Double Option for new contacts',
-                    'component' => 'checkbox-single'
+                    'component'      => 'checkbox-single'
                 ],
                 [
                     'require_list' => false,
-                    'key' => 'conditionals',
-                    'label' => 'Conditional Logics',
-                    'tips' => 'Allow FluentCRM integration conditionally based on your submission values',
-                    'component' => 'conditional_block'
+                    'key'          => 'conditionals',
+                    'label'        => 'Conditional Logics',
+                    'tips'         => 'Allow FluentCRM integration conditionally based on your submission values',
+                    'component'    => 'conditional_block'
                 ],
                 [
-                    'require_list' => false,
-                    'key' => 'enabled',
-                    'label' => 'Status',
-                    'component' => 'checkbox-single',
+                    'require_list'   => false,
+                    'key'            => 'enabled',
+                    'label'          => 'Status',
+                    'component'      => 'checkbox-single',
                     'checkbox_label' => 'Enable This feed'
                 ]
             ],
             'button_require_list' => false,
-            'integration_title' => $this->title
+            'integration_title'   => $this->title
         ];
     }
 
@@ -280,6 +289,7 @@ class Bootstrap extends IntegrationManager
             $contact['user_id'] = $user->ID;
         }
 
+
         if (!$subscriber) {
             $contact['source'] = 'FluentForms';
 
@@ -296,7 +306,7 @@ class Bootstrap extends IntegrationManager
                 $contact['tags'] = $tags;
             }
 
-            $subscriber = Subscriber::store($contact);
+            $subscriber = FluentCrmApi('contacts')->createOrUpdate($contact, false, false);
 
             if ($subscriber->status == 'pending') {
                 $subscriber->sendDoubleOptinEmail();
@@ -314,6 +324,10 @@ class Bootstrap extends IntegrationManager
             $subscriber->fill($contact);
             $subscriber->save();
 
+            if ($customValues) {
+                $subscriber->syncCustomFieldValues($customValues, false);
+            }
+
             if ($listId = Arr::get($data, 'list_id')) {
                 $lists = [$listId];
                 $subscriber->attachLists($lists);
@@ -323,7 +337,7 @@ class Bootstrap extends IntegrationManager
                 $subscriber->attachTags($tags);
             }
 
-            if (Arr::isTrue($data, 'double_opt_in') && ( $subscriber->status == 'pending' || $subscriber->status == 'unsubscribed' )) {
+            if (Arr::isTrue($data, 'double_opt_in') && ($subscriber->status == 'pending' || $subscriber->status == 'unsubscribed')) {
                 $subscriber->sendDoubleOptinEmail();
             }
 
@@ -352,13 +366,13 @@ class Bootstrap extends IntegrationManager
     protected function addLog($title, $status, $description, $formId, $entryId)
     {
         do_action('ff_log_data', [
-            'title' => $title,
-            'status' => $status,
-            'description' => $description,
+            'title'            => $title,
+            'status'           => $status,
+            'description'      => $description,
             'parent_source_id' => $formId,
-            'source_id' => $entryId,
-            'component' => $this->integrationKey,
-            'source_type' => 'submission_item'
+            'source_id'        => $entryId,
+            'component'        => $this->integrationKey,
+            'source_type'      => 'submission_item'
         ]);
     }
 }

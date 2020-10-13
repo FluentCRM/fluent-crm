@@ -87,7 +87,7 @@ class TemplateController extends Controller
         update_post_meta($templateId, '_design_template', Helper::getDefaultEmailTemplate());
 
         return $this->sendSuccess([
-            'message'     => __('Template successfully updated', 'fluentcrm'),
+            'message'     => __('Template successfully updated', 'fluent-crm'),
             'template_id' => $templateId
         ]);
     }
@@ -109,7 +109,7 @@ class TemplateController extends Controller
         update_post_meta($id, '_template_config', Arr::get($template, 'settings.template_config'));
 
         return $this->sendSuccess([
-            'message'     => __('Template successfully updated', 'fluentcrm'),
+            'message'     => __('Template successfully updated', 'fluent-crm'),
             'template_id' => $id
         ]);
     }

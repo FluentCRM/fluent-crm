@@ -147,6 +147,7 @@ class SendEmailAction extends BaseAction
 
         if(Arr::get($settings, 'send_email_to_type') == 'contact') {
             $campaign->subscribe([$subscriber->id], $args);
+            do_action('fluentcrm_process_contact_jobs', $subscriber);
         } else if($customAddresses = Arr::get($settings, 'send_email_custom')) {
             $customAddresses = array_map('trim', explode(',', $customAddresses));
             $campaign->sendToCustomAddresses($customAddresses, $args);

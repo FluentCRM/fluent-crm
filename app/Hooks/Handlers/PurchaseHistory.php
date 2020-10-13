@@ -31,7 +31,7 @@ class PurchaseHistory
         foreach ($customer_orders->orders as $customer_order) {
             $order = wc_get_order($customer_order);
             $item_count = $order->get_item_count() - $order->get_item_count_refunded();
-            $actionsHtml = '<a target="_blank" href="' . $order->get_edit_order_url() . '">' . __('View Order Details', 'fluentcrm') . '</a>';
+            $actionsHtml = '<a target="_blank" href="' . $order->get_edit_order_url() . '">' . __('View Order Details', 'fluent-crm') . '</a>';
             $formattedOrders[] = [
                 'order'   => '#' . $order->get_order_number(),
                 'date'    => esc_html(wc_format_datetime($order->get_date_created())),
@@ -65,7 +65,7 @@ class PurchaseHistory
         if($orders) {
             foreach ($orders as $order) {
                 $payment = new \EDD_Payment($order->ID);
-                $orderActionHtml = '<a target="_blank" href="' . add_query_arg('id', $payment->ID, admin_url('edit.php?post_type=download&page=edd-payment-history&view=view-order-details')) . '">' . __('View Order Details', 'fluentcrm') . '</a>';
+                $orderActionHtml = '<a target="_blank" href="' . add_query_arg('id', $payment->ID, admin_url('edit.php?post_type=download&page=edd-payment-history&view=view-order-details')) . '">' . __('View Order Details', 'fluent-crm') . '</a>';
 
                 $formattedOrders[] = [
                     'order'  => '#' . $payment->number,

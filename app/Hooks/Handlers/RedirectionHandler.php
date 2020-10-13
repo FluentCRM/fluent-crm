@@ -27,7 +27,7 @@ class RedirectionHandler
 
         if ($redirectUrl) {
             do_action('fluentcrm_email_url_click', $redirectUrl, $mailId, $urlData);
-            wp_redirect($redirectUrl);
+            wp_redirect(htmlspecialchars_decode($redirectUrl));
             exit;
         }
     }
@@ -53,6 +53,9 @@ class RedirectionHandler
         ]);
 
         setcookie("fc_sid", $campaignEmail->subscriber_id, time() + 2419200);  /* expire in 7 days */
+        if ($campaignEmail->campaign_id) {
+            setcookie("fc_cid", $campaignEmail->campaign_id, time() + 2419200);  /* expire in 7 days */
+        }
 
         do_action(FLUENTCRM . '_email_url_clicked', $campaignEmail, $urlData);
 

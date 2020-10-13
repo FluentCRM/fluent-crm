@@ -12,6 +12,7 @@ class AutoSubscribeHandler
     public function userRegistrationHandler($userId)
     {
         $settings = (new AutoSubscribe())->getRegistrationSettings();
+
         if (Arr::get($settings, 'status') != 'yes') {
             return;
         }
@@ -29,11 +30,14 @@ class AutoSubscribeHandler
 
         if($isDoubleOptin) {
             $subscriberData['status'] = 'pending';
+        } else {
+            $subscriberData['status'] = 'subscribed';
         }
+
 
         $contact = FunnelHelper::createOrUpdateContact($subscriberData);
 
-        if($contact->status = 'pending') {
+        if($contact->status == 'pending') {
             $contact->sendDoubleOptinEmail();
         }
     }
@@ -61,7 +65,7 @@ class AutoSubscribeHandler
 
         $label = Arr::get($settings, 'checkbox_label');
         if(!$label) {
-            $label = __('Subscribe to newsletter', 'fluentcrm');
+            $label = __('Subscribe to newsletter', 'fluent-crm');
         }
 
         $checkedTag = '';
@@ -116,7 +120,7 @@ class AutoSubscribeHandler
 
         $contact = FunnelHelper::createOrUpdateContact($subscriberData);
 
-        if($contact->status = 'pending') {
+        if($contact->status == 'pending') {
             $contact->sendDoubleOptinEmail();
         }
 

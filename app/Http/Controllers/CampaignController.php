@@ -3,7 +3,7 @@
 namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\Models\Campaign;
-use FluentCrm\App\Models\Subject;
+use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\Template;
 use FluentCrm\App\Services\BlockParser;
 use FluentCrm\App\Services\Helper;
@@ -33,6 +33,7 @@ class CampaignController extends Controller
         if (in_array('stats', $with)) {
             foreach ($campaigns as $campaign) {
                 $campaign->stats = $campaign->stats();
+                $campaign->next_step = fluentcrm_get_campaign_meta($campaign->id, '_next_config_step', true);
             }
         }
 
@@ -147,9 +148,22 @@ class CampaignController extends Controller
             $campaign = Campaign::find($id);
         }
 
+        if (isset($data['next_step'])) {
+            fluentcrm_update_campaign_meta($id, '_next_config_step', $data['next_step']);
+        }
+
         return $this->sendSuccess([
             'campaign' => $campaign
         ]);
+    }
+
+    public function updateStep(Request $request, $id)
+    {
+        $step = $request->get('next_step');
+        fluentcrm_update_campaign_meta($id, '_next_config_step', $step);
+        return [
+            'message' => 'step saved'
+        ];
     }
 
     public function validateRecipientsSelection(Request $request)
@@ -178,6 +192,7 @@ class CampaignController extends Controller
 
     public function subscribe(Request $request, $campaignId)
     {
+        $startTime = microtime(true);
         $campaign = Campaign::find($campaignId);
 
         $this->app->doCustomAction('campaign_status_active', $campaign);
@@ -220,8 +235,16 @@ class CampaignController extends Controller
                 'count'       => $campaign->recipients_count,
                 'total_items' => $subscribeStatus['total_items'],
                 'page_total'  => ceil($subscribeStatus['total_items'] / $limit),
-                'next_page'   => $page + 1
+                'next_page'   => $page + 1,
+                'execution_time' => microtime(true) - $startTime
             ]);
+        }
+
+        if($campaign->recipients_count) {
+            return [
+                'has_more' => false,
+                'count' => $campaign->recipients_count
+            ];
         }
 
         return $this->sendError([
@@ -260,7 +283,7 @@ class CampaignController extends Controller
         ]);
 
         return $this->sendSuccess([
-            'message'          => __('Selected emails are deleted', 'fluentcrm'),
+            'message'          => __('Selected emails are deleted', 'fluent-crm'),
             'recipients_count' => $newCount
         ]);
     }
@@ -279,7 +302,7 @@ class CampaignController extends Controller
                 'scheduled_at' => $scheduleAt
             ]);
 
-            $message = __('Your campaign email has been scheduled', 'fluentcrm');
+            $message = __('Your campaign email has been scheduled', 'fluent-crm');
 
             $data = [
                 'status'       => 'scheduled',
@@ -293,7 +316,7 @@ class CampaignController extends Controller
                 'scheduled_at' => fluentCrmTimestamp()
             ]);
 
-            $message = __('Email Sending has been started', 'fluentcrm');
+            $message = __('Email Sending has been started', 'fluent-crm');
 
             $data = [
                 'status'       => 'working',
@@ -356,6 +379,15 @@ class CampaignController extends Controller
 
         $emailBody = (new BlockParser())->parse($emailBody);
 
+        $subscriber = Subscriber::where('email', $email)->first();
+        if (!$subscriber) {
+            $subscriber = Subscriber::where('status', 'subscribed')->first();
+        }
+
+        if ($subscriber) {
+            $emailBody = apply_filters('fluentcrm-parse_campaign_email_text', $emailBody, $subscriber);
+        }
+
         $templateData = [
             'preHeader'   => $campaign->email_pre_header,
             'email_body'  => $emailBody,
@@ -389,7 +421,7 @@ class CampaignController extends Controller
         $result = Mailer::send($data);
 
         return [
-            'message' => 'Test email successfully sent to ' . $email,
+            'message' => 'Test email successfully sent to ' . $email . ', The dynamic tags may not replaced in test email',
             'result'  => $result
         ];
     }
@@ -472,6 +504,7 @@ class CampaignController extends Controller
                 $campaign->save();
             }
         }
+
 
         if ($campaign->status == 'working') {
             $lastEmailTimestamp = get_option(FLUENTCRM . '_is_sending_emails');

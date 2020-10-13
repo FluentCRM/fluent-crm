@@ -5,7 +5,7 @@
     <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
     <meta http-equiv="Imagetoolbar" content="No"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?php esc_html_e('Unsubscribe', 'fluentcrm') ?></title>
+    <title><?php esc_html_e('Unsubscribe', 'fluent-crm') ?></title>
     <?php
         wp_head();
         do_action('fluentcrm_unsubscribe_head', $campaign_email);
@@ -28,12 +28,14 @@
         <form id="fluentcrm_unsubscribe_form" class="fluentcrm_public_pref_form">
             <input type="hidden" name="_e_id" value="<?php echo $campaign_email->id; ?>" />
             <input type="hidden" name="action" value="fluentcrm_unsubscribe_ajax" />
+            <input type="hidden" name="combined_hash" value="<?php echo $combined_hash; ?>" />
+            <input type="hidden" name="sub_hash" value="<?php echo $subscriber->hash; ?>" />
             <div class="fluentcrm_form_item">
-                <label><?php _e('Your Email Address', 'fluentcrm'); ?></label>
-                <input required placeholder="Your Email Address" class="fluentcrm_form_control" type="email" name="email_address" />
+                <label><?php _e('Your Email Address', 'fluent-crm'); ?></label>
+                <input readonly="true" value="<?php echo $mask_email; ?>" class="fluentcrm_form_control" type="text" name="email_address" />
             </div>
             <div class="fluentcrm_form_item">
-                <label><?php _e('Please let us know a reason', 'fluentcrm'); ?></label>
+                <label><?php _e('Please let us know a reason', 'fluent-crm'); ?></label>
                 <div class="fluentcrm_radio_group">
                     <?php foreach ($reasons as $reasonKey => $reason): ?>
                     <label>
