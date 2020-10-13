@@ -2,7 +2,9 @@
 
 namespace FluentCrm\App\Api\Classes;
 
-use FluentCrm\App\models\Subscriber;
+use FluentCrm\App\Models\CustomContactField;
+use FluentCrm\App\Models\Subscriber;
+use FluentCrm\Includes\Helpers\Arr;
 
 class Contacts
 {
@@ -36,9 +38,23 @@ class Contacts
         return Subscriber::where('user_id', $userId)->first();
     }
 
-    public function createOrUpdate($data)
+    public function createOrUpdate($data, $forceUpdate = false, $deleteOtherValues = false, $sync = false)
     {
-        return $this->instance->updateOrCreate($data);
+        if(!isset($data['custom_fields'])) {
+            $customFieldKeys = [];
+            $customFields = (new CustomContactField)->getGlobalFields()['fields'];
+            foreach ($customFields as $field) {
+                $customFieldKeys[] = $field['slug'];
+            }
+            if ($customFieldKeys) {
+                $customFieldsData = Arr::only($data, $customFieldKeys);
+                if ($customFields) {
+                    $data['custom_fields'] = (new CustomContactField)->formatCustomFieldValues($customFieldsData);
+                }
+            }
+        }
+
+        return $this->instance->updateOrCreate($data, $forceUpdate = false, $deleteOtherValues = false, $sync = false);
     }
 
     public function getCurrentContact()

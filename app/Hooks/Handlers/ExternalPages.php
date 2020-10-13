@@ -4,6 +4,7 @@ namespace FluentCrm\App\Hooks\Handlers;
 
 use FluentCrm\App\Models\CampaignUrlMetric;
 use FluentCrm\App\Models\CampaignEmail;
+use FluentCrm\App\Models\CustomContactField;
 use FluentCrm\App\Models\Lists;
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\Webhook;
@@ -131,14 +132,19 @@ class ExternalPages
     public function unsubscribePage()
     {
         $campaignEmailId = $this->request->get('ce_id');
+        $subscriberHash = $this->request->get('hash');
 
+        $subscriber = Subscriber::where('hash', $subscriberHash)->first();
+
+        if (!$subscriber) {
+            echo 'Sorry! This is not a valid unsubscribe url. Please try again';
+            wp_die();
+        }
 
         if ($campaignEmailId) {
             $campaignEmailId = intval($campaignEmailId);
-
             $campaignEmail = CampaignEmail::where('id', $campaignEmailId)->first();
-
-            if (!$campaignEmail) {
+            if (!$campaignEmail || !$subscriber || $campaignEmail->subscriber_id != $subscriber->id) {
                 echo 'Sorry! This is not a valid unsubscribe url';
                 wp_die();
             }
@@ -153,9 +159,16 @@ class ExternalPages
 
         $this->loadAssets();
 
+        $absEmail = $this->hideEmail($subscriber->email);
+        $absEmailHash = md5($absEmail);
+
         fluentCrm('view')->render('external.unsubscribe', [
             'business'       => $businessSettings,
             'campaign_email' => $campaignEmail,
+            'subscriber'     => $subscriber,
+            'mask_email'     => $absEmail,
+            'abs_hash'       => $absEmailHash,
+            'combined_hash' => md5($subscriber->email.$absEmail),
             'reasons'        => $this->unsubscribeReasons()
         ]);
 
@@ -165,13 +178,13 @@ class ExternalPages
     public function unsubscribeReasons()
     {
         $reasons = apply_filters('fluentcrm_unsubscribe_reason', [
-            'no_loger'             => __('I no longer want to receive these emails', 'fluentcrm'),
-            'never_signed_up'      => __('I never signed up for this email list', 'fluentcrm'),
-            'emails_inappropriate' => __('The emails are inappropriate', 'fluentcrm'),
-            'emails_spam'          => __('The emails are spam', 'fluentcrm')
+            'no_loger'             => __('I no longer want to receive these emails', 'fluent-crm'),
+            'never_signed_up'      => __('I never signed up for this email list', 'fluent-crm'),
+            'emails_inappropriate' => __('The emails are inappropriate', 'fluent-crm'),
+            'emails_spam'          => __('The emails are spam', 'fluent-crm')
         ]);
 
-        $reasons['other'] = __('Other (fill in reason below)', 'fluentcrm');
+        $reasons['other'] = __('Other (fill in reason below)', 'fluent-crm');
 
         return $reasons;
     }
@@ -179,8 +192,23 @@ class ExternalPages
     public function handleUnsubscribe()
     {
         $request = FluentCrm('request');
+        $data = $request->all();
+        $subscriber = Subscriber::where('hash', $data['sub_hash'])->first();
+        if(!$subscriber) {
+            wp_send_json_error([
+                'message' => __('Sorry, No email found based on your data', 'fluent-crm')
+            ], 423);
+        }
+
+        $oldStatus = $subscriber->status;
+
+        if ($oldStatus != 'unsubscribed') {
+            $subscriber->status = 'unsubscribed';
+            $subscriber->save();
+            do_action('fluentcrm_subscriber_status_to_unsubscribed', $subscriber, $oldStatus);
+        }
+
         $emailId = intval($request->get('_e_id'));
-        $emailAddress = sanitize_text_field($request->get('email_address'));
         $reason = sanitize_text_field($request->get('reason'));
 
         if ($reason == 'other') {
@@ -194,41 +222,15 @@ class ExternalPages
             }
         }
 
-        if ($emailId) {
-            $campaignEmail = CampaignEmail::where('id', $emailId)->first();
-            if (!$campaignEmail || $campaignEmail->email_address != $emailAddress || !$subscriber) {
-                wp_send_json_error([
-                    'message' => __('Sorry, Email does not match with the database entry', 'fluentcrm')
-                ], 423);
-            }
-            $subscriber = Subscriber::where('id', $campaignEmail->subscriber_id)->first();
-        } else {
-            $campaignEmail = false;
-            $subscriber = Subscriber::where('email', $emailAddress)->first();
-        }
-
-
-        if (!$subscriber) {
-            wp_send_json_error([
-                'message' => __('Sorry, Email does not match with the database entry', 'fluentcrm')
-            ], 423);
-        }
-
-        $oldStatus = $subscriber->status;
-
-        if ($oldStatus != 'unsubscribed') {
-            $subscriber->status = 'unsubscribed';
-            $subscriber->save();
-            do_action('fluentcrm_subscriber_status_to_unsubscribed', $subscriber, $oldStatus);
-        }
+        $campaignEmail = CampaignEmail::find($emailId);
 
         if ($reason && $campaignEmail) {
             fluentcrm_update_subscriber_meta(
-                $campaignEmail->subscriber_id, 'unsubscribe_reason', $reason
+                $subscriber->id, 'unsubscribe_reason', $reason
             );
         }
 
-        if ($campaignEmail) {
+        if($campaignEmail) {
             CampaignUrlMetric::maybeInsert([
                 'campaign_id'   => $campaignEmail->campaign_id,
                 'subscriber_id' => $campaignEmail->subscriber_id,
@@ -238,7 +240,7 @@ class ExternalPages
         }
 
         wp_send_json_success([
-            'message' => __('You are successfully unsubscribed form the email list', 'fluentcrm')
+            'message' => __('You are successfully unsubscribed form the email list', 'fluent-crm')
         ], 200);
     }
 
@@ -325,18 +327,31 @@ class ExternalPages
         $postData = $this->request->get();
 
         if (empty($postData['email'])) {
-            $postData = $this->request->getJson();
+            $postData = (array)$this->request->getJson();
         }
 
         if (empty($hash = $this->request->get('hash'))) {
-            return;
+            wp_send_json_error([
+                'message' => 'Invalid Webhook URL'
+            ], 422);
         }
 
         if (!($webhook = Webhook::where('key', $hash)->first())) {
-            return;
+            wp_send_json_error([
+                'message' => 'Invalid Webhook Hash'
+            ], 422);
         }
 
-        $validator = FluentCrm('validator')->make((array) $postData, [
+        if ($keyBy = Arr::get($postData, '_key_by')) {
+            if ($keyBy == 'hash' && $hash = Arr::get($postData, '_key_by_value')) {
+                $exist = Subscriber::where('hash', $hash)->first();
+                if ($exist && empty($postData['email'])) {
+                    $postData['email'] = $exist->email;
+                }
+            }
+        }
+
+        $validator = FluentCrm('validator')->make($postData, [
             'email' => 'required|email'
         ])->validate();
 
@@ -347,29 +362,65 @@ class ExternalPages
             ], 422);
         }
 
-        $subscriber = new Subscriber;
+        $subscriberModel = new Subscriber;
 
-        $customColumns = array_map(function($field) {
+
+        $mainFields = Arr::only($postData, $subscriberModel->getFillable());
+        foreach ($mainFields as $fieldKey => $value) {
+            $mainFields[$fieldKey] = sanitize_text_field($value);
+        }
+
+        $customValues = [];
+        $customColumns = array_map(function ($field) {
             return $field['slug'];
         }, fluentcrm_get_option('contact_custom_fields', []));
-        
-        $customFields = Arr::only($postData, $customColumns);
 
-        $mainFields = Arr::only($postData, $subscriber->getFillable());
+        if ($customColumns) {
+            $customValues = [];
+            foreach (Arr::only($postData, $customColumns) as $itemKey => $value) {
+                if (is_string($value)) {
+                    $customValues[$itemKey] = sanitize_text_field($value);
+                } else {
+                    $customValues[$itemKey] = sanitize_text_field($value);
+                }
+            }
+        }
+
+        $tags = Arr::get($webhook->value, 'tags', []);
+        if (!empty($postData['tags'])) {
+            $postedTags = $postData['tags'];
+            if (is_array($postedTags)) {
+                $tags = $postedTags;
+            }
+        }
+
+        $lists = Arr::get($webhook->value, 'lists', []);
+        if (!empty($postData['lists'])) {
+            $postedLists = $postData['lists'];
+            if (is_array($postedLists)) {
+                $lists = $postedLists;
+            }
+        }
+
+        $extraData = [
+            'tags'   => $tags,
+            'lists'  => $lists,
+            'status' => Arr::get($webhook->value, 'status', '')
+        ];
 
         $data = array_merge(
             $mainFields,
-            ['custom_values' => $customFields],
-            [
-                'tags'   => $webhook->value['tags'],
-                'lists'  => $webhook->value['lists'],
-                'status' => $webhook->value['status']
-            ]
+            $customValues,
+            $extraData
         );
 
-        $subscriber = $subscriber->updateOrCreate($data, false, false, true);
+        $data = array_filter($data);
 
-        $message = $subscriber->wasRecentlyCreated ? 'Created' : 'updated';
+        $data = apply_filters('fluentcrm_webhook_contact_data', $data, $postData, $webhook);
+
+        $subscriber = FluentCrmApi('contacts')->createOrUpdate($data);
+
+        $message = $subscriber->wasRecentlyCreated ? 'created' : 'updated';
 
         wp_send_json_success([
             'message' => $message,
@@ -439,34 +490,31 @@ class ExternalPages
 
         if (!$subscriber) {
             wp_send_json_error([
-                'message' => __('Sorry! No subscriber found in the database', 'fluentcrm')
+                'message' => __('Sorry! No subscriber found in the database', 'fluent-crm')
             ], 423);
         }
 
         $addedLists = [];
         $detachedListIds = [];
-        if ($lists = Arr::get($_REQUEST, 'lists')) {
-            $publicLists = $this->getPublicLists();
-            if ($publicLists) {
-                $alreadyListIds = array_keys($subscriber->lists->keyBy('id')->toArray());
-                $publicListIds = array_values(array_keys($publicLists->keyBy('id')->toArray()));
-                $addedListIds = array_values(array_intersect($lists, $publicListIds));
-                if ($alreadyListIds) {
-                    $addedListIds = array_diff($addedListIds, $alreadyListIds);
-                }
-                $detachedListIds = array_values(array_diff($publicListIds, $lists));
-
-                $addedLists = array_combine($addedListIds, array_fill(
-                    0, count($addedListIds), ['object_type' => 'FluentCrm\App\Models\Lists']
-                ));
+        $publicLists = $this->getPublicLists();
+        if ($publicLists) {
+            $lists = Arr::get($_REQUEST, 'lists', []);
+            $alreadyListIds = array_keys($subscriber->lists->keyBy('id')->toArray());
+            $publicListIds = array_values(array_keys($publicLists->keyBy('id')->toArray()));
+            $addedListIds = array_values(array_intersect($lists, $publicListIds));
+            if ($alreadyListIds) {
+                $addedListIds = array_diff($addedListIds, $alreadyListIds);
             }
+            $detachedListIds = array_values(array_diff($publicListIds, $lists));
+
+            $addedLists = $addedListIds;
         }
 
         if ($absHash != md5($email)) {
             // Email has been changed
             if (!is_email($email)) {
                 wp_send_json_error([
-                    'message' => __('Email is not valid. Please provide a valid email', 'fluentcrm')
+                    'message' => __('Email is not valid. Please provide a valid email', 'fluent-crm')
                 ], 423);
             }
 
@@ -474,7 +522,7 @@ class ExternalPages
             $exist = Subscriber::where('email', $email)->where('id', '!=', $subscriber->id)->first();
             if ($exist) {
                 wp_send_json_error([
-                    'message' => __('The new email has been used to another account. Please use a new email address', 'fluentcrm')
+                    'message' => __('The new email has been used to another account. Please use a new email address', 'fluent-crm')
                 ], 423);
             }
 
@@ -486,14 +534,14 @@ class ExternalPages
             $subscriber->sendDoubleOptinEmail();
 
             if ($addedLists) {
-                $subscriber->lists()->attach($addedLists);
+                $subscriber->attachLists($addedLists);
             }
             if ($detachedListIds) {
-                $subscriber->lists()->detach($detachedListIds);
+                $subscriber->detachLists($detachedListIds);
             }
 
             wp_send_json_success([
-                'message' => sprintf(__('A conformation email has been sent to %s. Please confirm your email address to resubscribe with changed email address', 'fluentcrm'), $email)
+                'message' => sprintf(__('A conformation email has been sent to %s. Please confirm your email address to resubscribe with changed email address', 'fluent-crm'), $email)
             ], 200);
         }
 
@@ -503,22 +551,22 @@ class ExternalPages
         $subscriber->save();
 
         if ($addedLists) {
-            $subscriber->lists()->attach($addedLists);
+            $subscriber->attachLists($addedLists);
         }
 
         if ($detachedListIds) {
-            $subscriber->lists()->detach($detachedListIds);
+            $subscriber->detachLists($detachedListIds);
         }
 
         if ($subscriber->status != 'subscribed') {
             $subscriber->sendDoubleOptinEmail();
             wp_send_json_success([
-                'message' => sprintf(__('A conformation email has been sent to %s. Please confirm your email address to resubscribe', 'fluentcrm'), $email)
+                'message' => sprintf(__('A conformation email has been sent to %s. Please confirm your email address to resubscribe', 'fluent-crm'), $email)
             ], 200);
         }
 
         wp_send_json_success([
-            'message' => __('Your provided information has been successfully updated', 'fluentcrm')
+            'message' => __('Your provided information has been successfully updated', 'fluent-crm')
         ], 200);
     }
 

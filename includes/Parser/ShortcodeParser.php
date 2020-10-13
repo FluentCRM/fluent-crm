@@ -56,6 +56,7 @@ class ShortcodeParser
         if (!$valueKey) {
             return apply_filters('fluentcrm_smartcode_fallback', $matches[0], $subscriber);
         }
+
         $valueKeys = explode('|', $valueKey);
 
         $valueKey = $valueKeys[0];
@@ -121,12 +122,14 @@ class ShortcodeParser
 
         if ($valueKey == 'business_name') {
             $business = fluentcrmGetGlobalSettings('business_settings', []);
-            return Arr::get($business, 'business_name', $defaultValue);
+            $businessName = Arr::get($business, 'business_name');
+            return ($businessName) ? $businessName : $defaultValue;
         }
 
         if ($valueKey == 'business_address') {
             $business = fluentcrmGetGlobalSettings('business_settings', []);
-            return Arr::get($business, 'business_address', $defaultValue);
+            $address = Arr::get($business, 'business_address', $defaultValue);
+            return ($address) ? $address : $defaultValue;
         }
 
         return $defaultValue;
@@ -143,7 +146,8 @@ class ShortcodeParser
                 return $subscriber->full_name;
             }
 
-            return Arr::get($data, $valueKey, $defaultValue);
+            $value = Arr::get($data, $valueKey);
+            return ($value) ? $value : $defaultValue;
         }
 
         $customKey = $valueKeys[0];
@@ -155,7 +159,9 @@ class ShortcodeParser
             if (is_array($value)) {
                 return implode(', ', $value);
             }
-            return $value;
+            if($value) {
+                return $value;
+            }
         }
 
         return $defaultValue;

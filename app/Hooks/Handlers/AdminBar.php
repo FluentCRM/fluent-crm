@@ -9,7 +9,7 @@ class AdminBar
 {
     public function init()
     {
-        if (!current_user_can('manage_options')) {
+        if (!current_user_can('manage_options') || !is_admin()) {
             return;
         }
 

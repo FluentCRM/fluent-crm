@@ -4,6 +4,7 @@ namespace FluentCrm\App\Services\Funnel;
 
 use FluentCrm\App\Models\FunnelSubscriber;
 use FluentCrm\App\Models\Subscriber;
+use FluentCrm\App\Services\Helper;
 
 class FunnelHelper
 {
@@ -33,18 +34,10 @@ class FunnelHelper
 
     public static function prepareUserData($user)
     {
-        if(is_numeric($user)) {
-            $user = get_user_by('ID', $user);
-        }
-
-        return array_filter([
-            'user_id'    => $user->ID,
-            'first_name' => $user->first_name,
-            'last_name'  => $user->last_name,
-            'email'      => $user->user_email,
-            'source'     => 'web',
-            'ip'         => FluentCrm()->request->getIp()
-        ]);
+        $subscriber = Helper::getWPMapUserInfo($user);
+        $subscriber['source'] = 'web';
+        $subscriber['ip'] = FluentCrm()->request->getIp();
+        return $subscriber;
     }
 
     public static function getSubscriber($emailOrUserId)
@@ -59,7 +52,7 @@ class FunnelHelper
 
     public static function createOrUpdateContact($data)
     {
-        return (new Subscriber)->updateOrCreate($data, false, false);
+        return FluentCrmApi('contacts')->createOrUpdate($data);
     }
 
     public static function getUserRoles()

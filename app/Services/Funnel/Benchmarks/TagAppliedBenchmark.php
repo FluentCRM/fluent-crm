@@ -49,10 +49,10 @@ class TagAppliedBenchmark extends BaseBenchMark
             'fields'    => [
                 'tags'        => [
                     'type'        => 'option_selectors',
-                    'option_key'  => 'lists',
+                    'option_key'  => 'tags',
                     'is_multiple' => true,
-                    'label'       => 'Select Lists',
-                    'placeholder' => 'Select List'
+                    'label'       => 'Select Tags',
+                    'placeholder' => 'Select Tags'
                 ],
                 'select_type' => [
                     'label'      => 'Run When',

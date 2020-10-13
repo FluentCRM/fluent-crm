@@ -2,6 +2,8 @@
 
 namespace FluentCrm\App\Models;
 
+use FluentCrm\Includes\Helpers\Arr;
+
 class CustomContactField
 {
     protected $globalMetaName = 'contact_custom_fields';
@@ -117,5 +119,33 @@ class CustomContactField
         }
 
         return $label;
+    }
+
+    public function formatCustomFieldValues($values, $fields = [])
+    {
+        if(!$values) {
+            return $values;
+        }
+        if(!$fields) {
+            $rawFields = fluentcrm_get_option($this->globalMetaName, []);
+            foreach ($rawFields as $field) {
+                $fields[$field['slug']] = $field;
+            }
+        }
+
+        foreach ($values as $valueKey => $value) {
+            if(Arr::get($fields, $valueKey.'.type') == 'checkbox') {
+                $itemValues = explode(',', $value);
+                $trimmedvalues = [];
+                foreach ($itemValues as $itemValue) {
+                    $trimmedvalues[] = trim($itemValue);
+                }
+                if($itemValue) {
+                    $values[$valueKey] = $trimmedvalues;
+                }
+            }
+        }
+
+        return array_filter($values);
     }
 }

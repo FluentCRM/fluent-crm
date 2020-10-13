@@ -95,12 +95,16 @@ class CampaignEmail extends Model
     {
         $emailSettings = fluentcrmGetGlobalSettings('email_settings', []);
 
+        $emailBody = ($this->email_body) ? $this->email_body : $this->campaign->email_body;
+
+        $emailBody = apply_filters('fluentcrm-parse_campaign_email_text', $emailBody, $this->subscriber);
+
         $email_body = apply_filters(
             'fluentcrm-email-design-template-' . $this->campaign->design_template,
             $this->email_body,
             [
                 'preHeader'   => ($this->campaign) ? $this->campaign->email_pre_header : '',
-                'email_body'  => $this->email_body,
+                'email_body'  => $emailBody,
                 'footer_text' => '',
                 'config'      => wp_parse_args($this->campaign->settings['template_config'], Helper::getTemplateConfig($this->campaign->design_template))
             ],

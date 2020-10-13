@@ -8,8 +8,8 @@ class FormSubmissions
     {
         if(defined('FLUENTFORM')) {
             $providers['fluentform'] = [
-                'title' => __('Form Submissions (Fluent Forms)', 'fluentcrm'),
-                'name' => __('Fluent Forms', 'fluentcrm')
+                'title' => __('Form Submissions (Fluent Forms)', 'fluent-crm'),
+                'name' => __('Fluent Forms', 'fluent-crm')
             ];
         }
         return $providers;

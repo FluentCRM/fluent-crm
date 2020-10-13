@@ -291,22 +291,22 @@ class Helper
 
         if (defined('WC_PLUGIN_FILE')) {
             $validProviders['woocommerce'] = [
-                'title' => __('Woocommerce Purchase History', 'fluentcrm'),
-                'name'  => __('WooCommerce', 'fluentcrm')
+                'title' => __('Woocommerce Purchase History', 'fluent-crm'),
+                'name'  => __('WooCommerce', 'fluent-crm')
             ];
         }
 
         if (class_exists('\Easy_Digital_Downloads')) {
             $validProviders['edd'] = [
-                'title' => __('EDD Purchase History', 'fluentcrm'),
-                'name'  => __('Easy Digital Downloads', 'fluentcrm')
+                'title' => __('EDD Purchase History', 'fluent-crm'),
+                'name'  => __('Easy Digital Downloads', 'fluent-crm')
             ];
         }
 
         if (defined('WPPAYFORM_VERSION')) {
             $validProviders['payform'] = [
-                'title' => __('WPPayForm Purchase History', 'fluentcrm'),
-                'name'  => __('WP Pay Forms', 'fluentcrm')
+                'title' => __('WPPayForm Purchase History', 'fluent-crm'),
+                'name'  => __('WP Pay Forms', 'fluent-crm')
             ];
         }
 
@@ -316,7 +316,8 @@ class Helper
     public static function getThemePrefScheme()
     {
         list($color_palette) = (array)get_theme_support('editor-color-palette');
-        if (empty($color_palette)) {
+
+        if (empty($color_palette) || count($color_palette) < 2) {
             $color_palette[] = [
                 [
                     'name'  => 'Accent',
@@ -364,17 +365,22 @@ class Helper
         }
 
         return apply_filters('fluentcrm_theme_pref', [
-            'colors'     => $color_palette,
-            'font_sizes' => $font_sizes
+            'colors'     => (array) $color_palette,
+            'font_sizes' => (array) $font_sizes
         ]);
     }
 
     public static function generateThemePrefCss()
     {
+        static $color_css;
+        if($color_css) {
+            return $color_css;
+        }
         $pref = self::getThemePrefScheme();
         $css = '';
-        if ($pref['colors']) {
+        if (isset($pref['colors'])) {
             foreach ($pref['colors'] as $color) {
+                if(isset($color['slug']))
                 $slug = self::kebabCase($color['slug']);
                 $css .= '.has-' . $slug . '-color  { color: ' . $color['color'] . ';} ';
                 $css .= '.has-' . $slug . '-background-color  { background-color: ' . $color['color'] . '; background: ' . $color['color'] . '; } ';
@@ -388,7 +394,8 @@ class Helper
             }
         }
 
-        return $css;
+        $color_css = $css;
+        return $color_css;
     }
 
     public static function kebabCase($string)
@@ -446,4 +453,76 @@ class Helper
         return $globalHeaders;
     }
 
+
+    public static function recordCampaignRevenue($campaignId, $amount, $currency = 'USD', $isRefunded = false)
+    {
+        $currency = strtolower($currency);
+        $existing = fluentcrm_get_campaign_meta($campaignId, '_campaign_revenue');
+        $data = [];
+        if ($existing && $existing->value) {
+            $data = $existing->value;
+        }
+
+        if (!isset($data[$currency]) || !is_array($data)) {
+            $data[$currency] = 0;
+        }
+
+        if ($isRefunded) {
+            if($data[$currency] > $amount) {
+                $data[$currency] -= $amount;
+            }
+        } else {
+            $data[$currency] += $amount;
+        }
+
+        return fluentcrm_update_campaign_meta($campaignId, '_campaign_revenue', $data);
+
+    }
+
+
+    public static function getWPMapUserInfo($user)
+    {
+        if(is_numeric($user)) {
+            $user = get_user_by('ID', $user);
+        }
+
+        $subscriber =  array_filter([
+            'user_id'    => $user->ID,
+            'first_name' => $user->first_name,
+            'last_name'  => $user->last_name,
+            'email'      => $user->user_email
+        ]);
+
+        if($address1 = get_user_meta($user->ID, 'billing_address_1', true)) {
+            $subscriber['address_line_1'] = $address1;
+        }
+
+        if($address2 = get_user_meta($user->ID, 'billing_address_2', true)) {
+            $subscriber['address_line_2'] = $address2;
+        }
+
+        if($city = get_user_meta($user->ID, 'billing_city', true)) {
+            $subscriber['city'] = $city;
+        }
+
+        if($postalCode = get_user_meta($user->ID, 'billing_postcode', true)) {
+            $subscriber['postal_code'] = $postalCode;
+        }
+
+        if($country = get_user_meta($user->ID, 'billing_country', true)) {
+            $subscriber['country'] = $country;
+        }
+
+        if($state = get_user_meta($user->ID, 'billing_state', true)) {
+            $subscriber['state'] = $state;
+        }
+
+        if($state = get_user_meta($user->ID, 'billing_phone', true)) {
+            $subscriber['phone'] = $state;
+        }
+
+        $subscriber = array_filter($subscriber);
+
+        return apply_filters('fluentcrm_user_map_data', $subscriber, $user);
+    }
 }

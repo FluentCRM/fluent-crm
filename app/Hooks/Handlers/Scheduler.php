@@ -2,9 +2,6 @@
 
 namespace FluentCrm\App\Hooks\Handlers;
 
-use FluentForm\App\Services\Emogrifier\Emogrifier;
-use FluentForm\View;
-
 class Scheduler
 {
     public static function process()

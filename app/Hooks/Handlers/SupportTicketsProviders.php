@@ -8,8 +8,8 @@ class SupportTicketsProviders
     {
         if (class_exists('\Awesome_Support')) {
             $providers['awesome_support'] = [
-                'title' => __('Support Tickets by Awesome Support', 'fluentcrm'),
-                'name'  => __('Awesome Support', 'fluentcrm')
+                'title' => __('Support Tickets by Awesome Support', 'fluent-crm'),
+                'name'  => __('Awesome Support', 'fluent-crm')
             ];
         }
         return $providers;

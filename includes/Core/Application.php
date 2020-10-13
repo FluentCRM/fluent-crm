@@ -264,7 +264,7 @@ final class Application extends Container implements ArrayAccess
         $this->singleton('FluentCrm\Includes\Api\Api', function ($app) {
             return new Api($app);
         });
-        
+
         $this->alias('FluentCrm\Includes\Api\Api', 'api');
 
         $this->singleton('FluentCrm\Includes\Rest\Rest', function ($app) {
@@ -309,7 +309,7 @@ final class Application extends Container implements ArrayAccess
         $this->registerPath(FLUENTCRM_PLUGIN_PATH);
         $this->registerComponents(FLUENTCRM_PLUGIN_PATH);
         $this->requireCommonFilesForRequest($this);
-        load_plugin_textdomain('fluentcrm', false, 'fluent-crm/language/');
+        load_plugin_textdomain('fluent-crm', false, 'fluent-crm/language/');
     }
 
     private function setApplicationInstance($app)

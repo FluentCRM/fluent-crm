@@ -5,7 +5,7 @@
     <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
     <meta http-equiv="Imagetoolbar" content="No"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?php esc_html_e('Email Confirmation', 'fluentcrm') ?></title>
+    <title><?php esc_html_e('Email Confirmation', 'fluent-crm') ?></title>
     <?php
         wp_head();
         do_action('fluentcrm_confirmation_head', $subscriber);

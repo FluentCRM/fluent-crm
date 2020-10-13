@@ -202,14 +202,25 @@ class Campaign extends Model
     {
         $filterType = Arr::get($settings, 'sending_filter', 'list_tag');
 
-        if ($filterType == 'list_tag') {
-            $subscriberIds = $this->getSubscribeIdsByList($settings['subscribers'], 'subscribed');
+        $alreadySliced = false;
 
+        if ($filterType == 'list_tag') {
+            $excludeSubscriberIds = [];
             if ($excludeItems = Arr::get($settings, 'excludedSubscribers')) {
-                if ($excludeSubscriberIds = $this->getSubscribeIdsByList($excludeItems, 'subscribed')) {
-                    $subscriberIds = array_diff($subscriberIds, $excludeSubscriberIds);
-                }
+                $excludeSubscriberIds = $this->getSubscribeIdsByList($excludeItems, 'subscribed');
             }
+
+            if(!$excludeSubscriberIds) {
+                $alreadySliced = true;
+                $subscriberIds = $this->getSubscribeIdsByList($settings['subscribers'], 'subscribed', $limit, $offset);
+            } else {
+                $subscriberIds = $this->getSubscribeIdsByList($settings['subscribers'], 'subscribed');
+            }
+
+            if($excludeSubscriberIds) {
+                $subscriberIds = array_diff($subscriberIds, $excludeSubscriberIds);
+            }
+
             $totalItems = count($subscriberIds);
         } else {
             $segmentSettings = Arr::get($settings, 'dynamic_segment', []);
@@ -220,7 +231,7 @@ class Campaign extends Model
             $totalItems = $subscribersPaginate['total_count'];
         }
 
-        if ($limit) {
+        if ($limit && !$alreadySliced) {
             $subscriberIds = array_slice($subscriberIds, $offset, $limit);
         }
 
@@ -232,51 +243,78 @@ class Campaign extends Model
 
     /**
      * Get subscribers ids to by list with tag filtering
-     * @param array $listTags
+     * @param array $items
+     * @param string $status contact status
+     * @param int|boolean $limit limit
+     * @param int $offset contact offset
      * @return array
      */
-    public function getSubscribeIdsByList($items, $status = false)
+    public function getSubscribeIdsByList($items, $status = 'subscribed', $limit = false, $offset = 0)
     {
+        $query = wpFluent()->table('fc_subscribers')
+            ->select('fc_subscriber_pivot.subscriber_id')
+            ->groupBy('fc_subscriber_pivot.subscriber_id')
+            ->where('fc_subscribers.status', $status)
+            ->join('fc_subscriber_pivot', 'fc_subscriber_pivot.subscriber_id', '=', 'fc_subscribers.id');
+
+        $queryGroups = [];
+
+        $willSkip = false;
+
         foreach ($items as $item) {
-            $list = $item['list'];
+            $listId = $item['list'];
+            $tagId = $item['tag'];
+            if(!$listId || !$tagId) {
+                continue;
+            }
 
-            $segment = $item['tag'];
-
-            if ($list == 'all') {
-
-                $segmentQuery = Subscriber::where(function ($query) use ($status) {
-                    $status && $query->where('fc_subscribers.status', $status);
-                });
-
-                if ($segment && !in_array($segment, ['all', 'group'])) {
-                    $segmentQuery->filterByTags([$segment], 'slug');
-                }
-
-                $subscriberIds[] = $segmentQuery->get()->pluck('id');
+            if($listId == 'all' && $tagId == 'all') {
+                $willSkip = true;
+            } else if($listId == 'all') {
+                $queryGroups[] = ['tag_id' => $tagId];
+            } else if($tagId == 'all') {
+                $queryGroups[] = ['list_id' => $listId];
             } else {
-                $subscriberIds[] = Lists::with(['subscribers' => function ($query) use ($segment, $status) {
+                $queryGroups[] = [
+                    'list_id' => $listId,
+                    'tag_id' => $tagId
+                ];
+            }
+        }
 
-                    if ($segment && !in_array($segment, ['all', 'group'])) {
-                        $query->whereHas('tags', function ($query) use ($segment) {
-                            $query->where('fc_tags.slug', $segment);
-                        });
+        if(!$willSkip && $queryGroups) {
+            $type = 'where';
+            foreach ($queryGroups as $index => $pivotIds) {
+                $query->{$type}(function ($q) use ($pivotIds) {
+                    foreach ($pivotIds as $type => $id) {
+                        if($type == 'tag_id') {
+                            $q->where(function($tagQ) use($id) {
+                                $tagQ->where('object_id', $id);
+                                $tagQ->where('object_type', 'FluentCrm\App\Models\Tag');
+                            });
+                        } else if($type == 'list_id') {
+                            $q->where(function($tagQ) use($id) {
+                                $tagQ->where('object_id', $id);
+                                $tagQ->where('object_type', 'FluentCrm\App\Models\Lists');
+                            });
+                        }
                     }
-
-                    $status && $query->where('fc_subscribers.status', $status);
-
-                }])->find($list)->subscribers->pluck('id');
+                });
+                $type = 'orWhere';
             }
         }
 
-        $selectedIds = [];
-
-        if (isset($subscriberIds)) {
-            foreach ($subscriberIds as $ids) {
-                $selectedIds = array_merge($selectedIds, $ids);
-            }
+        if($limit) {
+            $query->limit($limit)->offset($offset);
         }
 
-        return array_unique($selectedIds);
+        $results = $query->get();
+        $ids = [];
+        foreach ($results as $result) {
+            $ids[] = $result->subscriber_id;
+        }
+
+        return $ids;
     }
 
     /**
@@ -335,13 +373,11 @@ class Campaign extends Model
                 ->update([
                     'email_hash' => $emailHash
                 ]);
-
             $updateIds[] = $inserted->id;
-
         }
 
         $result = $campaignEmails ? CampaignEmail::insert($campaignEmails) : [];
-        $this->recipients_count = $this->emails()->count();
+        $this->recipients_count = $this->getEmailCount();
         $this->save();
 
         return array_merge($result, $updateIds);
@@ -456,6 +492,13 @@ class Campaign extends Model
             'unsubscribers' => $unSubscribed
         ];
 
+    }
+
+    public function getEmailCount()
+    {
+        return wpFluent()->table('fc_campaign_emails')
+                    ->where('campaign_id', $this->id)
+                    ->count();
     }
 
 }

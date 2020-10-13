@@ -9,8 +9,8 @@ class Mailer
     {
         $headers = static::buildHeaders($data);
 
-        if( apply_filters('fluentcrm_is_simulated_mail', false, $data, $headers) ) {
-            return true;
+        if( $status = apply_filters('fluentcrm_is_simulated_mail', false, $data, $headers) ) {
+            return $status;
         }
 
         return wp_mail(

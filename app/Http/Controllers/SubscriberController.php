@@ -330,7 +330,7 @@ class SubscriberController extends Controller
         SubscriberNote::where('id', $noteId)->delete();
 
         return $this->sendSuccess([
-            'message' => __('Note successfully deleted', 'fluentcrm')
+            'message' => __('Note successfully deleted', 'fluent-crm')
         ]);
     }
 
