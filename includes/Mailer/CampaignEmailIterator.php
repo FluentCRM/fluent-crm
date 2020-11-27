@@ -40,7 +40,7 @@ class CampaignEmailIterator implements \Iterator
 
     public function valid()
     {
-        $this->emails = CampaignEmail::whereIn('status', ['pending', 'scheduled'])
+        $this->emails = CampaignEmail::whereIn('status', [ 'pending', 'scheduled' ])
             ->when($this->campaignId, function($query) {
                 $query->where('campaign_id', $this->campaignId);
             })
@@ -51,6 +51,6 @@ class CampaignEmailIterator implements \Iterator
             ->limit($this->limit)
             ->get();
 
-        return !$this->emails->empty();
+        return !$this->emails->isEmpty();
     }
 }

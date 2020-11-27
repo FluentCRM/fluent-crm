@@ -13,34 +13,14 @@ class ListPolicy extends Policy
      * @param  \FluentCrm\Includes\Request\Request $request
      * @return Boolean
      */
-    public function verifyRequest(Request $request, Lists $list)
+    public function verifyRequest(Request $request)
     {
-        return current_user_can('manage_options');
-    }
+        $permission = apply_filters('fluentcrm_permission', 'manage_options', 'lists', 'all');
 
-    public function find(Request $request, $id)
-    {
-        return current_user_can('manage_options');
-    }
+        if (!$permission) {
+            return false;
+        }
 
-    /**
-     * Check user permission for index method
-     * @param  \FluentCrm\Includes\Request\Request $request
-     * @return Boolean
-     */
-    public function index(Request $request)
-    {
-        return current_user_can('manage_options');
-    }
-
-
-    /**
-     * Check user permission for store method
-     * @param  \FluentCrm\Includes\Request\Request $request
-     * @return Boolean
-     */
-    public function store(Request $request)
-    {
-        return current_user_can('manage_options');
+        return current_user_can($permission);
     }
 }

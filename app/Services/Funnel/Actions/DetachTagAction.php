@@ -2,6 +2,7 @@
 
 namespace FluentCrm\App\Services\Funnel\Actions;
 
+use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Services\Funnel\BaseAction;
 use FluentCrm\App\Services\Funnel\FunnelHelper;
 
@@ -52,7 +53,9 @@ class DetachTagAction extends BaseAction
 
         $tags = $sequence->settings['tags'];
 
-        $subscriber->tags()->detach($tags);
+        $renewedSubscriber = Subscriber::where('id', $subscriber->id)->first();
+        $renewedSubscriber->detachTags($tags);
+        
         FunnelHelper::changeFunnelSubSequenceStatus($funnelSubscriberId, $sequence->id);
     }
 }

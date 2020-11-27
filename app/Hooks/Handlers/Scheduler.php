@@ -16,4 +16,10 @@ class Scheduler
     {
         (new \FluentCrm\Includes\Mailer\Handler)->processSubscriberEmail($subscriber->id);
     }
+
+    public static function processHourly()
+    {
+        // cleanup campaigns
+        (new \FluentCrm\Includes\Mailer\Handler)->finishProcessing();
+    }
 }

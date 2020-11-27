@@ -102,14 +102,11 @@ class RemoveFromTagBenchmark extends BaseBenchMark
         $marchType = Arr::get($settings, 'select_type');
 
         if ($marchType == 'all') {
-            $attachedListIds = Tag::whereHas('subscribers', function ($q) use ($subscriber) {
-                $q->where('subscriber_id', $subscriber->id);
-            })->get()->pluck('id');
-            return !array_diff($settings['tags'], $attachedListIds) == $settings['tags'];
+            $attachedTagIds = $subscriber->tags->pluck('id');
+            return !array_diff($settings['tags'], $attachedTagIds) == $settings['tags'];
         }
 
         return $isMatched;
-
     }
 
 }

@@ -14,6 +14,12 @@ class ReportPolicy extends Policy
      */
     public function verifyRequest(Request $request)
     {
-        return current_user_can('manage_options');
+        $permission = apply_filters('fluentcrm_permission', 'manage_options', 'report', 'all');
+
+        if (!$permission) {
+            return false;
+        }
+
+        return current_user_can($permission);
     }
 }

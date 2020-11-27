@@ -1,5 +1,5 @@
 <!doctype html>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<html <?php language_attributes(); ?>>
 <head>
     <!--[if gte mso 15]>
     <xml>
@@ -9,10 +9,10 @@
     </o:OfficeDocumentSettings>
     </xml>
     <![endif]-->
-    <meta charset="UTF-8">
+    <meta charset="<?php bloginfo( 'charset' ); ?>">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" >
+    <link rel="profile" href="https://gmpg.org/xfn/11">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title></title>
     <?php do_action('fluentform_email_header', 'simple'); ?>
     <?php include(FLUENTCRM_PLUGIN_PATH.'app/views/emails/common-style.php'); ?>
 </head>
@@ -88,6 +88,9 @@
                                                 <tbody><tr>
                                                     <td valign="top" class="fcTextContent" style="padding-top: 0;padding-right: 18px;padding-bottom: 9px;padding-left: 18px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;word-break: break-word;color: #202020;font-size: 12px;line-height: 150%;text-align: left;">
                                                         <?php echo $footer_text; ?>
+                                                        <?php if(!defined('FLUENTCAMPAIGN')): ?>
+                                                            <p>Powered By <a href="http://fluentcrm.com/?utm_source=wp&utm_medium=wp_mail&utm_campaign=footer">FluentCRM</a></p>
+                                                        <?php endif; ?>
                                                     </td>
                                                 </tr>
                                                 </tbody></table>

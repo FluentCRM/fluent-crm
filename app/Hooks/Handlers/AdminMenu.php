@@ -2,8 +2,9 @@
 
 namespace FluentCrm\App\Hooks\Handlers;
 
-use FluentCrm\App\Http\Controllers\PurchaseHistoryController;
+use FluentCrm\App\Models\Tag;
 use FluentCrm\App\Services\Helper;
+use FluentCrm\App\Services\TransStrings;
 
 class AdminMenu
 {
@@ -21,7 +22,21 @@ class AdminMenu
 
     public function addMenu()
     {
-        $permission = 'manage_options';
+        $permission = apply_filters('fluentcrm_permission', 'manage_options', 'admin_menu', 'all');
+        $contactPermission = apply_filters('fluentcrm_permission', 'manage_options', 'contacts', 'admin_menu');
+        $campaignPermission = apply_filters('fluentcrm_permission', 'manage_options', 'campaign', 'admin_menu');
+        $formsPermission = apply_filters('fluentcrm_permission', 'manage_options', 'forms', 'admin_menu');
+        $automationsPermission = apply_filters('fluentcrm_permission', 'manage_options', 'automations', 'admin_menu');
+        $settingsPermission = apply_filters('fluentcrm_permission', 'manage_options', 'settings', 'admin_menu');
+
+        if (!$permission) {
+            $permission = 'manage_options';
+        }
+
+        if (!current_user_can($permission)) {
+            return;
+        }
+
         add_menu_page(
             __('FluentCRM', 'fluent-crm'),
             __('FluentCRM', 'fluent-crm'),
@@ -34,57 +49,77 @@ class AdminMenu
 
         add_submenu_page(
             'fluentcrm-admin',
-            __('Dashboard', 'fluentform'),
-            __('Dashboard', 'fluentform'),
+            __('Dashboard', 'fluent-crm'),
+            __('Dashboard', 'fluent-crm'),
             $permission,
             'fluentcrm-admin',
             array($this, 'render')
         );
 
-        add_submenu_page(
-            'fluentcrm-admin',
-            __('Contacts', 'fluentform'),
-            __('Contacts', 'fluentform'),
-            $permission,
-            'fluentcrm-admin#/subscribers',
-            array($this, 'render')
-        );
+        if ($contactPermission) {
+            add_submenu_page(
+                'fluentcrm-admin',
+                __('Contacts', 'fluent-crm'),
+                __('Contacts', 'fluent-crm'),
+                $contactPermission,
+                'fluentcrm-admin#/subscribers',
+                array($this, 'render')
+            );
+        }
 
-        add_submenu_page(
-            'fluentcrm-admin',
-            __('Campaigns', 'fluentform'),
-            __('Campaigns', 'fluentform'),
-            $permission,
-            'fluentcrm-admin#/email/campaigns',
-            array($this, 'render')
-        );
 
-        add_submenu_page(
-            'fluentcrm-admin',
-            __('Forms', 'fluentform'),
-            __('Forms', 'fluentform'),
-            $permission,
-            'fluentcrm-admin#/forms',
-            array($this, 'render')
-        );
+        if ($campaignPermission) {
+            add_submenu_page(
+                'fluentcrm-admin',
+                __('Campaigns', 'fluent-crm'),
+                __('Campaigns', 'fluent-crm'),
+                $campaignPermission,
+                'fluentcrm-admin#/email/campaigns',
+                array($this, 'render')
+            );
 
-        add_submenu_page(
-            'fluentcrm-admin',
-            __('Automations', 'fluentform'),
-            __('Automations', 'fluentform'),
-            $permission,
-            'fluentcrm-admin#/funnels',
-            array($this, 'render')
-        );
+            add_submenu_page(
+                'fluentcrm-admin',
+                __('Email Sequences', 'fluent-crm'),
+                __('Email Sequences', 'fluent-crm'),
+                $campaignPermission,
+                'fluentcrm-admin#/email/sequences',
+                array($this, 'render')
+            );
+        }
 
-        add_submenu_page(
-            'fluentcrm-admin',
-            __('Settings', 'fluentform'),
-            __('Settings', 'fluentform'),
-            $permission,
-            'fluentcrm-admin#/settings',
-            array($this, 'render')
-        );
+        if ($formsPermission) {
+            add_submenu_page(
+                'fluentcrm-admin',
+                __('Forms', 'fluent-crm'),
+                __('Forms', 'fluent-crm'),
+                $formsPermission,
+                'fluentcrm-admin#/forms',
+                array($this, 'render')
+            );
+        }
+
+        if ($automationsPermission) {
+            add_submenu_page(
+                'fluentcrm-admin',
+                __('Automations', 'fluent-crm'),
+                __('Automations', 'fluent-crm'),
+                $automationsPermission,
+                'fluentcrm-admin#/funnels',
+                array($this, 'render')
+            );
+        }
+
+        if ($settingsPermission) {
+            add_submenu_page(
+                'fluentcrm-admin',
+                __('Settings', 'fluent-crm'),
+                __('Settings', 'fluent-crm'),
+                $settingsPermission,
+                'fluentcrm-admin#/settings',
+                array($this, 'render')
+            );
+        }
 
     }
 
@@ -103,13 +138,22 @@ class AdminMenu
 
         $urlBase = apply_filters('fluentcrm_menu_url_base', admin_url('admin.php?page=fluentcrm-admin#/'));
 
+        $contactPermission = apply_filters('fluentcrm_permission', 'manage_options', 'contacts', 'admin_menu');
+        $campaignPermission = apply_filters('fluentcrm_permission', 'manage_options', 'campaign', 'admin_menu');
+        $formsPermission = apply_filters('fluentcrm_permission', 'manage_options', 'forms', 'admin_menu');
+        $automationsPermission = apply_filters('fluentcrm_permission', 'manage_options', 'automations', 'admin_menu');
+        $settingsPermission = apply_filters('fluentcrm_permission', 'manage_options', 'settings', 'admin_menu');
+
         $menuItems = [
             [
                 'key'       => 'dashboard',
                 'label'     => __('Dashboard', 'fluent-crm'),
                 'permalink' => $urlBase
-            ],
-            [
+            ]
+        ];
+
+        if ($contactPermission && current_user_can($contactPermission)) {
+            $contactMenu = [
                 'key'       => 'contacts',
                 'label'     => __('Contacts', 'fluent-crm'),
                 'permalink' => $urlBase . 'subscribers',
@@ -118,25 +162,42 @@ class AdminMenu
                         'key'       => 'all_contacts',
                         'label'     => __('All Contacts', 'fluent-crm'),
                         'permalink' => $urlBase . 'subscribers'
-                    ],
-                    [
-                        'key'       => 'lists',
-                        'label'     => __('Lists', 'fluent-crm'),
-                        'permalink' => $urlBase . 'contact-groups/lists'
-                    ],
-                    [
-                        'key'       => 'tags',
-                        'label'     => __('Tags', 'fluent-crm'),
-                        'permalink' => $urlBase . 'contact-groups/tags'
-                    ],
-                    [
-                        'key'       => 'dynamic_segments',
-                        'label'     => __('Segments', 'fluent-crm'),
-                        'permalink' => $urlBase . 'contact-groups/dynamic-segments'
                     ]
                 ]
-            ],
-            [
+            ];
+
+            $listPermission = apply_filters('fluentcrm_permission', 'manage_options', 'lists', 'admin_menu');
+            if ($listPermission && current_user_can($listPermission)) {
+                $contactMenu['sub_items'][] = [
+                    'key'       => 'lists',
+                    'label'     => __('Lists', 'fluent-crm'),
+                    'permalink' => $urlBase . 'contact-groups/lists'
+                ];
+            }
+
+            $tagsPermission = apply_filters('fluentcrm_permission', 'manage_options', 'tags', 'admin_menu');
+            if ($tagsPermission && current_user_can($tagsPermission)) {
+                $contactMenu['sub_items'][] = [
+                    'key'       => 'tags',
+                    'label'     => __('Tags', 'fluent-crm'),
+                    'permalink' => $urlBase . 'contact-groups/tags'
+                ];
+            }
+
+            $dynamicSegmentsPermission = apply_filters('fluentcrm_permission', 'manage_options', 'dynamic_segments', 'admin_menu');
+            if ($dynamicSegmentsPermission && current_user_can($dynamicSegmentsPermission)) {
+                $contactMenu['sub_items'][] = [
+                    'key'       => 'dynamic_segments',
+                    'label'     => __('Segments', 'fluent-crm'),
+                    'permalink' => $urlBase . 'contact-groups/dynamic-segments'
+                ];
+            }
+
+            $menuItems[] = $contactMenu;
+        }
+
+        if ($campaignPermission && current_user_can($campaignPermission)) {
+            $campaignMenu = [
                 'key'       => 'campaigns',
                 'label'     => __('Email Campaigns', 'fluent-crm'),
                 'permalink' => $urlBase . 'email/campaigns',
@@ -145,44 +206,66 @@ class AdminMenu
                         'key'       => 'all_campaigns',
                         'label'     => __('All Campaigns', 'fluent-crm'),
                         'permalink' => $urlBase . 'email/campaigns'
-                    ],
-                    [
-                        'key'       => 'email_sequences',
-                        'label'     => __('Email Sequences', 'fluent-crm'),
-                        'permalink' => $urlBase . 'email/sequences'
-                    ],
-                    [
-                        'key'       => 'email_templates',
-                        'label'     => __('Email Templates', 'fluent-crm'),
-                        'permalink' => $urlBase . 'email/templates'
                     ]
                 ]
-            ],
-            [
+            ];
+
+            $emailSequencePermission = apply_filters('fluentcrm_permission', 'manage_options', 'email_sequences', 'admin_menu');
+            if ($emailSequencePermission && current_user_can($emailSequencePermission)) {
+                $campaignMenu['sub_items'][] = [
+                    'key'       => 'email_sequences',
+                    'label'     => __('Email Sequences', 'fluent-crm'),
+                    'permalink' => $urlBase . 'email/sequences'
+                ];
+            }
+
+            $templatesPermission = apply_filters('fluentcrm_permission', 'manage_options', 'templates', 'admin_menu');
+            if ($templatesPermission && current_user_can($templatesPermission)) {
+                $campaignMenu['sub_items'][] = [
+                    'key'       => 'email_templates',
+                    'label'     => __('Email Templates', 'fluent-crm'),
+                    'permalink' => $urlBase . 'email/templates'
+                ];
+            }
+
+            $menuItems[] = $campaignMenu;
+        }
+
+        if ($formsPermission && current_user_can($formsPermission)) {
+            $menuItems[] = [
                 'key'       => 'forms',
                 'label'     => __('Forms', 'fluent-crm'),
                 'permalink' => $urlBase . 'forms'
-            ],
-            [
+            ];
+        }
+
+        if ($automationsPermission && current_user_can($automationsPermission)) {
+            $menuItems[] = [
                 'key'       => 'funnels',
                 'label'     => __('Automations', 'fluent-crm'),
                 'permalink' => $urlBase . 'funnels'
-            ],
-            [
+            ];
+        }
+
+        if ($settingsPermission && current_user_can($settingsPermission)) {
+            $menuItems[] = [
                 'key'       => 'settings',
                 'label'     => __('Settings', 'fluent-crm'),
                 'permalink' => $urlBase . 'settings'
-            ]
-        ];
-
-        if(!defined('FLUENTCAMPAIGN')) {
-            $menuItems[] = [
-                'key' => 'get_pro',
-                'label' => 'Get Pro',
-                'permalink' => 'https://fluentcrm.com',
-                'class' => 'pro_link'
             ];
         }
+
+
+        if (!defined('FLUENTCAMPAIGN')) {
+            $menuItems[] = [
+                'key'       => 'get_pro',
+                'label'     => 'Get Pro',
+                'permalink' => 'https://fluentcrm.com',
+                'class'     => 'pro_link'
+            ];
+        }
+
+        $menuItems = apply_filters('fluentcrm_menu_items', $menuItems);
 
         $app['view']->render('admin.menu_page', [
             'menuItems' => $menuItems,
@@ -229,16 +312,33 @@ class AdminMenu
         }, 1);
 
         $app = FluentCrm();
+        $isRtl = is_rtl();
 
         $this->emailBuilderBlockInit();
         wp_enqueue_script('fluentcrm_admin_app_boot', fluentCrmMix('admin/js/boot.js'), array('jquery', 'moment'), $this->version);
         wp_enqueue_script('fluentcrm_global_admin.js', fluentCrmMix('admin/js/global_admin.js'), array('jquery'), $this->version);
 
-        wp_enqueue_style('fluentcrm_admin_app', fluentCrmMix('admin/css/fluentcrm-admin.css'));
-        wp_enqueue_style('fluentcrm_app_global', fluentCrmMix('admin/css/app_global.css'));
+        $adminAppCss = 'admin/css/fluentcrm-admin.css';
+        $appGlobalCss = 'admin/css/app_global.css';
+        if ($isRtl) {
+            $adminAppCss = 'admin/css/fluentcrm-admin-rtl.css';
+            $appGlobalCss = 'admin/css/app_global-rtl.css';
+        }
+
+        wp_enqueue_style('fluentcrm_admin_app', fluentCrmMix($adminAppCss));
+        wp_enqueue_style('fluentcrm_app_global', fluentCrmMix($appGlobalCss));
 
         wp_enqueue_script('fluentcrm-chartjs', fluentCrmMix('libs/chartjs/Chart.min.js'));
         wp_enqueue_script('fluentcrm-vue-chartjs', fluentCrmMix('libs/chartjs/vue-chartjs.min.js'));
+
+        $tags = Tag::get();
+        $formattedTags = [];
+        foreach ($tags as $tag) {
+            $formattedTags[] = [
+                'value' => $tag->id,
+                'label' => $tag->title
+            ];
+        }
 
         wp_localize_script('fluentcrm_admin_app_boot', 'fcAdmin', array(
             'images_url'                => $app['url.assets.images'],
@@ -259,7 +359,9 @@ class AdminMenu
             'contact_prefixes'          => Helper::getContactPrefixes(),
             'server_time'               => current_time('mysql'),
             'crm_pro_url'               => 'https://fluentcrm.com/?utm_source=plugin&utm_medium=admin&utm_campaign=promo',
-            'require_verify_request'    => apply_filters('fluentcrm_is_require_verify', false)
+            'require_verify_request'    => apply_filters('fluentcrm_is_require_verify', false),
+            'trans'                     => TransStrings::getStrings(),
+            'available_tags' => $formattedTags
         ));
     }
 
@@ -268,9 +370,11 @@ class AdminMenu
         $ns = $app['rest.namespace'];
         $v = $app['rest.version'];
 
+        $restUrl = rest_url($ns . '/' . $v);
+        $restUrl = rtrim($restUrl, '/\\');
         return [
             'base_url'  => esc_url_raw(rest_url()),
-            'url'       => rest_url($ns . '/' . $v),
+            'url'       => $restUrl,
             'nonce'     => wp_create_nonce('wp_rest'),
             'namespace' => $ns,
             'version'   => $v,
@@ -325,10 +429,14 @@ class AdminMenu
         wp_enqueue_script('wp-format-library');
         wp_enqueue_style('wp-format-library');
 
+        $css = 'block_editor/index.css';
+        if (is_rtl()) {
+            $css = 'block_editor/index-rtl.css';
+        }
         // Styles.
         wp_enqueue_style(
             'fc_block_editor_styles', // Handle.
-            fluentCrmMix('block_editor/index.css'), // Block editor CSS.
+            fluentCrmMix($css), // Block editor CSS.
             array('wp-edit-blocks'), // Dependency to include the CSS after it.
             $version
         );
@@ -369,7 +477,7 @@ class AdminMenu
             'alignWide'                   => false,
             'allowedMimeTypes'            => get_allowed_mime_types(),
             'imageSizes'                  => $available_image_sizes,
-            'isRTL'                       => false,
+            'isRTL'                       => is_rtl(),
             'maxUploadFileSize'           => $max_upload_size,
             'allowedBlockTypes'           => array(
                 'core/paragraph',
@@ -391,7 +499,8 @@ class AdminMenu
                 'core/button',
                 'core/media-text',
                 'core/buttons',
-                'core/rss'
+                'core/rss',
+                'fluentcrm/conditional-group'
             ),
             '__experimentalBlockPatterns' => []
         );

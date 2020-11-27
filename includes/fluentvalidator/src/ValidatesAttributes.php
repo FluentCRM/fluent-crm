@@ -234,7 +234,8 @@ trait ValidatesAttributes
      */
     protected function validateUrl($attribute, $value)
     {
-        return (bool) wp_http_validate_url($value);
+        $result = (bool) filter_var($value, FILTER_VALIDATE_URL);
+        return apply_filters('fluent_url_validator', $result, $value);
     }
 
     /**

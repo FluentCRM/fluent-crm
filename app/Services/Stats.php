@@ -107,6 +107,11 @@ Class Stats
                 'title' => 'Settings',
                 'url' => $urlBase.'settings',
                 'icon' => 'el-icon-setting'
+            ],
+            [
+                'title' => 'Documentations',
+                'url' => 'https://fluentcrm.com/docs?utm_source=wp&utm_medium=quicklinks&utm_campaign=site',
+                'icon' => 'el-icon-document'
             ]
         ]);
     }

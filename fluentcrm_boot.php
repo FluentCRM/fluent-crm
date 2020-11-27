@@ -6,18 +6,21 @@ define('FLUENTCRM', 'fluentcrm');
 define('FLUENTCRM_UPLOAD_DIR', '/fluentcrm');
 define('FLUENTCRM_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('FLUENTCRM_PLUGIN_PATH', plugin_dir_path(__FILE__));
-define('FLUENTCRM_PLUGIN_VERSION', '1.1.1');
+define('FLUENTCRM_PLUGIN_VERSION', '1.1.91');
 
 spl_autoload_register(function ($class) {
-    if (strpos($class, 'FluentCrm') !== false) {
-        $path = plugin_dir_path(__FILE__);
-        $file = str_replace(
-            ['FluentCrm', '\\', '/App/', '/Includes/'],
-            ['', DIRECTORY_SEPARATOR, 'app/', 'includes/'],
-            $class
-        );
-        require(trailingslashit($path) . trim($file, '/') . '.php');
+    $match = 'FluentCrm';
+    if (!preg_match("/\b{$match}\b/", $class)) {
+        return;
     }
+
+    $path = plugin_dir_path(__FILE__);
+    $file = str_replace(
+        ['FluentCrm', '\\', '/App/', '/Includes/'],
+        ['', DIRECTORY_SEPARATOR, 'app/', 'includes/'],
+        $class
+    );
+    require(trailingslashit($path) . trim($file, '/') . '.php');
 });
 
 // Keep it here, doesn't work in plugin files/classes

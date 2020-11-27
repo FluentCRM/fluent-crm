@@ -2,6 +2,7 @@
 
 namespace FluentCrm\App\Services\Funnel;
 
+use FluentCrm\App\Models\FunnelMetric;
 use FluentCrm\App\Models\FunnelSubscriber;
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Services\Helper;
@@ -52,6 +53,7 @@ class FunnelHelper
 
     public static function createOrUpdateContact($data)
     {
+
         return FluentCrmApi('contacts')->createOrUpdate($data);
     }
 
@@ -185,4 +187,15 @@ class FunnelHelper
 
     }
 
+    public static function removeSubscribersFromFunnel($funnelId, $subscriberIds)
+    {
+        FunnelSubscriber::where('funnel_id', $funnelId)
+            ->whereIn('subscriber_id', $subscriberIds)
+            ->delete();
+
+        FunnelMetric::where('funnel_id', $funnelId)
+            ->whereIn('subscriber_id', $subscriberIds)
+            ->delete();
+        return true;
+    }
 }

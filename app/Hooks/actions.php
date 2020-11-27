@@ -12,6 +12,7 @@
 // fluentCrmMaybeRegisterQueryLoggerIfAvailable($app);
 
 $app->addAction('fluentcrm_scheduled_minute_tasks', 'Scheduler@process');
+$app->addAction('fluentcrm_scheduled_hourly_tasks', 'Scheduler@processHourly');
 $app->addAction('fluentcrm_process_contact_jobs', 'Scheduler@processForSubscriber', 999, 1);
 
 // Add admin init
@@ -44,7 +45,7 @@ $app->addAction('fluentcrm_subscriber_status_to_subscribed', 'FunnelHandler@resu
 /*
  * Cleanup Hooks
  */
-$app->addAction('subscribers_deleted', 'Cleanup@deleteSubscribersAssets', 10, 1);
+$app->addAction('fluentcrm_after_subscribers_deleted', 'Cleanup@deleteSubscribersAssets', 10, 1);
 $app->addAction('fluentcrm_campaign_deleted', 'Cleanup@deleteCampaignAssets', 10, 1);
 $app->addAction('fluentcrm_list_deleted', 'Cleanup@deleteListAssets', 10, 1);
 $app->addAction('fluentcrm_tag_deleted', 'Cleanup@deleteTagAssets', 10, 1);
@@ -73,6 +74,10 @@ add_action('wp', function () use ($app) {
 
     if (isset($_GET['do_fluentcrm_scheduled_tasks'])) {
         do_action('fluentcrm_scheduled_minute_tasks');
+    }
+
+    if (isset($_GET['fluentcrm_scheduled_hourly_tasks'])) {
+        do_action('fluentcrm_scheduled_hourly_tasks');
     }
 
 });

@@ -2,7 +2,6 @@
 
 namespace FluentCrm\Includes\Mailer;
 
-use Exception;
 use FluentCrm\App\Models\Campaign;
 use FluentCrm\App\Models\CampaignEmail;
 use FluentCrm\App\Services\Helper;
@@ -14,8 +13,6 @@ class Handler
 
     protected $campaignId = false;
 
-    protected $processedCampaigns = [];
-
     protected $emailLimitPerSecond = 0;
 
     protected $maximumProcessingTime = 50;
@@ -24,32 +21,46 @@ class Handler
 
     public function handle($campaignId = null)
     {
-        if( apply_filters('fluentcrm_disable_email_processing', false )) {
+        if (apply_filters('fluentcrm_disable_email_processing', false)) {
             return false;
         }
+
+        $this->maximumProcessingTime = apply_filters('fluentcrm_max_email_sending_time', 50);
+
+        $sendingPerChunk = apply_filters('fluentcrm_email_sending_per_chunk', 10);
+
+        $hadJobs = false;
 
         try {
             $this->campaignId = $campaignId;
             if ($this->isProcessing()) {
-                return;
+                return false;
             }
             $this->processing();
             $this->handleFailedLog();
             $this->startedAt = microtime(true);
             $startedTimeStamp = time();
 
-            foreach ((new CampaignEmailIterator($campaignId, 30)) as $emailCollection) {
-                if(time() - $startedTimeStamp > $this->maximumProcessingTime) {
+            foreach ((new CampaignEmailIterator($campaignId, $sendingPerChunk)) as $emailCollection) {
+                $hadJobs = true;
+                if (time() - $startedTimeStamp > $this->maximumProcessingTime) {
                     update_option(FLUENTCRM . '_is_sending_emails', null);
-                    return; // we don't want to run the process for more than 50 seconds
+                    return false; // we don't want to run the process for more than 50 seconds
                 }
+
                 $this->updateProcessTime();
                 $this->sendEmails($emailCollection);
             }
-            $this->finishProcessing();
         } catch (\Exception $e) {
-            $this->finishProcessing();
+
         }
+
+        update_option(FLUENTCRM . '_is_sending_emails', null);
+
+        if(!$hadJobs && mt_rand(1, 50) > 35) {
+            do_action('fluentcrm_scheduled_maybe_regular_tasks');
+        }
+
     }
 
     public function processSubscriberEmail($subscriberId)
@@ -105,8 +116,10 @@ class Handler
 
     protected function sendEmails($campaignEmails)
     {
-        $sentIds = [];
+        do_action('fluentcrm_sending_emails_starting', $campaignEmails);
+
         $failedIds = [];
+        $sentIds = [];
         foreach ($campaignEmails as $email) {
             if ($this->reachedEmailLimitPerSecond()) {
                 $this->restartWhenOneSecondExceeds();
@@ -115,21 +128,31 @@ class Handler
                 $this->dispatchedWithinOneSecond++;
                 if (is_wp_error($response)) {
                     $failedIds[] = $email->id;
+                } else {
+                    CampaignEmail::where('id', $email->id)->whereNot('status', 'failed')->update([
+                        'status'     => 'sent',
+                        'updated_at' => current_time('mysql')
+                    ]);
+                    $sentIds[] = $email->id;
                 }
-                $sentIds[] = $email->id;
-                $this->processedCampaigns[$email->campaign->id] = $email->campaign->id;
             }
         }
+
         if ($sentIds) {
-            CampaignEmail::whereIn('id', $sentIds)->whereNot('status', 'failed')->update([
-                'status'     => 'sent',
-                'email_body' => '',
-                'updated_at' => current_time('mysql')
+            CampaignEmail::whereIn('id', $sentIds)
+                ->where('campaign_id', '>=', 1)
+                ->whereNot('status', 'failed')
+                ->update([
+                    'email_body' => ''
+                ]);
+        }
+
+        if ($failedIds) {
+            CampaignEmail::whereIn('id', $failedIds)->update([
+                'status' => 'failed'
             ]);
         }
-        if ($failedIds) {
-            CampaignEmail::whereIn('id', $failedIds)->update(['status' => 'failed']);
-        }
+        do_action('fluentcrm_sending_emails_done', $campaignEmails);
     }
 
     protected function reachedEmailLimitPerSecond()
@@ -154,43 +177,32 @@ class Handler
         $emailSettings = fluentcrmGetGlobalSettings('email_settings', []);
 
         if (!empty($emailSettings['emails_per_second'])) {
-            $limit = $emailSettings['emails_per_second'];
+            $limit = intval($emailSettings['emails_per_second']);
         } else {
-            $limit = 30;
+            $limit = 14;
         }
+
+        if (!$limit || $limit < 2) {
+            $limit = 2;
+        }
+
 
         return ($limit > $this->emailLimitPerSecond) ? ($limit - 1) : $limit;
     }
 
-    protected function finishProcessing()
+    public function finishProcessing()
     {
-        $this->markIncompleteCampaigns();
-
         $this->markArchiveCampaigns();
-
         $this->jobCompleted();
-    }
-
-    protected function markIncompleteCampaigns()
-    {
-        $campaigns = Campaign::where('status', 'working')->whereHas('emails', function ($query) {
-            $query->where('status', 'failed');
-        })->whereIn('id', array_unique($this->processedCampaigns))->get();
-
-        if (!$campaigns->empty()) {
-            Campaign::whereIn(
-                'id', array_unique($campaigns->pluck('id'))
-            )->update(['status' => 'incomplete']);
-        }
     }
 
     protected function markArchiveCampaigns()
     {
         $campaigns = Campaign::where('status', 'working')->whereDoesNotHave('emails', function ($query) {
-            $query->whereIn('status', ['pending', 'failed']);
-        })->whereIn('id', array_unique($this->processedCampaigns))->get();
+            $query->whereIn('status', ['pending', 'failed', 'scheduled']);
+        })->get();
 
-        if (!$campaigns->empty()) {
+        if (!$campaigns->isEmpty()) {
             Campaign::whereIn(
                 'id', array_unique($campaigns->pluck('id'))
             )->update(['status' => 'archived']);
@@ -203,21 +215,24 @@ class Handler
         // Mark those campaigns and their pending emails as purged, so we can show
         // those campaigns in the campaign's page (index) allowed to edit the campaign.
         foreach (Campaign::where('status', 'working')->get() as $campaign) {
+
+            $hasPending = $campaign->emails()->where('status', 'pending')->count();
+            if ($hasPending) {
+                continue;
+            }
+
             $hasSent = $campaign->emails()->where('status', 'sent')->count();
             $hasFailed = $campaign->emails()->where('status', 'failed')->count();
-            $hasPending = $campaign->emails()->where('status', 'pending')->count();
 
             if (!$hasPending) {
                 $campaign->status = 'archived';
                 $campaign->save();
             } else if (!$hasSent && !$hasFailed) {
-                $campaign->emails()->update(['status' => 'purged']);
                 $campaign->status = 'purged';
                 $campaign->save();
             }
-        }
 
-        update_option(FLUENTCRM . '_is_sending_emails', null);
+        }
     }
 
     protected function handleFailedLog()
@@ -262,8 +277,6 @@ class Handler
         $url = site_url('?fluentcrm=1&route=confirmation&s_id=' . $subscriber->id . '&hash=' . $subscriber->hash);
         $emailBody = str_replace('#activate_link#', $url, $emailBody);
 
-        $emailSettings = fluentcrmGetGlobalSettings('email_settings', []);
-
         $templateData = [
             'preHeader'   => '',
             'email_body'  => $emailBody,
@@ -279,17 +292,13 @@ class Handler
             $subscriber
         );
 
-
         $data = [
             'to'      => [
                 'email' => $subscriber->email
             ],
             'subject' => $emailSubject,
             'body'    => $emailBody,
-            'from'    => [
-                'name'  => Arr::get($emailSettings, 'from_name'),
-                'email' => Arr::get($emailSettings, 'from_email')
-            ]
+            'headers'    => Helper::getMailHeader()
         ];
         Mailer::send($data);
         return true;

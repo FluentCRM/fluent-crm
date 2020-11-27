@@ -7,6 +7,14 @@ $bodBgyColor = $config['body_bg_color'];
 $contentBg = $config['content_bg_color'];
 $footerColor = $config['footer_text_color'];
 $mainFont = $config['content_font_family'];
+
+$alignLeft = 'left';
+$alignRight = 'right';
+if(is_rtl()) {
+    $alignLeft = 'right';
+    $alignRight = 'left';
+}
+
 ?>
 
 <style type="text/css">
@@ -62,6 +70,10 @@ $mainFont = $config['content_font_family'];
         <?php endif; ?>
     }
 
+    img.emoji {
+        width: 14px;
+    }
+
     /* /SettingsDefaults */
 
     /*Block Editor*/
@@ -95,10 +107,10 @@ $mainFont = $config['content_font_family'];
     }
 
     .has-text-align-right {
-        text-align: right !important;
+        text-align: <?php echo $alignRight; ?> !important;
     }
     .has-text-align-left {
-        text-align: left !important;
+        text-align: <?php echo $alignLeft; ?> !important;
     }
     .has-text-align-center {
         text-align: center !important;
@@ -293,7 +305,7 @@ $mainFont = $config['content_font_family'];
     #templateHeader .fcTextContent, #templateHeader .fcTextContent p {
         font-size: 16px;
         line-height: 180%;
-        text-align: left;
+        text-align: <?php echo $alignLeft; ?>;
     }
 
     #templateHeader .fcTextContent a, #templateHeader .fcTextContent p a {
@@ -309,7 +321,7 @@ $mainFont = $config['content_font_family'];
     #templateBody .fcTextContent, #templateBody .fcTextContent p {
         font-size: 16px;
         line-height: 180%;
-        text-align: left;
+        text-align: <?php echo $alignLeft; ?>;
     }
 
     #templateBody .fcTextContent a, #templateBody .fcTextContent p a {
@@ -336,7 +348,7 @@ $mainFont = $config['content_font_family'];
         text-align: center !important;
     }
     .alignright {
-        text-align: right !important;
+        text-align: <?php echo $alignRight; ?> !important;
     }
 
     /*
@@ -352,7 +364,14 @@ $mainFont = $config['content_font_family'];
         margin: 0 0 0 auto;
     }
 
+    <?php if(is_rtl()) : ?>
+        p,ul,li {
+            text-align: right;
+        }
+    <?php endif; ?>
+
 </style>
+
 
 <style type="text/css">
     @media only screen and (max-width: 768px) {
@@ -503,5 +522,4 @@ $mainFont = $config['content_font_family'];
         }
     }
 </style>
-
 

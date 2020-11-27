@@ -34,7 +34,8 @@ class CampaignUrlMetric extends Model
     {
         $stats = static::select(
                 wpFluent()->raw('count(*) as total'),
-                'fc_url_stores.url'
+                'fc_url_stores.url',
+                'fc_url_stores.id'
             )
             ->where('fc_campaign_url_metrics.campaign_id', $campaignId)
             ->where('fc_campaign_url_metrics.type', 'click')
@@ -79,7 +80,7 @@ class CampaignUrlMetric extends Model
     {
         $subjects = $campaign->subjects()->get();
 
-        if ($subjects->empty()) {
+        if ($subjects->isEmpty()) {
             return [];
         }
 

@@ -50,6 +50,7 @@ class TagAppliedBenchmark extends BaseBenchMark
                 'tags'        => [
                     'type'        => 'option_selectors',
                     'option_key'  => 'tags',
+                    'creatable'   => true,
                     'is_multiple' => true,
                     'label'       => 'Select Tags',
                     'placeholder' => 'Select Tags'
@@ -101,11 +102,15 @@ class TagAppliedBenchmark extends BaseBenchMark
 
         $marchType = Arr::get($settings, 'select_type');
 
-        if ($marchType == 'all') {
-            $attachedListIds = Tag::whereHas('subscribers', function ($q) use ($subscriber) {
-                $q->where('subscriber_id', $subscriber->id);
-            })->get()->pluck('id');
-            return array_intersect($settings['tags'], $attachedListIds) == $settings['tags'];
+        $subscriberTags = $subscriber->tags->pluck('id');
+        $intersection = array_intersect($tagIds, $subscriberTags);
+
+        if ($marchType === 'any') {
+            // At least one funnel list id is available.
+            $isMatched = !empty($intersection);
+        } else {
+            // All of the funnel list ids are present.
+            $isMatched = count($intersection) === count($settings['tags']);
         }
 
         return $isMatched;

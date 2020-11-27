@@ -4,6 +4,8 @@ namespace FluentCrm\App\Hooks\Handlers;
 
 use FluentCrm\App\Models\CampaignEmail;
 use FluentCrm\App\Models\CampaignUrlMetric;
+use FluentCrm\App\Models\FunnelMetric;
+use FluentCrm\App\Models\FunnelSubscriber;
 use FluentCrm\App\Models\SubscriberMeta;
 use FluentCrm\App\Models\SubscriberNote;
 use FluentCrm\App\Models\SubscriberPivot;
@@ -17,6 +19,12 @@ class Cleanup
         SubscriberMeta::whereIn('subscriber_id', $subscriberIds)->delete();
         SubscriberNote::whereIn('subscriber_id', $subscriberIds)->delete();
         SubscriberPivot::whereIn('subscriber_id', $subscriberIds)->delete();
+        FunnelMetric::whereIn('subscriber_id', $subscriberIds)->delete();
+        FunnelSubscriber::whereIn('subscriber_id', $subscriberIds)->delete();
+
+        if (defined('FLUENTCAMPAIGN_DIR_FILE')) {
+            \FluentCampaign\App\Models\SequenceTracker::whereIn('subscriber_id' , $subscriberIds)->delete();
+        }
     }
 
     public function deleteCampaignAssets($campaignId)

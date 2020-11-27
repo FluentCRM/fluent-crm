@@ -2,6 +2,7 @@
 
 namespace FluentCrm\App\Services\Funnel\Actions;
 
+use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Services\Funnel\BaseAction;
 use FluentCrm\App\Services\Funnel\FunnelHelper;
 
@@ -51,11 +52,10 @@ class ApplyListAction extends BaseAction
         }
 
         $lists = $sequence->settings['lists'];
-        $lists = array_combine($lists, array_fill(
-            0, count($lists), ['object_type' => 'FluentCrm\App\Models\Lists']
-        ));
 
-        $subscriber->lists()->sync($lists, false);
+        $renewedSubscriber = Subscriber::where('id', $subscriber->id)->first();
+        $renewedSubscriber->attachLists($lists);
+
         FunnelHelper::changeFunnelSubSequenceStatus($funnelSubscriberId, $sequence->id, 'skipped');
     }
 }

@@ -166,7 +166,8 @@ function fluentcrm_update_meta($objectId, $objectType, $key, $value)
 
     if ($model) {
         $model->value = $value;
-        return $model->save();
+        $model->save();
+        return $model;
     }
 
     return Meta::create([
@@ -221,8 +222,8 @@ function fluentcrm_update_option($optionName, $value)
 function fluentcrm_get_campaign_meta($objectId, $key, $returnValue = false)
 {
     $item = fluentcrm_get_meta($objectId, 'FluentCrm\App\Models\Campaign', $key);
-    if($returnValue) {
-        if($item) {
+    if ($returnValue) {
+        if ($item) {
             return $item->value;
         }
         return false;
@@ -462,7 +463,7 @@ function fluentcrm_contact_added_to_tags($attachedTagIds, Subscriber $subscriber
 {
     return do_action(
         'fluentcrm_contact_added_to_tags',
-        (array) $attachedTagIds,
+        (array)$attachedTagIds,
         $subscriber
     );
 }
@@ -471,7 +472,7 @@ function fluentcrm_contact_added_to_lists($attachedListIds, Subscriber $subscrib
 {
     return do_action(
         'fluentcrm_contact_added_to_lists',
-        (array) $attachedListIds,
+        (array)$attachedListIds,
         $subscriber
     );
 }
@@ -480,7 +481,7 @@ function fluentcrm_contact_removed_from_tags($detachedTagIds, Subscriber $subscr
 {
     return do_action(
         'fluentcrm_contact_removed_from_tags',
-        (array) $detachedTagIds,
+        (array)$detachedTagIds,
         $subscriber
     );
 }
@@ -489,7 +490,7 @@ function fluentcrm_contact_removed_from_lists($detachedListIds, Subscriber $subs
 {
     return do_action(
         'fluentcrm_contact_removed_from_lists',
-        (array) $detachedListIds,
+        (array)$detachedListIds,
         $subscriber
     );
 }
@@ -513,4 +514,147 @@ function fluentcrm_get_current_contact()
     }
 
     return $subscriber;
+}
+
+function fluentcrm_get_crm_profile_html($userIdOrEmail, $checkPermission = true, $withCss = true)
+{
+    if (!$userIdOrEmail) {
+        return '';
+    }
+    if ($checkPermission) {
+        $contactPermission = apply_filters('fluentcrm_permission', 'manage_options', 'contacts', 'admin_menu');
+        if (!current_user_can($contactPermission)) {
+            return '';
+        }
+    }
+
+    $profile = FluentCrmApi('contacts')->getContactByUserRef($userIdOrEmail);
+    if (!$profile) {
+        return '';
+    }
+
+    $urlBase = apply_filters('fluentcrm_menu_url_base', admin_url('admin.php?page=fluentcrm-admin#/'));
+    $crmProfileUrl = $urlBase . 'subscribers/' . $profile->id;
+    $tags = $profile->tags;
+    $lists = $profile->lists;
+
+    $stats = $profile->stats();
+
+    ob_start();
+    ?>
+    <div class="fc_profile_external">
+        <div class="fluentcrm_profile-photo">
+            <a title="View Profile: <?php echo $profile->email; ?>" href="<?php echo $crmProfileUrl; ?>">
+                <img src="<?php echo $profile->photo; ?>"/>
+            </a>
+        </div>
+        <div class="profile-info">
+            <div class="profile_title">
+                <h3>
+                    <a title="View Profile: <?php echo $profile->email; ?>" href="<?php echo $crmProfileUrl; ?>">
+                        <?php echo $profile->full_name; ?>
+                    </a>
+                </h3>
+                <p><?php echo $profile->status; ?></p>
+            </div>
+            <div class="fc_tag_lists">
+                <div class="fc_stats" style="text-align: center">
+                    <?php foreach ($stats as $statKey => $stat): ?>
+                        <span><?php echo ucfirst($statKey); ?>: <?php echo $stat; ?></span>
+                    <?php endforeach; ?>
+                </div>
+                <?php if (!$lists->isEmpty()): ?>
+                    <div class="fc_taggables">
+                        <i class="dashicons dashicons-list-view"></i>
+                        <?php foreach ($lists as $list): ?>
+                            <span><?php echo $list->title; ?></span>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+                <?php if (!$tags->isEmpty()): ?>
+                    <div class="fc_taggables">
+                        <i class="dashicons dashicons-tag"></i>
+                        <?php foreach ($tags as $tag): ?>
+                            <span><?php echo $tag->title; ?></span>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <?php if ($withCss): ?>
+    <style>
+        .fc_profile_external {
+        }
+
+        .fc_profile_external .fluentcrm_profile-photo {
+            max-width: 100px;
+            margin: 0 auto;
+        }
+
+        .fc_profile_external .fluentcrm_profile-photo img {
+            width: 80px;
+            height: 80px;
+            border: 6px solid #e6ebf0;
+            border-radius: 50%;
+            vertical-align: middle;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+
+        .fc_profile_external .profile_title {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .fc_profile_external .profile_title h3 {
+            margin: 0;
+            padding: 0;
+            display: inline-block;
+        }
+
+        .fc_profile_external .profile_title a {
+            text-decoration: none;
+        }
+
+        .fc_profile_external p {
+            margin: 0 0 5px;
+            padding: 0;
+        }
+
+        .fc_taggables span {
+            border: 1px solid #d3e7ff;
+            margin-left: 4px;
+            padding: 2px 5px;
+            display: inline-block;
+            margin-bottom: 10px;
+            font-size: 11px;
+            border-radius: 3px;
+            color: #2196F3;
+        }
+
+        .fc_taggables i {
+            font-size: 11px;
+            margin-top: 7px;
+        }
+        .fc_stats {
+            list-style: none;
+            margin-bottom: 20px;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .fc_stats span {
+            border: 1px solid #d9ecff;
+            margin: 0 -4px 0px 0px;
+            padding: 3px 6px;
+            display: inline-block;
+            background: #ecf5ff;
+            color: #409eff;
+        }
+    </style>
+<?php endif; ?>
+    <?php
+    return ob_get_clean();
 }

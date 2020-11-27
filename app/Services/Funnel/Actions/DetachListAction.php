@@ -2,6 +2,7 @@
 
 namespace FluentCrm\App\Services\Funnel\Actions;
 
+use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Services\Funnel\BaseAction;
 use FluentCrm\App\Services\Funnel\FunnelHelper;
 
@@ -52,7 +53,9 @@ class DetachListAction extends BaseAction
 
         $lists = $sequence->settings['lists'];
 
-        $subscriber->lists()->detach($lists);
+        $renewedSubscriber = Subscriber::where('id', $subscriber->id)->first();
+        $renewedSubscriber->detachLists($lists);
+
         FunnelHelper::changefunnelSubSequenceStatus($funnelSubscriberId, $sequence->id);
     }
 }

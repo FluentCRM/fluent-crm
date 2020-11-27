@@ -66,9 +66,9 @@ class OptionsController extends Controller
     {
         $lists = Lists::select(['id', 'slug', 'title'])->get();
 
-        $withCount = (array) $this->request->get('with_count', []);
+        $withCount = (array)$this->request->get('with_count', []);
 
-        if($withCount && in_array('lists', $withCount)) {
+        if ($withCount && in_array('lists', $withCount)) {
             foreach ($lists as $list) {
                 $list->subscribersCount = $list->countByStatus('subscribed');
             }
@@ -86,8 +86,13 @@ class OptionsController extends Controller
      */
     public function tags()
     {
+        $tags = Tag::select(['id', 'slug', 'title'])->get();
+        foreach ($tags as $tag) {
+            $tag->value = strval($tag->id);
+            $tag->label = $tag->title;
+        }
         return [
-            'tags' => Tag::select(['id', 'slug', 'title'])->get()
+            'tags' => $tags
         ];
     }
 
@@ -113,7 +118,7 @@ class OptionsController extends Controller
         $sequences = [];
 
         if (defined('FLUENTCAMPAIGN')) {
-            $sequences  = \FluentCampaign\App\Models\Sequence::select('id', 'title')->orderBy('id', 'DESC')->get();
+            $sequences = \FluentCampaign\App\Models\Sequence::select('id', 'title')->orderBy('id', 'DESC')->get();
         }
 
         return [

@@ -14,16 +14,13 @@ class TagPolicy extends Policy
      */
     public function index(Request $request)
     {
-        return current_user_can('manage_options');
+        $permission = apply_filters('fluentcrm_permission', 'manage_options', 'tags', 'all');
+
+        if (!$permission) {
+            return false;
+        }
+
+        return current_user_can($permission);
     }
 
-    /**
-     * Check user permission for store method
-     * @param  \FluentCrm\Includes\Request\Request $request
-     * @return Boolean
-     */
-    public function store(Request $request)
-    {
-        return current_user_can('manage_options');
-    }
 }

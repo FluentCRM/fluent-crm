@@ -2,6 +2,7 @@
 
 namespace FluentCrm\App\Services\Funnel\Actions;
 
+use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Services\Funnel\BaseAction;
 use FluentCrm\App\Services\Funnel\FunnelHelper;
 
@@ -19,7 +20,7 @@ class ApplyTagAction extends BaseAction
         return [
             'title'       => 'Apply Tag',
             'description' => 'Add this contact to the selected Tags',
-            'icon' => fluentCrmMix('images/funnel_icons/apply_tag.svg'),
+            'icon'        => fluentCrmMix('images/funnel_icons/apply_tag.svg'),
             'settings'    => [
                 'tags' => []
             ]
@@ -34,8 +35,9 @@ class ApplyTagAction extends BaseAction
             'fields'    => [
                 'tags' => [
                     'type'        => 'option_selectors',
-                    'option_key' => 'tags',
+                    'option_key'  => 'tags',
                     'is_multiple' => true,
+                    'creatable'   => true,
                     'label'       => 'Select Tags',
                     'placeholder' => 'Select Tag'
                 ]
@@ -51,11 +53,8 @@ class ApplyTagAction extends BaseAction
         }
 
         $tags = $sequence->settings['tags'];
-        $tags = array_combine($tags, array_fill(
-            0, count($tags), ['object_type' => 'FluentCrm\App\Models\Tag']
-        ));
-
-        $subscriber->tags()->sync($tags, false);
+        $renewedSubscriber = Subscriber::where('id', $subscriber->id)->first();
+        $renewedSubscriber->attachTags($tags);
         FunnelHelper::changeFunnelSubSequenceStatus($funnelSubscriberId, $sequence->id);
     }
 }

@@ -2,7 +2,6 @@
 
 namespace FluentCrm\App\Models;
 
-use FluentCrm\App\Services\Helper;
 use FluentCrm\Includes\Helpers\Arr;
 use FluentCrm\Includes\Mailer\Handler;
 use WPManageNinja\WPOrm\ModelCollection;
@@ -36,12 +35,11 @@ class Subscriber extends Model
         'date_of_birth',
         'source',
         'life_time_value',
+        'last_activity',
         'total_points',
         'latitude',
         'longitude',
-        'last_activity',
-        'ip',
-        'created_at'
+        'ip'
     ];
 
     public static function boot()
@@ -82,9 +80,20 @@ class Subscriber extends Model
             $query->where(function ($query) use ($fields, $search) {
                 $query->where(array_shift($fields), 'LIKE', "%$search%");
 
+                $nameArray = explode(' ', $search);
+                if(count($nameArray) >= 2) {
+                    $query->orWhere(function ($q) use ($nameArray) {
+                        $fname = array_shift($nameArray);
+                        $lastName = implode(' ', $nameArray);
+                        $q->where('first_name', 'LIKE', "$fname%");
+                        $q->where('last_name', 'LIKE', "$lastName%");
+                    });
+                }
+
                 foreach ($fields as $field) {
                     $query->orWhere($field, 'LIKE', "$search%");
                 }
+
             });
         }
 
@@ -454,7 +463,7 @@ class Subscriber extends Model
      */
     public function getPhotoAttribute()
     {
-        if ($this->attributes['avatar']) {
+        if (isset($this->attributes['avatar'])) {
             return $this->attributes['avatar'];
         }
         return fluentcrmGravatar($this->attributes['email']);
@@ -617,7 +626,7 @@ class Subscriber extends Model
 
         $isNew = true;
         $oldStatus = '';
-        if($exist) {
+        if ($exist) {
             $isNew = false;
             $oldStatus = $exist->status;
         }
@@ -636,9 +645,9 @@ class Subscriber extends Model
         }
 
         $isSubscribed = false;
-        if(($exist && $exist->status != 'subscribed') && (!empty($subscriberData['status']) && $subscriberData['status']) == 'subscribed') {
+        if (($exist && $exist->status != 'subscribed') && (!empty($subscriberData['status']) && $subscriberData['status']) == 'subscribed') {
             $isSubscribed = true;
-        } else if(!$exist && (!empty($subscriberData['status']) && $subscriberData['status']) == 'subscribed') {
+        } else if (!$exist && (!empty($subscriberData['status']) && $subscriberData['status']) == 'subscribed') {
             $isSubscribed = true;
         }
 
@@ -658,14 +667,14 @@ class Subscriber extends Model
             $exist->syncCustomFieldValues($customValues, $deleteOtherValues);
         }
 
-        if($isSubscribed) {
-            do_action('fluentcrm_subscriber_status_to_subscribed', $exist, $oldStatus);
-        }
-
-        if($isNew) {
+        if ($isNew) {
             do_action('fluentcrm_contact_created', $exist);
         } else {
             do_action('fluentcrm_contact_updated', $exist);
+        }
+
+        if ($isSubscribed && $exist->status == 'subscribed') {
+            do_action('fluentcrm_subscriber_status_to_subscribed', $exist, $oldStatus);
         }
 
         return $exist;
@@ -673,6 +682,13 @@ class Subscriber extends Model
 
     public function sendDoubleOptinEmail()
     {
+        $lastDoubleOptin = fluentcrm_get_subscriber_meta($this->id, '_last_double_optin_timestamp');
+        if ($lastDoubleOptin && (time() - $lastDoubleOptin < 150)) {
+            return false;
+        } else {
+            fluentcrm_update_subscriber_meta($this->id, '_last_double_optin_timestamp', time());
+        }
+
         return (new Handler())->sendDoubleOptInEmail($this);
     }
 
@@ -711,9 +727,9 @@ class Subscriber extends Model
         ));
 
         if ($lists) {
-            $attachedListIds = $this->lists()->attach($lists);
+            $this->lists()->attach($lists);
             $this->load('lists');
-            fluentcrm_contact_added_to_lists($attachedListIds, $this);
+            fluentcrm_contact_added_to_lists($newListIds, $this);
         }
 
         return $this;
@@ -736,9 +752,9 @@ class Subscriber extends Model
         ));
 
         if ($tags) {
-            $attachedTagIds = $this->tags()->attach($tags);
+            $this->tags()->attach($tags);
             $this->load('tags');
-            fluentcrm_contact_added_to_tags($attachedTagIds, $this);
+            fluentcrm_contact_added_to_tags($newTagIds, $this);
         }
 
         return $this;
@@ -763,9 +779,7 @@ class Subscriber extends Model
             fluentcrm_contact_removed_from_lists($validListIds, $this);
         }
 
-
         return $this;
-
     }
 
     public function detachTags($tagsIds)
@@ -789,5 +803,23 @@ class Subscriber extends Model
         }
 
         return $this;
+    }
+
+    public function unsubscribeReason()
+    {
+        return fluentcrm_get_subscriber_meta($this->id, 'unsubscribe_reason', '');
+    }
+
+    public function hasAnyTagId($tagIds)
+    {
+        if(!$tagIds || !is_array($tagIds)) {
+            return false;
+        }
+        foreach ($this->tags as $tag) {
+            if(in_array($tag->id, $tagIds)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

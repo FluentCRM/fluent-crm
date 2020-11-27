@@ -164,6 +164,28 @@ class ShortcodeParser
             }
         }
 
+        if($customKey == 'tags') {
+            $tagsArray = [];
+            foreach ($subscriber->tags as $tag) {
+                $tagsArray[] = $tag->{$customProperty};
+            }
+
+            if($tagsArray) {
+                return implode(', ', $tagsArray);
+            }
+        }
+
+        if($customKey == 'lists') {
+            $tagsArray = [];
+            foreach ($subscriber->lists as $tag) {
+                $tagsArray[] = $tag->{$customProperty};
+            }
+
+            if($tagsArray) {
+                return implode(', ', $tagsArray);
+            }
+        }
+
         return $defaultValue;
     }
 }

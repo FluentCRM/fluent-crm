@@ -14,7 +14,6 @@ $app->addCustomFilter('countries', 'CountryNames@get');
 $app->addCustomFilter('email-design-template-plain', 'EmailDesignTemplates@addPlainTemplate', 10, 3);
 $app->addCustomFilter('email-design-template-simple', 'EmailDesignTemplates@addSimpleTemplate', 10, 3);
 $app->addCustomFilter('email-design-template-classic', 'EmailDesignTemplates@addClassicTemplate', 10, 3);
-$app->addCustomFilter('email-design-template-raw_html', 'EmailDesignTemplates@addRawHtmlTemplate', 10, 3);
 
 $app->addCustomFilter('get_purchase_history_woocommerce', 'PurchaseHistory@wooOrders', 10, 2);
 $app->addCustomFilter('get_purchase_history_edd', 'PurchaseHistory@eddOrders', 10, 2);

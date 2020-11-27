@@ -33,6 +33,16 @@ class Contacts
         return false;
     }
 
+    public function getContactByUserRef($userIdOrEmail)
+    {
+        if(is_numeric($userIdOrEmail)) {
+            return Subscriber::where('user_id', $userIdOrEmail)->first();
+        } else if(is_string($userIdOrEmail)) {
+            return Subscriber::where('email', $userIdOrEmail)->first();
+        }
+        return false;
+    }
+
     public function getContactByUserId($userId)
     {
         return Subscriber::where('user_id', $userId)->first();
@@ -40,7 +50,19 @@ class Contacts
 
     public function createOrUpdate($data, $forceUpdate = false, $deleteOtherValues = false, $sync = false)
     {
-        if(!isset($data['custom_fields'])) {
+
+        if(empty($data['email']) || !is_email($data['email'])) {
+            return false;
+        }
+
+        if(!$forceUpdate) {
+            $exist = Subscriber::where('email', $data['email'])->first();
+            if($exist && $exist->status != 'subscribed' && !empty($data['status'])) {
+                $forceUpdate = true;
+            }
+        }
+
+        if(!isset($data['custom_values'])) {
             $customFieldKeys = [];
             $customFields = (new CustomContactField)->getGlobalFields()['fields'];
             foreach ($customFields as $field) {
@@ -48,13 +70,14 @@ class Contacts
             }
             if ($customFieldKeys) {
                 $customFieldsData = Arr::only($data, $customFieldKeys);
+                $customFieldsData = array_filter($customFieldsData);
                 if ($customFields) {
-                    $data['custom_fields'] = (new CustomContactField)->formatCustomFieldValues($customFieldsData);
+                    $data['custom_values'] = (new CustomContactField)->formatCustomFieldValues($customFieldsData);
                 }
             }
         }
 
-        return $this->instance->updateOrCreate($data, $forceUpdate = false, $deleteOtherValues = false, $sync = false);
+        return $this->instance->updateOrCreate($data, $forceUpdate, $deleteOtherValues, $sync);
     }
 
     public function getCurrentContact()

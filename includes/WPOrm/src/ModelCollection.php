@@ -254,14 +254,9 @@ class ModelCollection implements Countable, ArrayAccess, IteratorAggregate, Json
         return end($this->models);
     }
 
-    public function empty()
-    {
-        return !count($this->models);
-    }
-
     public function isEmpty()
     {
-        return $this->empty();
+        return !count($this->models);
     }
 
     public function merge($models)

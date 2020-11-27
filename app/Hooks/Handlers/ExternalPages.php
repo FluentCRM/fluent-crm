@@ -77,7 +77,11 @@ class ExternalPages
 
         $postdata = \json_decode($postdata, true);
 
-        $notificationType = Arr::get($postdata, 'Type');
+        $notificationType = Arr::get($postdata, 'notificationType');
+
+        if(!$notificationType) {
+            $notificationType = Arr::get($postdata, 'Type');
+        }
 
         if ($notificationType == 'SubscriptionConfirmation') {
             \wp_remote_get($postdata['SubscribeURL']);
@@ -87,23 +91,21 @@ class ExternalPages
             ], 200);
         }
 
-        $message = \json_decode(Arr::get($postdata, 'Message'), true);
-        $messageType = Arr::get($message, 'notificationType');
-        if ($messageType == 'Bounce') {
-            $bounce = $message['bounce'];
+        if ($notificationType == 'Bounce') {
+            $bounce = Arr::get($postdata, 'bounce', []);
             foreach ($bounce['bouncedRecipients'] as $bouncedRecipient) {
                 $data = [
-                    'email'  => $bouncedRecipient['emailAddress'],
+                    'email'  => $this->extractEmail($bouncedRecipient['emailAddress']),
                     'reason' => Arr::get($bouncedRecipient, 'diagnosticCode'),
                     'status' => 'bounced'
                 ];
                 $this->recordUnsubscribe($data);
             }
-        } else if ($messageType == 'complaint') {
-            $complaint = $message['complaint'];
+        } else if ($notificationType == 'Complaint') {
+            $complaint = Arr::get($postdata, 'complaint', []);
             foreach ($complaint['complainedRecipients'] as $complainedRecipient) {
                 $data = [
-                    'email'  => Arr::get($complainedRecipient, 'emailAddress'),
+                    'email'  => $this->extractEmail(Arr::get($complainedRecipient, 'emailAddress')),
                     'reason' => Arr::get($complainedRecipient, 'diagnosticCode'),
                     'status' => 'complained'
                 ];
@@ -125,6 +127,10 @@ class ExternalPages
                 $subscriber->status = $data['status'];
                 $subscriber->save();
                 fluentcrm_update_subscriber_meta($subscriber->id, 'reason', $data['reason']);
+            } else {
+                $contactData = Arr::only($data, ['email','status']);
+                $contact = Subscriber::store($contactData);
+                fluentcrm_update_subscriber_meta($contact->id, 'reason', $data['reason']);
             }
         }
     }
@@ -301,7 +307,7 @@ class ExternalPages
 
         wp_enqueue_style(
             'fluentcrm_unsubscribe',
-            FLUENTCRM_PLUGIN_URL . 'assets/public/unsubscribe.css',
+            FLUENTCRM_PLUGIN_URL . 'assets/public/public_pref.css',
             [],
             FLUENTCRM_PLUGIN_VERSION
         );
@@ -364,7 +370,6 @@ class ExternalPages
 
         $subscriberModel = new Subscriber;
 
-
         $mainFields = Arr::only($postData, $subscriberModel->getFillable());
         foreach ($mainFields as $fieldKey => $value) {
             $mainFields[$fieldKey] = sanitize_text_field($value);
@@ -402,10 +407,16 @@ class ExternalPages
             }
         }
 
+        $defaultStatus = Arr::get($webhook->value, 'status', '');
+
+        if($postedStatus = Arr::get($postData, 'status')) {
+            $defaultStatus = $postedStatus;
+        }
+
         $extraData = [
             'tags'   => $tags,
             'lists'  => $lists,
-            'status' => Arr::get($webhook->value, 'status', '')
+            'status' => $defaultStatus
         ];
 
         $data = array_merge(
@@ -418,7 +429,13 @@ class ExternalPages
 
         $data = apply_filters('fluentcrm_webhook_contact_data', $data, $postData, $webhook);
 
-        $subscriber = FluentCrmApi('contacts')->createOrUpdate($data);
+        $forceUpdate = !empty($data['status']);
+
+        $subscriber = FluentCrmApi('contacts')->createOrUpdate($data, $forceUpdate);
+
+        if($subscriber->status == 'pending') {
+            $subscriber->sendDoubleOptinEmail();
+        }
 
         $message = $subscriber->wasRecentlyCreated ? 'created' : 'updated';
 
@@ -431,7 +448,9 @@ class ExternalPages
     public function handleBenchmarkUrl()
     {
         $benchmarkActionId = intval(Arr::get($_REQUEST, 'aid'));
-        do_action('fluencrm_benchmark_link_clicked', $benchmarkActionId, fluentcrm_get_current_contact());
+        if($benchmarkActionId) {
+            do_action('fluencrm_benchmark_link_clicked', $benchmarkActionId, fluentcrm_get_current_contact());
+        }
     }
 
     public function manageSubscription()
@@ -576,11 +595,17 @@ class ExternalPages
         $first = str_replace(substr($first, 2), str_repeat('*', strlen($first) - 2), $first);
         $last = explode('.', $last);
         $last_domain = str_replace(substr($last['0'], '1'), str_repeat('*', strlen($last['0']) - 1), $last['0']);
-        return $first . '@' . $last_domain . '.' . $last['1'];
+        array_shift($last);
+        return $first . '@' . $last_domain . '.' . implode('.', $last);
     }
 
     private function loadAssets()
     {
+        if(defined('CT_VERSION')) {
+            // oxygen page compatibility
+            remove_action( 'wp_head', 'oxy_print_cached_css', 999999 );
+        }
+
         wp_enqueue_style(
             'fluentcrm_public_pref',
             FLUENTCRM_PLUGIN_URL . 'assets/public/public_pref.css',
@@ -609,16 +634,31 @@ class ExternalPages
             $prefListItems = Arr::get($emailSettings, 'pref_list_items', []);
             if ($prefListItems) {
                 $lists = Lists::whereIn('id', $prefListItems)->get();
-                if ($lists->empty()) {
+                if ($lists->isEmpty()) {
                     return [];
                 }
             }
         } else if ($preListType == 'all') {
             $lists = Lists::get();
-            if ($lists->empty()) {
+            if ($lists->isEmpty()) {
                 return [];
             }
         }
         return $lists;
+    }
+
+    private function extractEmail($from_email)
+    {
+        $bracket_pos = strpos( $from_email, '<' );
+        if ( false !== $bracket_pos ) {
+            $from_email = substr( $from_email, $bracket_pos + 1 );
+            $from_email = str_replace( '>', '', $from_email );
+            $from_email = trim( $from_email );
+        }
+
+        if(is_email($from_email)) {
+            return $from_email;
+        }
+        return false;
     }
 }

@@ -3,13 +3,13 @@
 namespace FluentCrm\App\Services\ExternalIntegrations\FluentForm;
 
 use FluentCrm\App\Models\CustomContactField;
-use FluentForm\App\Services\Integrations\IntegrationManager;
-use FluentForm\Framework\Foundation\Application;
-use FluentForm\Framework\Helpers\ArrayHelper;
 use FluentCrm\App\Models\Lists;
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\Tag;
 use FluentCrm\Includes\Helpers\Arr;
+use FluentForm\App\Services\Integrations\IntegrationManager;
+use FluentForm\Framework\Foundation\Application;
+use FluentForm\Framework\Helpers\ArrayHelper;
 
 class Bootstrap extends IntegrationManager
 {
@@ -54,33 +54,34 @@ class Bootstrap extends IntegrationManager
     public function getIntegrationDefaults($settings, $formId)
     {
         return [
-            'name'           => '',
-            'first_name'     => '',
-            'last_name'      => '',
-            'full_name'      => '',
-            'email'          => '',
-            'other_fields'   => [
+            'name'                   => '',
+            'first_name'             => '',
+            'last_name'              => '',
+            'full_name'              => '',
+            'email'                  => '',
+            'other_fields'           => [
                 [
                     'item_value' => '',
                     'label'      => ''
                 ]
             ],
-            'list_id'        => '',
-            'tag_ids'        => [],
-            'skip_if_exists' => false,
-            'double_opt_in'  => false,
-            'conditionals'   => [
+            'list_id'                => '',
+            'tag_ids'                => [],
+            'tag_ids_selection_type' => 'simple',
+            'tag_routers'            => [],
+            'skip_if_exists'         => false,
+            'double_opt_in'          => false,
+            'conditionals'           => [
                 'conditions' => [],
                 'status'     => false,
                 'type'       => 'all'
             ],
-            'enabled'        => true
+            'enabled'                => true
         ];
     }
 
     public function getSettingsFields($settings, $formId)
     {
-
         $fieldOptions = [];
 
         foreach (Subscriber::mappables() as $key => $column) {
@@ -94,7 +95,6 @@ class Bootstrap extends IntegrationManager
         unset($fieldOptions['email']);
         unset($fieldOptions['first_name']);
         unset($fieldOptions['last_name']);
-
 
         return [
             'fields'              => [
@@ -158,8 +158,18 @@ class Bootstrap extends IntegrationManager
                     'key'          => 'tag_ids',
                     'require_list' => false,
                     'label'        => 'Contact Tags',
-                    'component'    => 'select',
+                    'placeholder' => 'Select Tags',
+                    'component'    => 'selection_routing',
+                    'simple_component' => 'select',
+                    'routing_input_type' => 'select',
+                    'routing_key'  => 'tag_ids_selection_type',
+                    'settings_key' => 'tag_routers',
                     'is_multiple'  => true,
+                    'labels'       => [
+                        'choice_label'      => 'Enable Dynamic Tag Selection',
+                        'input_label'       => '',
+                        'input_placeholder' => 'Set Tag'
+                    ],
                     'options'      => $this->getTags()
                 ],
                 [
@@ -214,7 +224,7 @@ class Bootstrap extends IntegrationManager
         $tags = Tag::get();
         $formattedTags = [];
         foreach ($tags as $tag) {
-            $formattedTags[$tag->id] = $tag->title;
+            $formattedTags[strval($tag->id)] = $tag->title;
         }
         return $formattedTags;
     }
@@ -230,7 +240,6 @@ class Bootstrap extends IntegrationManager
         if (!is_email($contact['email'])) {
             $contact['email'] = ArrayHelper::get($formData, $contact['email']);
         }
-
 
         if (!$contact['first_name'] && !$contact['last_name']) {
             $fullName = Arr::get($data, 'full_name');
@@ -289,9 +298,15 @@ class Bootstrap extends IntegrationManager
             $contact['user_id'] = $user->ID;
         }
 
+        $tags = $this->getSelectedTagIds($data, $formData, 'tag_ids');
+        if ($tags) {
+            $contact['tags'] = $tags;
+        }
 
         if (!$subscriber) {
-            $contact['source'] = 'FluentForms';
+            if(empty($contact['source'])) {
+                $contact['source'] = 'FluentForms';
+            }
 
             if (Arr::isTrue($data, 'double_opt_in')) {
                 $contact['status'] = 'pending';
@@ -301,9 +316,6 @@ class Bootstrap extends IntegrationManager
 
             if ($listId = Arr::get($data, 'list_id')) {
                 $contact['lists'] = [$listId];
-            }
-            if ($tags = Arr::get($data, 'tag_ids')) {
-                $contact['tags'] = $tags;
             }
 
             $subscriber = FluentCrmApi('contacts')->createOrUpdate($contact, false, false);
@@ -321,23 +333,21 @@ class Bootstrap extends IntegrationManager
             );
 
         } else {
-            $subscriber->fill($contact);
-            $subscriber->save();
-
-            if ($customValues) {
-                $subscriber->syncCustomFieldValues($customValues, false);
-            }
-
             if ($listId = Arr::get($data, 'list_id')) {
-                $lists = [$listId];
-                $subscriber->attachLists($lists);
+                $contact['lists'] = [$listId];
             }
 
-            if ($tags = Arr::get($data, 'tag_ids')) {
-                $subscriber->attachTags($tags);
+            $hasDouBleOptIn = Arr::isTrue($data, 'double_opt_in');
+
+            $forceSubscribed = !$hasDouBleOptIn && ($subscriber->status != 'subscribed');
+
+            if ($forceSubscribed) {
+                $contact['status'] = 'subscribed';
             }
 
-            if (Arr::isTrue($data, 'double_opt_in') && ($subscriber->status == 'pending' || $subscriber->status == 'unsubscribed')) {
+            $subscriber = FluentCrmApi('contacts')->createOrUpdate($contact, $forceSubscribed, false);
+
+            if ($hasDouBleOptIn && ($subscriber->status == 'pending' || $subscriber->status == 'unsubscribed')) {
                 $subscriber->sendDoubleOptinEmail();
             }
 
@@ -351,7 +361,6 @@ class Bootstrap extends IntegrationManager
         }
 
     }
-
 
     public function isConfigured()
     {
@@ -374,5 +383,53 @@ class Bootstrap extends IntegrationManager
             'component'        => $this->integrationKey,
             'source_type'      => 'submission_item'
         ]);
+    }
+
+    /*
+     * We will remove this in future
+     */
+    protected function getSelectedTagIds($data, $inputData, $simpleKey = 'tag_ids', $routingId = 'tag_ids_selection_type', $routersKey = 'tag_routers')
+    {
+        $routing = ArrayHelper::get($data, $routingId, 'simple');
+        if(!$routing || $routing == 'simple') {
+            return ArrayHelper::get($data, $simpleKey, []);
+        }
+
+        $routers = ArrayHelper::get($data, $routersKey);
+        if(empty($routers)) {
+            return [];
+        }
+
+        return $this->evaluateRoutings($routers, $inputData);
+    }
+
+    /*
+     * We will remove this in future
+     */
+    protected function evaluateRoutings($routings, $inputData)
+    {
+        $validInputs = [];
+        foreach ($routings as $routing) {
+            $inputValue = ArrayHelper::get($routing, 'input_value');
+            if(!$inputValue) {
+                continue;
+            }
+            $condition = [
+                'conditionals' => [
+                    'status'     => true,
+                    'is_test' => true,
+                    'type'       => 'any',
+                    'conditions' => [
+                        $routing
+                    ]
+                ]
+            ];
+
+            if (\FluentForm\App\Services\ConditionAssesor::evaluate($condition, $inputData)) {
+                $validInputs[] = $inputValue;
+            }
+        }
+
+        return $validInputs;
     }
 }

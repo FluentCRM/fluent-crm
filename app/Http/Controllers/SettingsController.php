@@ -128,19 +128,19 @@ class SettingsController extends Controller
     {
         return [
             'message' => 'Valid',
-            'params' => $request->all()
+            'params'  => $request->all()
         ];
     }
 
     public function resetDB(Request $request)
     {
-        if(!current_user_can('manage_options')) {
+        if (!current_user_can('manage_options')) {
             return $this->sendError([
                 'message' => 'Sorry, You do not have admin permission to reset database'
             ]);
         }
 
-        if(!defined('FLUENTCRM_IS_DEV_FEATURES') || !FLUENTCRM_IS_DEV_FEATURES) {
+        if (!defined('FLUENTCRM_IS_DEV_FEATURES') || !FLUENTCRM_IS_DEV_FEATURES) {
             return $this->sendError([
                 'message' => 'Development mode is not activated. So you can not use this feature. You can define "FLUENTCRM_IS_DEV_FEATURES" in your wp-config to enable this feature'
             ]);
@@ -164,24 +164,24 @@ class SettingsController extends Controller
             'fc_url_stores'
         ];
 
-        if(defined('FLUENTCAMPAIGN_PLUGIN_URL')) {
+        if (defined('FLUENTCAMPAIGN_PLUGIN_URL')) {
             $databases[] = 'fc_sequence_tracker';
         }
 
         global $wpdb;
         foreach ($tables as $table) {
-            $wpdb->query( "DROP TABLE IF EXISTS ".$wpdb->prefix.$table );
+            $wpdb->query("DROP TABLE IF EXISTS " . $wpdb->prefix . $table);
         }
         // All tables are delete now let's run the migration
         \FluentCrm\Includes\Activator::handle(false);
 
-        if(defined('FLUENTCAMPAIGN_PLUGIN_URL')) {
+        if (defined('FLUENTCAMPAIGN_PLUGIN_URL')) {
             \FluentCampaign\App\Migration\Migrate::run(false);
         }
 
         return [
             'message' => 'All FluentCRM Database Tables have been resetted',
-            'tables' => $tables
+            'tables'  => $tables
         ];
     }
 
@@ -189,13 +189,13 @@ class SettingsController extends Controller
     public function getBounceConfigs()
     {
         $sesBounceKey = fluentcrm_get_option('_fc_bounce_key');
-        if(!$sesBounceKey) {
+        if (!$sesBounceKey) {
             $sesBounceKey = substr(md5(wp_generate_uuid4()), 0, 10); // first 8 digit
             fluentcrm_update_option('_fc_bounce_key', $sesBounceKey);
         }
         return [
             'bounce_settings' => [
-                'ses' => site_url('?fluentcrm=1&route=bounce_handler&provider=ses&verify_key='.$sesBounceKey)
+                'ses' => site_url('?fluentcrm=1&route=bounce_handler&provider=ses&verify_key=' . $sesBounceKey)
             ]
         ];
     }
@@ -206,11 +206,11 @@ class SettingsController extends Controller
 
         $data = [
             'registration_setting' => $autoSubscribeService->getRegistrationSettings(),
-            'comment_settings' => $autoSubscribeService->getCommentSettings()
+            'comment_settings'     => $autoSubscribeService->getCommentSettings()
         ];
 
         $with = $request->get('with', []);
-        if(in_array('fields', $with)) {
+        if (in_array('fields', $with)) {
             $data['registration_fields'] = $autoSubscribeService->getRegistrationFields();
             $data['comment_fields'] = $autoSubscribeService->getCommentFields();
         }
@@ -230,4 +230,58 @@ class SettingsController extends Controller
             'message' => __('Settings has been updated', 'fluent-crm')
         ];
     }
+
+
+    public function getCronStatus()
+    {
+        $hookNames = [
+            'fluentcrm_scheduled_minute_tasks' => __('Scheduled Email Sending'),
+            'fluentcrm_scheduled_hourly_tasks' => __('Scheduled Automation Tasks')
+        ];
+
+        $crons = _get_cron_array();
+        $events = array();
+
+        foreach ($crons as $time => $hooks) {
+            foreach ($hooks as $hook => $hook_events) {
+                if (!isset($hookNames[$hook])) {
+                    continue;
+                }
+                foreach ($hook_events as $sig => $data) {
+                    $events[] = (object)array(
+                        'hook'       => $hook,
+                        'human_name' => $hookNames[$hook],
+                        'next_run'   => human_time_diff($time, time()),
+                        'interval'   => $data['interval']
+                    );
+                }
+            }
+        }
+
+        return [
+            'cron_events' => $events
+        ];
+    }
+
+    public function runCron(Request $request)
+    {
+        $hookName = $request->get('hook');
+        $hookNames = [
+            'fluentcrm_scheduled_minute_tasks' => __('Scheduled Email Sending'),
+            'fluentcrm_scheduled_hourly_tasks' => __('Scheduled Automation Tasks')
+        ];
+
+        if(!isset($hookNames[$hookName])) {
+            return $this->sendError([
+                'message' => 'The provided hook name is not valid'
+            ]);
+        }
+
+        do_action($hookName);
+
+        return [
+            'message' => __('Selected CRON Event successfully ran', 'fluent-crm')
+        ];
+    }
+
 }

@@ -16,7 +16,6 @@ class Helper
         $formatted = [];
         foreach ($urls as $index => $url) {
             $urlSlug = UrlStores::getUrlSlug('http' . $url);
-
             $formatted[$replaces[$index]] = add_query_arg([
                 'ns_url' => $urlSlug
             ], site_url());
@@ -46,7 +45,11 @@ class Helper
         // Replace Web Preview
         $emailBody = str_replace('##web_preview_url##', $preViewUrl, $emailBody);
 
-        $trackImageUrl = site_url('?fluentcrm=1&route=open&_e_hash=' . $hash);
+        $trackImageUrl = add_query_arg([
+            'fluentcrm' => 1,
+            'route' => 'open',
+            '_e_hash' => $hash
+        ], site_url());
         $trackPixelHtml = '<img src="' . $trackImageUrl . '" alt="" />';
 
         if (strpos($emailBody, '{fluent_track_pixel}') !== false) {
@@ -244,8 +247,11 @@ class Helper
         ]);
     }
 
-    public static function getTemplateConfig($templateName)
+    public static function getTemplateConfig($templateName = '')
     {
+        if(!$templateName) {
+            $templateName = self::getDefaultEmailTemplate();
+        }
         return Arr::get(self::getEmailDesignTemplates(), $templateName . '.config', []);
     }
 
@@ -284,7 +290,6 @@ class Helper
         ];
     }
 
-
     public static function getPurchaseHistoryProviders()
     {
         $validProviders = [];
@@ -315,10 +320,11 @@ class Helper
 
     public static function getThemePrefScheme()
     {
-        list($color_palette) = (array)get_theme_support('editor-color-palette');
+        list($color_palette) = get_theme_support('editor-color-palette');
 
-        if (empty($color_palette) || count($color_palette) < 2) {
-            $color_palette[] = [
+
+        if (empty($color_palette) || !is_array($color_palette) || count($color_palette) < 2) {
+            $color_palette = [
                 [
                     'name'  => 'Accent',
                     'slug'  => 'fc-accent-color',
@@ -344,22 +350,26 @@ class Helper
                 [
                     'name'      => 'Small',
                     'shortName' => 'S',
-                    'size'      => 14
+                    'size'      => 14,
+                    'slug' => 'small'
                 ],
                 [
                     'name'      => 'Medium',
                     'shortName' => 'M',
-                    'size'      => 18
+                    'size'      => 18,
+                    'slug' => 'medium'
                 ],
                 [
                     'name'      => 'Large',
                     'shortName' => 'L',
-                    'size'      => 24
+                    'size'      => 24,
+                    'slug' => 'large'
                 ],
                 [
                     'name'      => 'Larger',
                     'shortName' => 'XL',
-                    'size'      => 32
+                    'size'      => 32,
+                    'slug' => 'larger'
                 ]
             ];
         }
@@ -377,20 +387,24 @@ class Helper
             return $color_css;
         }
         $pref = self::getThemePrefScheme();
+
         $css = '';
         if (isset($pref['colors'])) {
             foreach ($pref['colors'] as $color) {
-                if(isset($color['slug']))
-                $slug = self::kebabCase($color['slug']);
-                $css .= '.has-' . $slug . '-color  { color: ' . $color['color'] . ';} ';
-                $css .= '.has-' . $slug . '-background-color  { background-color: ' . $color['color'] . '; background: ' . $color['color'] . '; } ';
+                if(isset($color['slug']) && isset($color['color'])) {
+                    $slug = self::kebabCase($color['slug']);
+                    $css .= '.has-' . $slug . '-color  { color: ' . $color['color'] . ';} ';
+                    $css .= '.has-' . $slug . '-background-color  { background-color: ' . $color['color'] . '; background: ' . $color['color'] . '; } ';
+                }
             }
         }
 
         if ($pref['font_sizes']) {
             foreach ($pref['font_sizes'] as $size) {
-                $slug = self::kebabCase($size['slug']);
-                $css .= '.fc_email_body .has-' . $slug . '-font-size  { font-size: ' . $size['size'] . 'px !important;} ';
+                if(isset($size['slug']) && isset($size['size']) ) {
+                    $slug = self::kebabCase($size['slug']);
+                    $css .= '.fc_email_body .has-' . $slug . '-font-size  { font-size: ' . $size['size'] . 'px !important;} ';
+                }
             }
         }
 
@@ -405,7 +419,11 @@ class Helper
 
     public static function getMailHeadersFromSettings($emailSettings = [])
     {
-        if (!$emailSettings || $emailSettings['is_custom'] != 'yes') {
+        if (empty($emailSettings) || Arr::get($emailSettings, 'is_custom') == 'no') {
+            $emailSettings = fluentcrmGetGlobalSettings('email_settings', []);
+        }
+
+        if(empty($emailSettings)) {
             return [];
         }
 
@@ -427,7 +445,7 @@ class Helper
 
     public static function getMailHeader($existingHeader = [])
     {
-        if (isset($existingHeader['From'])) {
+        if (!empty($existingHeader['From'])) {
             return $existingHeader;
         }
 
@@ -448,11 +466,19 @@ class Helper
             $headers['From'] = $fromEmail;
         }
 
+        $replyName = Arr::get($globalEmailSettings, 'reply_to_name');
+        $replyEmail = Arr::get($globalEmailSettings, 'reply_to_email');
+
+        if ($replyName && $replyEmail) {
+            $headers['Reply-To'] = $replyName . ' <' . $replyEmail . '>';
+        } else if ($replyEmail) {
+            $headers['Reply-To'] = $replyEmail;
+        }
+
         $globalHeaders = $headers;
 
         return $globalHeaders;
     }
-
 
     public static function recordCampaignRevenue($campaignId, $amount, $currency = 'USD', $isRefunded = false)
     {
@@ -478,7 +504,6 @@ class Helper
         return fluentcrm_update_campaign_meta($campaignId, '_campaign_revenue', $data);
 
     }
-
 
     public static function getWPMapUserInfo($user)
     {

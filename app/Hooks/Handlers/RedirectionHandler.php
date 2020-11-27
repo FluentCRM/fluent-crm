@@ -17,7 +17,7 @@ class RedirectionHandler
             $mailId = intval($data['mid']);
         }
 
-        $urlData = UrlStores::where('short', $urlSlug)->first();
+        $urlData = UrlStores::getRowByShort($urlSlug);
 
         if (!$urlData) {
             return;
@@ -25,9 +25,11 @@ class RedirectionHandler
 
         $redirectUrl = $this->trackUrlClick($mailId, $urlData);
 
+        $redirectUrl = htmlspecialchars_decode($redirectUrl);
+
         if ($redirectUrl) {
             do_action('fluentcrm_email_url_click', $redirectUrl, $mailId, $urlData);
-            wp_redirect(htmlspecialchars_decode($redirectUrl));
+            wp_redirect($redirectUrl);
             exit;
         }
     }
@@ -52,9 +54,11 @@ class RedirectionHandler
             'ip_address'    => FluentCrm('request')->getIp()
         ]);
 
-        setcookie("fc_sid", $campaignEmail->subscriber_id, time() + 2419200);  /* expire in 7 days */
-        if ($campaignEmail->campaign_id) {
-            setcookie("fc_cid", $campaignEmail->campaign_id, time() + 2419200);  /* expire in 7 days */
+        if (apply_filters('fluentcrm_will_use_cookie', true)) {
+            setcookie("fc_sid", $campaignEmail->subscriber_id, time() + 9676800);  /* expire in 28 days */
+            if ($campaignEmail->campaign_id) {
+                setcookie("fc_cid", $campaignEmail->campaign_id, time() + 9676800);  /* expire in 28 days */
+            }
         }
 
         do_action(FLUENTCRM . '_email_url_clicked', $campaignEmail, $urlData);
