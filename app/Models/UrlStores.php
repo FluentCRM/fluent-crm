@@ -6,7 +6,6 @@ class UrlStores extends Model
 {
     protected $table = 'fc_url_stores';
 
-
     public static function getUrlSlug($longUrl)
     {
         $isExist = self::where('url', $longUrl)
@@ -51,7 +50,12 @@ class UrlStores extends Model
             } else {
                 $mod = self::bcmodFallBack($num, $len);
             }
-            $num = bcdiv($num, $len);
+            if (function_exists('bcdiv')) {
+                $num = bcdiv($num, $len);
+            } else {
+                $num = self::bcDivFallBack($num, $len);
+            }
+
             $string = $chars[$mod] . $string;
         }
         return $chars[intval($num)] . $string;
@@ -70,5 +74,17 @@ class UrlStores extends Model
         } while (strlen($x));
 
         return (int)$mod;
+    }
+
+    private static function bcDivFallBack($x, $y)
+    {
+        return floor($x / $y);
+    }
+
+    public static function getRowByShort($short)
+    {
+        $short = esc_sql($short);
+        global $wpdb;
+        return $wpdb->get_row("SELECT * FROM ".$wpdb->prefix."fc_url_stores WHERE BINARY `short` = '".$short."' LIMIT 1");
     }
 }

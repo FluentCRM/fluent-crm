@@ -1,7 +1,12 @@
 <div class="fluentcrm_app_wrapper">
     <div class="fluentcrm_main_menu_items">
         <div class="fluentcrm_menu_logo_holder">
-            <a href="<?php echo $base_url; ?>"><img src="<?php echo $logo; ?>" /></a>
+            <a href="<?php echo $base_url; ?>">
+                <img src="<?php echo $logo; ?>" />
+                <?php if(defined('FLUENTCAMPAIGN_PLUGIN_PATH')): ?>
+                <span>Pro</span>
+                <?php endif; ?>
+            </a>
         </div>
         <div class="fluentcrm_handheld"><span class="dashicons dashicons-menu-alt3"></span></div>
         <ul class="fluentcrm_menu">

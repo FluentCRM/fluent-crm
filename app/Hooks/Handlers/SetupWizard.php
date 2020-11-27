@@ -65,7 +65,7 @@ class SetupWizard
             'ajaxurl' => admin_url('admin-ajax.php'),
             'slug' => FLUENTCRM,
             'rest'  => $this->getRestInfo(FluentCrm()),
-            'dashboard_url' => admin_url('admin.php?page=fluentcrm-admin'),
+            'dashboard_url' => admin_url('admin.php?page=fluentcrm-admin&setup_complete='.time()),
             'business_settings' => (object) $businessSettings,
             'has_fluentform' => defined('FLUENTFORM')
         ]);

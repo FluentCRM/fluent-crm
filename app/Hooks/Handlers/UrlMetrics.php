@@ -67,7 +67,8 @@ class UrlMetrics
                 'created_at' => fluentCrmTimestamp(),
                 'updated_at' => fluentCrmTimestamp()
             ];
-            CampaignUrlMetric::insert($data);
+            $metric = CampaignUrlMetric::insert($data);
+            do_action('fluentcrm_email_link_click_inserted', $metric);
         }
     }
 

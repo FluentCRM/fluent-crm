@@ -2,14 +2,17 @@
 
 namespace FluentCrm\App\Hooks\Handlers;
 
+use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Services\Stats;
-use FluentCrm\App\Http\Controllers\DashboardController;
+use FluentCrm\Includes\Helpers\Arr;
 
 class AdminBar
 {
     public function init()
     {
-        if (!current_user_can('manage_options') || !is_admin()) {
+        $contactPermission = apply_filters('fluentcrm_permission', 'manage_options', 'contacts', 'admin_menu');
+
+        if (!is_admin() || !$contactPermission || !current_user_can($contactPermission)) {
             return;
         }
 
@@ -30,16 +33,39 @@ class AdminBar
             admin_url('admin.php?page=fluentcrm-admin#/')
         );
 
+        $currentScreen = get_current_screen();
+        $editingUserVars = null;
+        if ($currentScreen && $currentScreen->id == 'user-edit') {
+            $userId = Arr::get($_REQUEST, 'user_id');
+            $user = get_user_by('ID', $userId);
+
+            if ($userId && $user) {
+                $crmProfile = Subscriber::where('email', $user->user_email)
+                    ->orWhere('user_id', $user->ID)
+                    ->first();
+                if ($crmProfile) {
+                    $urlBase = apply_filters('fluentcrm_menu_url_base', admin_url('admin.php?page=fluentcrm-admin#/'));
+                    $crmProfileUrl = $urlBase . 'subscribers/' . $crmProfile->id;
+                    $editingUserVars = [
+                        'user_id'         => $userId,
+                        'crm_profile_id'  => $crmProfile->id,
+                        'crm_profile_url' => $crmProfileUrl
+                    ];
+                }
+            }
+        }
+
         wp_localize_script('fluentcrm_global_seach', 'fc_bar_vars', [
-            'rest' => $this->getRestInfo(),
-            'links' => (new Stats)->getQuickLinks(),
-            'subscriber_base' => $urlBase.'subscribers/'
+            'rest'            => $this->getRestInfo(),
+            'links'           => (new Stats)->getQuickLinks(),
+            'subscriber_base' => $urlBase . 'subscribers/',
+            'edit_user_vars'  => $editingUserVars
         ]);
 
         $args = [
             'parent' => 'top-secondary',
             'id'     => 'fc_global_search',
-            'title'  => 'Search Contact',
+            'title'  => 'Search Contacts',
             'href'   => '#',
             'meta'   => false
         ];
@@ -59,7 +85,7 @@ class AdminBar
             'url'       => rest_url($ns . '/' . $v),
             'nonce'     => wp_create_nonce('wp_rest'),
             'namespace' => $ns,
-            'version'   => $v,
+            'version'   => $v
         ];
     }
 }

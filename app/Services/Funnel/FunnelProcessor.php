@@ -3,11 +3,10 @@
 namespace FluentCrm\App\Services\Funnel;
 
 use FluentCrm\App\Models\Funnel;
-use FluentCrm\Includes\Helpers\Arr;
-use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\FunnelMetric;
 use FluentCrm\App\Models\FunnelSequence;
 use FluentCrm\App\Models\FunnelSubscriber;
+use FluentCrm\App\Models\Subscriber;
 
 class FunnelProcessor
 {
@@ -52,14 +51,13 @@ class FunnelProcessor
         if (!$subscriber) {
             // it's new so let's create new subscriber
             $subscriber = FunnelHelper::createOrUpdateContact($subscriberData);
-
-            if ($subscriber->status == 'pending') {
+            if ($subscriber->status == 'pending' || $subscriber->status == 'unsubscribed') {
                 $subscriber->sendDoubleOptinEmail();
             }
         }
 
         $args = [
-            'status' => ($subscriber->status == 'pending') ? 'pending' : 'draft'
+            'status' => ($subscriber->status == 'pending' || $subscriber->status == 'unsubscribed') ? 'pending' : 'draft'
         ];
 
         if ($funnelSubArgs) {
@@ -74,7 +72,8 @@ class FunnelProcessor
         $sequences = FunnelSequence::where('funnel_id', $funnel->id)
             ->orderBy('sequence', 'ASC')
             ->get();
-        if (!$sequences) {
+
+        if ($sequences->isEmpty()) {
             return;
         }
 
@@ -98,7 +97,7 @@ class FunnelProcessor
 
     public function processSequences($sequences, $subscriber, $funnelSubscriber)
     {
-        if ($sequences->empty()) {
+        if ($sequences->isEmpty()) {
             $this->completeFunnelSequence($funnelSubscriber);
             return;
         }
@@ -107,7 +106,7 @@ class FunnelProcessor
         $nextSequence = false;
         $firstSequence = $sequences[0];
 
-        $requiredBenchMark = null;
+        $requiredBenchMark = false;
 
         foreach ($sequences as $sequence) {
             if ($requiredBenchMark) {
@@ -118,7 +117,7 @@ class FunnelProcessor
              * Check if there has a required sequence for this.
              */
             if ($sequence->type == 'benchmark') {
-                if (Arr::get($sequence->settings, 'type') == 'required') {
+                if ($sequence->settings['type'] == 'required') {
                     $requiredBenchMark = $sequence;
                 }
                 continue;
@@ -140,10 +139,9 @@ class FunnelProcessor
             $this->processSequence($subscriber, $immediateSequence, $funnelSubscriber->id);
         }
 
-
         if ($nextSequence && $requiredBenchMark) {
             if ($nextSequence->sequence < $requiredBenchMark->sequence) {
-                $requiredBenchMark = null;
+                $requiredBenchMark = false;
             }
         }
 
@@ -196,6 +194,7 @@ class FunnelProcessor
             })
             ->where('next_execution_time', '<=', current_time('mysql'))
             ->whereNotNull('next_execution_time')
+            ->limit(200)// we want to process 200 records each time
             ->get();
 
         foreach ($jobs as $job) {
@@ -205,8 +204,15 @@ class FunnelProcessor
 
     public function processFunnelAction($funnelSubscriber)
     {
-        $funnel = $this->getFunnel($funnelSubscriber->funnel_id);
         $subscriber = $this->getSubscriber($funnelSubscriber->subscriber_id);
+        $funnel = $this->getFunnel($funnelSubscriber->funnel_id);
+
+        if (!$subscriber) {
+            FunnelSubscriber::where('id', $funnelSubscriber->id)->update([
+                'status' => 'skipped'
+            ]);
+            return false;
+        }
 
         $upcomingSequences = FunnelSequence::where('funnel_id', $funnel->id)
             ->orderBy('sequence', 'ASC')
@@ -249,6 +255,7 @@ class FunnelProcessor
         } else {
             // We already have funnel subscriber. Now we have to update that
             $lastSequence = $funnelSubscriber->last_sequence;
+
             if (!$lastSequence || ($lastSequence->sequence <= $startSequence->sequence)) {
                 $nextSequence = FunnelSequence::where('sequence', '>', $startSequence->sequence)
                     ->orderBy('sequence', 'ASC')

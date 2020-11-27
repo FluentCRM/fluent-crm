@@ -73,4 +73,9 @@ class Funnel extends Model
     {
         return \maybe_unserialize($conditions);
     }
+
+    public function getSubscribersCount()
+    {
+        return $this->subscribers()->count();
+    }
 }

@@ -679,22 +679,34 @@ abstract class Model implements Arrayable, ArrayAccess, Jsonable, JsonSerializab
 
     public function getDirty()
     {
-        $dirty = array_diff(
-            array_map('json_encode', $this->getAttributes()),
-            array_map('json_encode', $this->getOriginal())
-        );
+        $dirty = [];
 
-        $dirty = array_map('json_decode', $dirty);
-
-        if ($dirty) {
-            foreach ($dirty as $key => $value) {
-                if (strcmp((string) $value, (string) $this->getOriginal($key)) === 0) {
-                    unset($dirty[$key]);
-                }
+        foreach ($this->attributes as $key => $value) {
+            if (! array_key_exists($key, $this->original)) {
+                $dirty[$key] = $value;
+            } elseif ($value !== $this->original[$key] &&
+                ! $this->originalIsNumericallyEquivalent($key)) {
+                $dirty[$key] = $value;
             }
         }
 
         return $dirty;
+    }
+
+
+    /**
+     * Determine if the new and old values for a given key are numerically equivalent.
+     *
+     * @param  string  $key
+     * @return bool
+     */
+    protected function originalIsNumericallyEquivalent($key)
+    {
+        $current = $this->attributes[$key];
+
+        $original = $this->original[$key];
+
+        return is_numeric($current) && is_numeric($original) && strcmp((string) $current, (string) $original) === 0;
     }
 
     public function getOriginal($key = null)

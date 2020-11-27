@@ -3,7 +3,7 @@
 Plugin Name:  FluentCRM - Marketing Automation For WordPress
 Plugin URI:   https://fluentcrm.com
 Description:  CRM and Email Newsletter Plugin for WordPress
-Version:      1.1.1
+Version:      1.1.91
 Author:       Fluent CRM
 Author URI:   https://fluentcrm.com
 License:      GPLv2 or later

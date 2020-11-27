@@ -100,7 +100,7 @@ class ListsController extends Controller
             'description' => sanitize_text_field($allData['description']),
         ]);
 
-        do_action('fluentcrm_list_updated', $list->id);
+        do_action('fluentcrm_list_updated', $id);
 
         return $this->send([
             'lists'   => $list,

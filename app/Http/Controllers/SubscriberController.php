@@ -2,12 +2,13 @@
 
 namespace FluentCrm\App\Http\Controllers;
 
-use FluentCrm\Includes\Helpers\Arr;
-use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\CampaignEmail;
-use FluentCrm\Includes\Request\Request;
+use FluentCrm\App\Models\CustomEmailCampaign;
+use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\SubscriberNote;
 use FluentCrm\App\Models\SubscriberPivot;
+use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Includes\Request\Request;
 
 class SubscriberController extends Controller
 {
@@ -30,8 +31,9 @@ class SubscriberController extends Controller
                 $query->orderBy($this->request->get('sort_by'), $this->request->get('sort_type'));
             });
 
+        $subscribers = $subscribers->paginate();
         return $this->sendSuccess([
-            'subscribers' => $subscribers->paginate()
+            'subscribers' => $subscribers
         ]);
     }
 
@@ -56,6 +58,14 @@ class SubscriberController extends Controller
 
         if (in_array('subscriber.custom_values', $with)) {
             $subscriber->custom_values = (object)$subscriber->custom_fields();
+        }
+
+        if ($subscriber->date_of_birth == '0000-00-00') {
+            $subscriber->date_of_birth = '';
+        }
+
+        if ($subscriber->status == 'unsubscribed') {
+            $subscriber->unsubscribe_reason = $subscriber->unsubscribeReason();
         }
 
         $data = [
@@ -112,7 +122,7 @@ class SubscriberController extends Controller
             if ($oldValue != $value) {
                 $subscriber->{$column} = $value;
                 $subscriber->save();
-                if(in_array($column, ['status', 'contact_type'])) {
+                if (in_array($column, ['status', 'contact_type'])) {
                     do_action('fluentcrm_subscriber_' . $column . '_to_' . $value, $subscriber, $oldValue);
                 }
             }
@@ -182,19 +192,24 @@ class SubscriberController extends Controller
         ]);
 
         if ($this->isNew()) {
-            Subscriber::store($data);
-            return $this->sendSuccess([
-                'message' => 'Successfully added the subscriber.'
-            ]);
+            $contact = Subscriber::store($data);
+
+            do_action('fluentcrm_contact_created', $contact, $data);
+
+            return [
+                'message' => 'Successfully added the subscriber.',
+                'contact' => $contact
+            ];
         }
     }
 
-    public function updateSubscriber(Request $request)
+    public function updateSubscriber(Request $request, $id)
     {
-        $subscriber = Subscriber::find($id = $request->get('id'));
+        $subscriber = Subscriber::findOrFail($id);
 
-        $data = $this->validate($request->getJson('subscriber'), [
-            'email'  => 'required|email|unique:fc_subscribers,email,'.$id,
+        $originalData = $request->getJson('subscriber');
+        $data = $this->validate($originalData, [
+            'email' => 'required|email|unique:fc_subscribers,email,' . $id,
         ], [
             'email.unique' => __('Provided email already assigned to another subscriber.')
         ]);
@@ -204,17 +219,33 @@ class SubscriberController extends Controller
             $data['user_id'] = $user->ID;
         }
 
+        if (!empty($data['user_id'])) {
+            $data['user_id'] = intval($data['user_id']);
+        }
+
+        if (empty($data['date_of_birth'])) {
+            $data['date_of_birth'] = '0000-00-00';
+        }
+
+        $data = Arr::only($data, $subscriber->getFillable());
+        unset($data['created_at']);
+        unset($data['last_activity']);
         $subscriber->fill($data);
+        $isDirty = $subscriber->isDirty();
         $subscriber->save();
 
-        do_action('fluentcrm_contact_updated', $subscriber, $data);
+        if ($isDirty) {
+            do_action('fluentcrm_contact_updated', $subscriber, $data);
+        }
 
-        if ($customValues = Arr::get($data, 'custom_values')) {
+        if ($customValues = Arr::get($originalData, 'custom_values')) {
             $subscriber->syncCustomFieldValues($customValues);
         }
 
         return $this->sendSuccess([
-            'message' => __('Subscriber successfully updated')
+            'message' => __('Subscriber successfully updated'),
+            'contact' => $subscriber,
+            'isDirty' => $isDirty
         ], 200);
     }
 
@@ -276,9 +307,8 @@ class SubscriberController extends Controller
         return true;
     }
 
-    public function emails()
+    public function emails(Request $request, $subscriberId)
     {
-        $subscriberId = $this->request->get('id');
         $emails = CampaignEmail::where('subscriber_id', $subscriberId)
             ->orderBy('id', 'DESC')
             ->paginate();
@@ -286,6 +316,17 @@ class SubscriberController extends Controller
         return apply_filters('fluentcrm_contact_emails', [
             'emails' => $emails
         ], $subscriberId);
+    }
+
+    public function deleteEmails(Request $request, $subscriberId)
+    {
+        $emailIds = $request->get('email_ids');
+        CampaignEmail::where('subscriber_id', $subscriberId)
+            ->whereIn('id', $emailIds)
+            ->delete();
+        return [
+            'message' => __('Selected emails has been deleted')
+        ];
     }
 
     public function addNote(Request $request, $id)
@@ -396,4 +437,46 @@ class SubscriberController extends Controller
             'message' => 'Double OptIn email has been sent'
         ]);
     }
+
+    public function getTemplateMock(Request $request, $id)
+    {
+        $emailMock = CustomEmailCampaign::getMock();
+        $emailMock['title'] = __('Custom Email to Contact');
+        return [
+            'email_mock' => $emailMock
+        ];
+    }
+
+    public function sendCustomEmail(Request $request, $contactId)
+    {
+        $contact = Subscriber::findOrFail($contactId);
+        if ($contact->status != 'subscribed') {
+            $this->sendError([
+                'message' => __('Subscriber\'s status need to be subscribed.', 'fluent-crm')
+            ]);
+        }
+
+        add_action('wp_mail_failed', function ($wpError) {
+            $this->sendError([
+                'message' => $wpError->get_error_message()
+            ]);
+        }, 10, 1);
+
+        $newCampaign = $request->get('campaign');
+        unset($newCampaign['id']);
+
+        $campaign = CustomEmailCampaign::create($newCampaign);
+
+        $campaign->subscribe([$contactId], [
+            'status' => 'scheduled',
+            'scheduled_at' => current_time('mysql')
+        ]);
+
+        do_action('fluentcrm_process_contact_jobs', $contact);
+
+        return [
+            'message' => __('Custom Email has been successfully sent')
+        ];
+    }
+
 }

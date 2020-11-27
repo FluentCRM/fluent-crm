@@ -116,9 +116,7 @@ class RemoveFromListBenchmark extends BaseBenchMark
         $marchType = Arr::get($settings, 'select_type');
 
         if ($marchType == 'all') {
-            $attachedListIds = Lists::whereHas('subscribers', function ($q) use ($subscriber) {
-                $q->where('subscriber_id', $subscriber->id);
-            })->get()->pluck('id');
+            $attachedListIds = $subscriber->lists->pluck('id');
             return !array_diff($settings['lists'], $attachedListIds) == $settings['lists'];
         }
 

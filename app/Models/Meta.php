@@ -6,6 +6,15 @@ class Meta extends Model
 {
     protected $table = 'fc_meta';
 
+    protected $primaryKey = 'id';
+
+    protected $fillable = [
+        'object_type',
+        'object_id',
+        'key',
+        'value'
+    ];
+
     public function setValueAttribute($value)
     {
         $this->attributes['value'] = maybe_serialize($value);

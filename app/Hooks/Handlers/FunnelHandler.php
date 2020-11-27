@@ -5,23 +5,19 @@ namespace FluentCrm\App\Hooks\Handlers;
 use FluentCrm\App\Models\Funnel;
 use FluentCrm\App\Models\FunnelSequence;
 use FluentCrm\App\Models\FunnelSubscriber;
-
-use FluentCrm\App\Services\Funnel\Benchmarks\RemoveFromListBenchmark;
-use FluentCrm\App\Services\Funnel\Benchmarks\RemoveFromTagBenchmark;
-use FluentCrm\App\Services\Funnel\Benchmarks\TagAppliedBenchmark;
-use FluentCrm\App\Services\Funnel\FunnelProcessor;
-
-use FluentCrm\App\Services\Funnel\Triggers\FluentFormSubmissionTrigger;
-use FluentCrm\App\Services\Funnel\Triggers\UserRegistrationTrigger;
-
 use FluentCrm\App\Services\Funnel\Actions\ApplyListAction;
 use FluentCrm\App\Services\Funnel\Actions\ApplyTagAction;
 use FluentCrm\App\Services\Funnel\Actions\DetachListAction;
 use FluentCrm\App\Services\Funnel\Actions\DetachTagAction;
 use FluentCrm\App\Services\Funnel\Actions\SendEmailAction;
 use FluentCrm\App\Services\Funnel\Actions\WaitTimeAction;
-
 use FluentCrm\App\Services\Funnel\Benchmarks\ListAppliedBenchmark;
+use FluentCrm\App\Services\Funnel\Benchmarks\RemoveFromListBenchmark;
+use FluentCrm\App\Services\Funnel\Benchmarks\RemoveFromTagBenchmark;
+use FluentCrm\App\Services\Funnel\Benchmarks\TagAppliedBenchmark;
+use FluentCrm\App\Services\Funnel\FunnelProcessor;
+use FluentCrm\App\Services\Funnel\Triggers\FluentFormSubmissionTrigger;
+use FluentCrm\App\Services\Funnel\Triggers\UserRegistrationTrigger;
 
 class FunnelHandler
 {
@@ -34,9 +30,7 @@ class FunnelHandler
         $this->initTriggers();
         $triggers = get_option($this->settingsKey, []);
 
-        if (!$triggers) {
-            return;
-        }
+        $triggers = array_unique($triggers);
 
         foreach ($triggers as $triggerName) {
             $argNum = apply_filters('fluentcrm_funnel_arg_num_' . $triggerName, 1);
@@ -52,8 +46,14 @@ class FunnelHandler
 
     private function mapTriggers($triggerName, $originalArgs, $argNumber)
     {
+        $triggerNameBase = $triggerName;
+
+        if($triggerName == 'woocommerce_order_status_completed') {
+            $triggerNameBase = 'woocommerce_order_status_processing';
+        }
+
         $funnels = Funnel::where('status', 'published')
-            ->where('trigger_name', $triggerName)
+            ->where('trigger_name', $triggerNameBase)
             ->get();
 
         foreach ($funnels as $funnel) {
@@ -63,6 +63,7 @@ class FunnelHandler
         }
 
         $benchMarks = FunnelSequence::where('type', 'benchmark')
+            ->where('action_name', $triggerNameBase)
             ->whereHas('funnel', function ($q) {
                 $q->where('status', 'published');
             })
@@ -92,11 +93,18 @@ class FunnelHandler
         $sequenceMetrics = FunnelSequence::select('action_name')
             ->where('status', 'published')
             ->where('type', 'benchmark')
+            ->whereHas('funnel', function ($q) {
+                $q->where('status', 'published');
+            })
             ->groupBy('action_name')
             ->get();
 
         foreach ($sequenceMetrics as $sequenceMetric) {
             $funnelArrays[] = $sequenceMetric->action_name;
+        }
+
+        if(in_array('woocommerce_order_status_processing', $funnelArrays)) {
+            $funnelArrays[] = 'woocommerce_order_status_completed';
         }
 
         update_option($this->settingsKey, array_unique($funnelArrays), 'yes');
@@ -141,7 +149,7 @@ class FunnelHandler
 
             // check the last sequence ID here
             $lastSequence = false;
-            if($funnelSubscriber->last_sequence_id) {
+            if ($funnelSubscriber->last_sequence_id) {
                 $lastSequence = FunnelSequence::find($funnelSubscriber->last_sequence_id);
             }
 
@@ -151,7 +159,7 @@ class FunnelHandler
                 })
                 ->orderBy('sequence', 'ASC');
 
-            if($lastSequence) {
+            if ($lastSequence) {
                 // If sequence already stated then we want to resume here
                 $sequences = $sequences->where('sequence', '>', $lastSequence->sequence);
             }

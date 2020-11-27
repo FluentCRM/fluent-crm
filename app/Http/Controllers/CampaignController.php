@@ -3,6 +3,8 @@
 namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\Models\Campaign;
+use FluentCrm\App\Models\CampaignEmail;
+use FluentCrm\App\Models\CampaignUrlMetric;
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\Template;
 use FluentCrm\App\Services\BlockParser;
@@ -11,8 +13,6 @@ use FluentCrm\Includes\Helpers\Arr;
 use FluentCrm\Includes\Mailer\Handler;
 use FluentCrm\Includes\Mailer\Mailer;
 use FluentCrm\Includes\Request\Request;
-use FluentCrm\App\Models\CampaignEmail;
-use FluentCrm\App\Models\CampaignUrlMetric;
 
 class CampaignController extends Controller
 {
@@ -85,10 +85,15 @@ class CampaignController extends Controller
     public function campaignEmails(Request $request, $campaignId)
     {
         $filterType = $request->get('filter_type');
+        $search = $request->get('search');
 
-        $emailsQuery = CampaignEmail::with(['subscriber' => function ($query) {
-            $query->with('tags', 'lists');
-        }])->where('campaign_id', $campaignId);
+        $emailsQuery = CampaignEmail::with(['subscriber'])->where('campaign_id', $campaignId);
+
+        if ($search) {
+            $emailsQuery->whereHas('subscriber', function ($q) use ($search) {
+                $q->searchBy($search);
+            });
+        }
 
         if ($filterType == 'click') {
             $emailsQuery = $emailsQuery->whereNotNull('click_counter')
@@ -101,7 +106,8 @@ class CampaignController extends Controller
         $emails = $emailsQuery->paginate();
 
         return $this->sendSuccess([
-            'emails' => $emails
+            'emails' => $emails,
+            'failed_counts' => CampaignEmail::where('campaign_id', $campaignId)->where('status', 'failed')->count()
         ]);
     }
 
@@ -231,19 +237,19 @@ class CampaignController extends Controller
 
         if ($subscribeStatus['total_items']) {
             return $this->sendSuccess([
-                'has_more'    => $hasMore,
-                'count'       => $campaign->recipients_count,
-                'total_items' => $subscribeStatus['total_items'],
-                'page_total'  => ceil($subscribeStatus['total_items'] / $limit),
-                'next_page'   => $page + 1,
+                'has_more'       => $hasMore,
+                'count'          => $campaign->recipients_count,
+                'total_items'    => $subscribeStatus['total_items'],
+                'page_total'     => ceil($subscribeStatus['total_items'] / $limit),
+                'next_page'      => $page + 1,
                 'execution_time' => microtime(true) - $startTime
             ]);
         }
 
-        if($campaign->recipients_count) {
+        if ($campaign->recipients_count) {
             return [
                 'has_more' => false,
-                'count' => $campaign->recipients_count
+                'count'    => $campaign->recipients_count
             ];
         }
 
@@ -254,6 +260,7 @@ class CampaignController extends Controller
 
     public function getContactEstimation(Request $request)
     {
+        $start_time = microtime(true);
         $subscribersSettings = [
             'subscribers'         => $request->get('subscribers'),
             'excludedSubscribers' => $request->get('excludedSubscribers'),
@@ -261,8 +268,14 @@ class CampaignController extends Controller
             'dynamic_segment'     => $request->get('dynamic_segment')
         ];
 
-        $subscribers = (new Campaign())->getSubscriberIdsBySegmentSettings($subscribersSettings);
-        return $subscribers['total_count'];
+        //$subscribers = (new Campaign())->getSubscriberIdsBySegmentSettings($subscribersSettings);
+        $count = (new Campaign())->getSubscriberIdsCountBySegmentSettings($subscribersSettings);
+        
+        return [
+           // 'count' => $subscribers['total_count'],
+            'count' => $count,
+            'execution_time' => microtime(true) - $start_time
+        ];
     }
 
     public function deleteCampaignEmails(Request $request, $campaignId)
@@ -296,11 +309,13 @@ class CampaignController extends Controller
         $this->app->doCustomAction('campaign_status_active', $campaign);
 
         if ($scheduleAt) {
-            CampaignEmail::where('campaign_id', $campaignId)->update([
-                'status'       => 'scheduled',
-                'updated_at'   => fluentCrmTimestamp(),
-                'scheduled_at' => $scheduleAt
-            ]);
+            CampaignEmail::where('campaign_id', $campaignId)
+                ->where('status', '!=', 'sent')
+                ->update([
+                    'status'       => 'scheduled',
+                    'updated_at'   => fluentCrmTimestamp(),
+                    'scheduled_at' => $scheduleAt
+                ]);
 
             $message = __('Your campaign email has been scheduled', 'fluent-crm');
 
@@ -310,11 +325,13 @@ class CampaignController extends Controller
                 'scheduled_at' => $scheduleAt
             ];
         } else {
-            CampaignEmail::where('campaign_id', $campaignId)->update([
-                'status'       => 'pending',
-                'updated_at'   => fluentCrmTimestamp(),
-                'scheduled_at' => fluentCrmTimestamp()
-            ]);
+            CampaignEmail::where('campaign_id', $campaignId)
+                ->where('status', '!=', 'sent')
+                ->update([
+                    'status'       => 'pending',
+                    'updated_at'   => fluentCrmTimestamp(),
+                    'scheduled_at' => fluentCrmTimestamp()
+                ]);
 
             $message = __('Email Sending has been started', 'fluent-crm');
 
@@ -337,6 +354,8 @@ class CampaignController extends Controller
                 ]
             ]);
         }
+
+        $campaign = Campaign::find($campaignId);
 
         return $this->sendSuccess([
             'campaign'          => $campaign,
@@ -377,21 +396,24 @@ class CampaignController extends Controller
 
         $emailBody = $campaignEmail->email_body;
 
-        $emailBody = (new BlockParser())->parse($emailBody);
-
         $subscriber = Subscriber::where('email', $email)->first();
         if (!$subscriber) {
             $subscriber = Subscriber::where('status', 'subscribed')->first();
         }
 
+        $emailBody = (new BlockParser($subscriber))->parse($emailBody);
+
+        $emailFooter = Arr::get(Helper::getGlobalEmailSettings(), 'email_footer', '');
+
         if ($subscriber) {
             $emailBody = apply_filters('fluentcrm-parse_campaign_email_text', $emailBody, $subscriber);
+            $emailFooter = apply_filters('fluentcrm-parse_campaign_email_text', $emailFooter, $subscriber);
         }
 
         $templateData = [
             'preHeader'   => $campaign->email_pre_header,
             'email_body'  => $emailBody,
-            'footer_text' => Arr::get(Helper::getGlobalEmailSettings(), 'email_footer', ''),
+            'footer_text' => $emailFooter,
             'config'      => wp_parse_args($campaign->settings['template_config'], Helper::getTemplateConfig($campaign->design_template))
         ];
 
@@ -493,18 +515,12 @@ class CampaignController extends Controller
             ->groupBy('status')
             ->get();
 
-        $sentCount = CampaignEmail::select('id')
-            ->where('campaign_id', $campaignId)
-            ->where('status', 'sent')
-            ->count();
-
         if ($campaign->status == 'scheduled' && $campaign->scheduled_at) {
-            if (strtotime($campaign->scheduled_at) < strtotime(fluentCrmTimestamp())) {
+            if (strtotime($campaign->scheduled_at) < strtotime(current_time('mysql'))) {
                 $campaign->status = 'working';
                 $campaign->save();
             }
         }
-
 
         if ($campaign->status == 'working') {
             $lastEmailTimestamp = get_option(FLUENTCRM . '_is_sending_emails');
@@ -534,7 +550,6 @@ class CampaignController extends Controller
             if (!$onPrecessingCount) {
                 (new Handler())->handle($campaignId);
             }
-
         }
 
         $analytics = [];
@@ -542,6 +557,26 @@ class CampaignController extends Controller
         if ($campaign->status == 'archived') {
             $analytics = $campaignUrlMetric->getCampaignAnalytics($campaignId);
             $subjectsAnalytics = $campaignUrlMetric->getSubjectStats($campaign);
+        }
+
+        $sentCount = CampaignEmail::select('id')
+            ->where('campaign_id', $campaignId)
+            ->where('status', 'sent')
+            ->count();
+
+        if ($campaign->status == 'working') {
+            $pendingCount = CampaignEmail::select('id')
+                ->where('campaign_id', $campaignId)
+                ->whereIn('status', ['pending', 'scheduled', 'paused'])
+                ->count();
+
+            if ($sentCount && !$pendingCount) {
+                Campaign::where('id', $campaign->id)->update([
+                    'status'     => 'archived',
+                    'updated_at' => current_time('mysql')
+                ]);
+                $campaign = Campaign::find($campaignId);
+            }
         }
 
         return $this->sendSuccess([
@@ -552,5 +587,113 @@ class CampaignController extends Controller
             'analytics'         => $analytics,
             'subject_analytics' => $subjectsAnalytics
         ], 200);
+    }
+
+    public function pauseCampaign(Request $request, $id)
+    {
+        $campaign = Campaign::findOrFail($id);
+
+        if ($campaign->status != 'working') {
+            return $this->sendError([
+                'message' => __('You can only pause a campaign if it is on "Working" state, Please reload this page', 'fluent-crm')
+            ]);
+        }
+
+        $campaign->status = 'paused';
+        $campaign->save();
+
+        CampaignEmail::where('campaign_id', $campaign->id)
+            ->whereNotIn('status', ['sent', 'failed', 'bounced'])
+            ->update([
+                'status' => 'paused'
+            ]);
+
+        return [
+            'message'  => 'Campaign has been successfully marked as paused',
+            'campaign' => Campaign::find($id)
+        ];
+    }
+
+    public function resumeCampaign(Request $request, $id)
+    {
+        $campaign = Campaign::findOrFail($id);
+
+        if ($campaign->status != 'paused') {
+            return $this->sendError([
+                'message' => __('You can only resume a campaign if it is on "paused" state, Please reload this page', 'fluent-crm')
+            ]);
+        }
+
+        $campaign->status = 'working';
+        $campaign->save();
+
+        CampaignEmail::where('campaign_id', $campaign->id)
+            ->where('status', 'paused')
+            ->update([
+                'status'       => 'scheduled',
+                'scheduled_at' => current_time('mysql')
+            ]);
+
+        return [
+            'message'  => 'Campaign has been successfully resumed',
+            'campaign' => Campaign::find($id)
+        ];
+    }
+
+    public function updateCampaignTitle(Request $request, $id)
+    {
+        $campaign = Campaign::findOrFail($id);
+        $campaign->title = sanitize_text_field($request->get('title'));
+        $campaign->save();
+
+        if($campaign->status == 'scheduled') {
+            $newTime = $request->get('scheduled_at');
+            if($newTime != $campaign->scheduled_at) {
+                $campaign->scheduled_at = $newTime;
+                $campaign->save();
+                CampaignEmail::where('campaign_id', $campaign->id)
+                    ->whereNotIn('status', ['sent', 'failed', 'bounced'])
+                    ->update([
+                        'status' => 'scheduled',
+                        'scheduled_at' => $newTime
+                    ]);
+            }
+        }
+
+        return [
+            'message' => 'Campaign has been updated',
+            'campaign' => Campaign::find($id)
+        ];
+    }
+
+    public function duplicateCampaign(Request $request, $id)
+    {
+        $oldCampaign = Campaign::findOrFail($id);
+        $newCampaign = [
+            'title' => '[Duplicate] '.$oldCampaign->title,
+            'slug' => $oldCampaign->slug.'-'.time(),
+            'email_body' => $oldCampaign->email_body,
+            'status' => 'draft',
+            'template_id' => $oldCampaign->template_id,
+            'email_subject' => $oldCampaign->email_subject,
+            'email_pre_header' => $oldCampaign->email_pre_header,
+            'utm_status' => $oldCampaign->utm_status,
+            'utm_source' => $oldCampaign->utm_source,
+            'utm_medium' => $oldCampaign->utm_medium,
+            'utm_campaign' => $oldCampaign->utm_campaign,
+            'utm_term' => $oldCampaign->utm_term,
+            'utm_content' => $oldCampaign->utm_content,
+            'design_template' => $oldCampaign->design_template,
+            'created_by' => get_current_user_id(),
+            'settings' => $oldCampaign->settings
+        ];
+
+        $campaign = Campaign::create($newCampaign);
+
+        return [
+            'campaign' => $campaign,
+            'message' => __('Campaign has been successfully duplicated', 'fluent-crm')
+        ];
+
     }
 }

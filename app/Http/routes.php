@@ -63,6 +63,9 @@ $app->group(function ($app) {
     $app->get('{id}', 'SubscriberController@show')->int('id');
     $app->put('{id}', 'SubscriberController@updateSubscriber')->int('id');
     $app->get('{id}/emails', 'SubscriberController@emails')->int('id');
+    $app->get('{id}/emails/template-mock', 'SubscriberController@getTemplateMock')->int('id');
+    $app->post('{id}/emails/send', 'SubscriberController@sendCustomEmail')->int('id');
+    $app->delete('{id}/emails', 'SubscriberController@deleteEmails')->int('id');
     $app->get('{id}/purchase-history', 'PurchaseHistoryController@getOrders')->int('id');
     $app->get('{id}/form-submissions', 'SubscriberController@getFormSubmissions')->int('id');
     $app->get('{id}/support-tickets', 'SubscriberController@getSupportTickets')->int('id');
@@ -95,6 +98,10 @@ $app->group(function ($app) {
     $app->get('{id}', 'CampaignController@campaign')->int('id');
     $app->put('{id}', 'CampaignController@update')->int('id');
     $app->put('{id}/step', 'CampaignController@updateStep')->int('id');
+    $app->post('{id}/pause', 'CampaignController@pauseCampaign')->int('id');
+    $app->post('{id}/duplicate', 'CampaignController@duplicateCampaign')->int('id');
+    $app->post('{id}/resume', 'CampaignController@resumeCampaign')->int('id');
+    $app->put('{id}/title', 'CampaignController@updateCampaignTitle')->int('id');
     $app->delete('{id}', 'CampaignController@delete')->int('id');
 
     $app->post('{id}/subscribe', 'CampaignController@subscribe')->int('id');
@@ -128,11 +135,17 @@ $app->group(function ($app) {
     $app->get('/', 'FunnelController@funnels');
     $app->post('/', 'FunnelController@create');
 
+    $app->get('subscriber/{subscriber_id}/automations', 'FunnelController@subscriberAutomations');
+
     $app->get('{id}', 'FunnelController@getFunnel')->int('id');
+    $app->post('{id}/clone', 'FunnelController@cloneFunnel')->int('id');
     $app->post('{id}/sequences', 'FunnelController@saveSequences')->int('id');
     $app->get('{id}/subscribers', 'FunnelController@getSubscribers')->int('id');
+    $app->delete('{id}/subscribers', 'FunnelController@deleteSubscribers')->int('id');
     $app->delete('{id}', 'FunnelController@delete')->int('id');
     $app->get('{id}/report', 'FunnelController@report')->int('id');
+
+    $app->put('{id}/subscribers/{subscriber_id}/status', 'FunnelController@updateSubscriptionStatus')->int('id')->int('subscriber_id');
 
 })->prefix('funnels')->withPolicy('FunnelPolicy');
 
@@ -175,37 +188,10 @@ $app->group(function ($app) {
 
     $app->post('reset_db', 'SettingsController@resetDB');
 
+    $app->get('cron_status', 'SettingsController@getCronStatus');
+    $app->post('run_cron', 'SettingsController@runCron');
+
 })->prefix('setting')->withPolicy('SettingsPolicy');
-
-
-
-/*
- * We are keeping the /settings route as dupliate. We will delete that next month (November)
- */
-
-$app->group(function ($app) {
-    return; // for testing
-    $app->get('/', 'SettingsController@get');
-    $app->put('/', 'SettingsController@save');
-    $app->post('complete-installation', 'SetupController@CompleteWizard');
-    $app->get('double-optin', 'SettingsController@getDoubleOptinSettings');
-    $app->put('double-optin', 'SettingsController@saveDoubleOptinSettings');
-
-    $app->post('install-fluentform', 'SetupController@handleFluentFormInstall');
-
-    $app->get('bounce_configs', 'SettingsController@getBounceConfigs');
-
-    $app->get('auto_subscribe_settings', 'SettingsController@getAutoSubscribeSettings');
-    $app->post('auto_subscribe_settings', 'SettingsController@saveAutoSubscribeSettings');
-
-    $app->get('test', 'SettingsController@TestRequestResolver');
-    $app->put('test', 'SettingsController@TestRequestResolver');
-    $app->post('test', 'SettingsController@TestRequestResolver');
-    $app->delete('test', 'SettingsController@TestRequestResolver');
-
-    $app->post('reset_db', 'SettingsController@resetDB');
-
-})->prefix('settings')->withPolicy('SettingsPolicy');
 
 
 $app->group(function ($app) {

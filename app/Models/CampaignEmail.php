@@ -77,7 +77,7 @@ class CampaignEmail extends Model
         $email_subject = $this->getEmailSubject();
         $email_body = $this->getEmailBody();
         $headers = Helper::getMailHeader($this->email_headers);
-
+        
         return [
             'to'            => [
                 'email' => $this->email_address
@@ -97,16 +97,29 @@ class CampaignEmail extends Model
 
         $emailBody = ($this->email_body) ? $this->email_body : $this->campaign->email_body;
 
+        $emailBody = (new BlockParser($this->subscriber))->parse($emailBody);
+
         $emailBody = apply_filters('fluentcrm-parse_campaign_email_text', $emailBody, $this->subscriber);
 
+        $designTemplate = 'classic';
+        if($this->campaign) {
+            $designTemplate = $this->campaign->design_template;
+        }
+
+        if($this->campaign && $this->campaign->settings['template_config']) {
+            $templateConfig = wp_parse_args($this->campaign->settings['template_config'], Helper::getTemplateConfig($this->campaign->design_template));
+        } else {
+            $templateConfig = Helper::getTemplateConfig();
+        }
+
         $email_body = apply_filters(
-            'fluentcrm-email-design-template-' . $this->campaign->design_template,
+            'fluentcrm-email-design-template-' . $designTemplate,
             $this->email_body,
             [
                 'preHeader'   => ($this->campaign) ? $this->campaign->email_pre_header : '',
                 'email_body'  => $emailBody,
                 'footer_text' => '',
-                'config'      => wp_parse_args($this->campaign->settings['template_config'], Helper::getTemplateConfig($this->campaign->design_template))
+                'config'      => $templateConfig
             ],
             $this->campaign,
             $this->subscriber
@@ -143,11 +156,11 @@ class CampaignEmail extends Model
         if (!$this->is_parsed) {
             $emailBody = $this->getParsedEmailBody();
             $emailBody = apply_filters('fluentcrm-parse_campaign_email_text', $emailBody, $subscriber);
+            $emailBody = apply_filters('fluentcrm_email_body_text', $emailBody, $subscriber, $this);
             $campaignUrls = $this->getCampaignUrls($emailBody);
             if ($campaignUrls) {
                 $emailBody = Helper::attachUrls($emailBody, $campaignUrls, $this->id);
             }
-            $emailBody = apply_filters('fluentcrm-parse_campaign_email_text', $emailBody, $subscriber);
             $this->email_body = $emailBody;
             $this->is_parsed = 1;
             $this->save();
@@ -157,15 +170,27 @@ class CampaignEmail extends Model
         $footerText = Arr::get(Helper::getGlobalEmailSettings(), 'email_footer', '');
         $footerText = apply_filters('fluentcrm-parse_campaign_email_text', $footerText, $subscriber);
 
+        if($this->campaign && $this->campaign->settings['template_config']) {
+            $templateConfig = wp_parse_args($this->campaign->settings['template_config'], Helper::getTemplateConfig($this->campaign->design_template));
+        } else {
+            $templateConfig = Helper::getTemplateConfig();
+        }
+
         $templateData = [
             'preHeader'   => ($this->campaign) ? $this->campaign->email_pre_header : '',
             'email_body'  => $this->email_body,
             'footer_text' => $footerText,
-            'config'      => wp_parse_args($this->campaign->settings['template_config'], Helper::getTemplateConfig($this->campaign->design_template))
+            'config'      => $templateConfig
         ];
 
+        $designTemplate = 'classic';
+
+        if($this->campaign) {
+            $designTemplate = $this->campaign->design_template;
+        }
+
         $content = apply_filters(
-            'fluentcrm-email-design-template-' . $this->campaign->design_template,
+            'fluentcrm-email-design-template-' . $designTemplate,
             $this->email_body,
             $templateData,
             $this->campaign,
@@ -178,14 +203,24 @@ class CampaignEmail extends Model
     private function getParsedEmailBody()
     {
         if (!$this->campaign_id) {
-            return (new BlockParser())->parse($this->email_body);
+            return (new BlockParser($this->subscriber))->parse($this->email_body);
         }
 
         static $parsedEmailBody = [];
+
         if (isset($parsedEmailBody[$this->campaign_id])) {
             return $parsedEmailBody[$this->campaign_id];
         }
-        $parsedEmailBody[$this->campaign_id] = (new BlockParser())->parse($this->campaign->email_body);
+
+        $originalBody = $this->campaign->email_body;
+
+        $emailBody = (new BlockParser($this->subscriber))->parse($originalBody);
+
+        if(strpos($originalBody, 'fc-cond-blocks')) {
+            return $emailBody;
+        }
+
+        $parsedEmailBody[$this->campaign_id] = $emailBody;;
         return $parsedEmailBody[$this->campaign_id];
     }
 

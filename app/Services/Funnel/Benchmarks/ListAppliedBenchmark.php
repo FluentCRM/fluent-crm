@@ -4,7 +4,6 @@ namespace FluentCrm\App\Services\Funnel\Benchmarks;
 
 use FluentCrm\App\Services\Funnel\BaseBenchMark;
 use FluentCrm\App\Services\Funnel\FunnelProcessor;
-use FluentCrm\App\Models\Lists;
 use FluentCrm\Includes\Helpers\Arr;
 
 class ListAppliedBenchmark extends BaseBenchMark
@@ -23,7 +22,7 @@ class ListAppliedBenchmark extends BaseBenchMark
         return [
             'title'       => 'List Applied',
             'description' => 'This will run when selected lists will be applied to a contact',
-            'icon' => fluentCrmMix('images/funnel_icons/list_applied.svg'),
+            'icon'        => fluentCrmMix('images/funnel_icons/list_applied.svg'),
             'settings'    => [
                 'lists'       => [],
                 'select_type' => 'any',
@@ -115,11 +114,15 @@ class ListAppliedBenchmark extends BaseBenchMark
 
         $marchType = Arr::get($settings, 'select_type');
 
-        if ($marchType == 'all') {
-            $attachedListIds = Lists::whereHas('subscribers', function ($q) use ($subscriber) {
-                $q->where('subscriber_id', $subscriber->id);
-            })->get()->pluck('id');
-            return array_intersect($settings['lists'], $attachedListIds) == $settings['lists'];
+        $subscriberLists = $subscriber->lists->pluck('id');
+        $intersection = array_intersect($listIds, $subscriberLists);
+
+        if ($marchType === 'any') {
+            // At least one funnel list id is available.
+            $isMatched = !empty($intersection);
+        } else {
+            // All of the funnel list ids are present.
+            $isMatched = count($intersection) === count($settings['lists']);
         }
 
         return $isMatched;

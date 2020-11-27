@@ -48,7 +48,6 @@ class Tags
         return $newTags;
     }
 
-
     public function __construct(Tag $instance)
     {
         $this->instance = $instance;

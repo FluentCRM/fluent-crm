@@ -156,11 +156,11 @@ class FluentFormSubmissionTrigger extends BaseTrigger
     {
         return [
             'run_only_one' => [
-                'type'    => 'yes_no_check',
-                'label'   => '',
-                'check_label' => 'Run this automation only once per contact',
-                'help'    => 'If you enable this then this will run only once per customer',
-                'options' => FunnelHelper::getUpdateOptions()
+                'type'        => 'yes_no_check',
+                'label'       => '',
+                'check_label' => 'Run this automation only once per contact. If unchecked then it will over-write existing flow',
+                'help'        => 'If you enable this then this will run only once per customer otherwise, It will delete the existing automation flow and start new',
+                'options'     => FunnelHelper::getUpdateOptions()
             ],
         ];
     }
@@ -172,9 +172,15 @@ class FluentFormSubmissionTrigger extends BaseTrigger
         $form = $originalArgs[2];
 
         $processedValues = $funnel->settings;
+
+        if (Arr::get($processedValues, 'form_id') != $form->id) {
+            return; // not our form
+        }
+
         $processedValues['primary_fields']['ip'] = '{submission.ip}';
 
         $processedValues = ShortCodeParser::parse($processedValues, $insertId, $formData);
+
         if (!is_email(Arr::get($processedValues, 'primary_fields.email'))) {
             return;
         }
@@ -195,6 +201,7 @@ class FluentFormSubmissionTrigger extends BaseTrigger
         }
 
         $willProcess = $this->isProcessable($funnel, $subscriberData);
+
         $willProcess = apply_filters('fluentcrm_funnel_will_process_' . $this->triggerName, $willProcess, $funnel, $subscriberData, $originalArgs);
         if (!$willProcess) {
             return;
@@ -229,7 +236,7 @@ class FluentFormSubmissionTrigger extends BaseTrigger
 
         // check run_only_one
         if ($isOnlyOne && $subscriber && FunnelHelper::ifAlreadyInFunnel($funnel->id, $subscriber->id)) {
-            return false;
+            FunnelHelper::removeSubscribersFromFunnel($funnel->id, [$subscriber->id]);
         }
 
         return true;

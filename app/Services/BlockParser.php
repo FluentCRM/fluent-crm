@@ -7,9 +7,13 @@ use FluentCrm\Includes\Helpers\Arr;
 
 class BlockParser
 {
-    public function __construct()
+    private $subscriber = null;
+
+    public function __construct($subscriber = null)
     {
         static $initiated;
+
+        BlockParserHelper::setSubscriber($subscriber);
 
         if($initiated) {
             return $this;
@@ -18,6 +22,7 @@ class BlockParser
         $initiated = true;
         add_filter('render_block', array($this, 'alterBlockContent'), 999, 2);
     }
+
 
     public function parse($content)
     {
@@ -28,7 +33,9 @@ class BlockParser
             $output .= render_block( $block );
         }
 
-        error_log($output);
+        if($this->subscriber) {
+            $output .= '<h1>'.$this->subscriber->id.'-'.$this->subscriber->email.'</h1>';
+        }
 
         return $output;
     }
@@ -64,6 +71,7 @@ class BlockParser
             $block['innerContent'][0] = $this->getButtonsOpening($block);
             $block['innerContent'][$lastContentIndex] = $this->getButtonsClosing($block);
         }
+
         return $block;
     }
 
@@ -112,6 +120,10 @@ class BlockParser
 
     public function alterBlockContent($content, $data)
     {
+        if(isset($data['blockName']) && $data['blockName'] == 'fluentcrm/conditional-group') {
+            return $this->renderConditionalBlock($content, $data);
+        }
+
         if(empty($data['fc_total_blocks'])) {
             return  $content;
         }
@@ -165,5 +177,39 @@ class BlockParser
         }
 
         return '<td align="center" valign="middle" class="fce_column"><table border="0" cellpadding="10" cellspacing="0" width="100%"><tr><td class="fc_column_content '.$btn_wrapper_class.'">'.$content.'</td></tr></table></td>';
+    }
+
+    private function renderConditionalBlock($content, $data)
+    {
+        $subscriber = BlockParserHelper::getSubscriber();
+
+        if(!$subscriber) {
+            return '';
+        }
+
+        $tagIds = Arr::get($data, 'attrs.tag_ids');
+        if(!$tagIds) {
+            return '';
+        }
+
+        $checkType = Arr::get($data, 'attrs.condition_type', 'show_if_tag_exist');
+        $tagMatched = $subscriber->hasAnyTagId($tagIds);
+
+        if($checkType == 'show_if_tag_exist') {
+            if($tagMatched) {
+                return $content;
+            };
+            return '';
+        }
+
+        if($checkType == 'show_if_tag_not_exist') {
+            if($tagMatched) {
+                return '';
+            };
+            return $content;
+        }
+
+
+        return '';
     }
 }

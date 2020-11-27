@@ -84,7 +84,7 @@ class SendEmailAction extends BaseAction
 
         $sequenceId = Arr::get($sequence,'id');
 
-        if ($funnelCampaignId) {
+        if ($funnelCampaignId && $funnel->id == Arr::get($sequence, 'parent_id')) {
             // We have this campaign
             $data['settings'] = \maybe_serialize($data['settings']);
             $data['type'] = 'funnel_email_campaign';
@@ -134,6 +134,7 @@ class SendEmailAction extends BaseAction
         }
 
         $campaign = FunnelCampaign::find($refCampaign);
+
         if(!$campaign) {
             return;
         }
@@ -142,7 +143,7 @@ class SendEmailAction extends BaseAction
             'status' => 'scheduled',
             'scheduled_at' => current_time('mysql'),
             'email_type' => 'funnel_email_campaign',
-            'note' => 'Email Sent From Funnel '.$sequence->funnel_id
+            'note' => 'Email Sent From Funnel: '.$campaign->title
         ];
 
         if(Arr::get($settings, 'send_email_to_type') == 'contact') {
