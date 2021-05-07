@@ -24,7 +24,9 @@ class FunnelSequences
             $sql = "CREATE TABLE $table (
                 `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
                 `funnel_id` BIGINT UNSIGNED NULL,
+                `parent_id` BIGINT UNSIGNED DEFAULT 0,
                 `action_name` VARCHAR(192) NULL,
+                `condition_type` VARCHAR(192) NULL,
                 `type` VARCHAR(50) DEFAULT 'sequence',
                 `title` VARCHAR(192) NULL,
                 `description` VARCHAR(192) NULL,
@@ -43,6 +45,12 @@ class FunnelSequences
             ) $charsetCollate;";
 
             dbDelta($sql);
+        } else {
+            $sequenceTable = $wpdb->prefix.'fc_funnel_sequences';
+            $isMigrated = $wpdb->get_col($wpdb->prepare("SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND COLUMN_NAME='parent_id' AND TABLE_NAME=%s", $sequenceTable));
+            if(!$isMigrated) {
+                $wpdb->query("ALTER TABLE {$sequenceTable} ADD COLUMN `parent_id` bigint NOT NULL DEFAULT '0', ADD `condition_type` varchar(192) NULL AFTER `parent_id`");
+            }
         }
     }
 }

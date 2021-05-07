@@ -1,6 +1,7 @@
 {
     "/admin/js/boot.js": "/admin/js/boot.js",
     "/admin/css/fluentcrm-admin.css": "/admin/css/fluentcrm-admin.css",
+    "/admin/css/admin_rtl.css": "/admin/css/admin_rtl.css",
     "/public/public_pref.css": "/public/public_pref.css",
     "/admin/css/app_global.css": "/admin/css/app_global.css",
     "/admin/css/setup-wizard.css": "/admin/css/setup-wizard.css",

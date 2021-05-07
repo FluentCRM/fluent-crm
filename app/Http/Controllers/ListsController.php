@@ -23,7 +23,9 @@ class ListsController extends Controller
             'by'    => $request->get('sort_by', 'id'),
             'order' => $request->get('sort_order', 'DESC')
         ];
-        $lists = Lists::orderBy($order['by'], $order['order'])->get()->each(function ($list) {
+        $lists = Lists::orderBy($order['by'], $order['order'])
+            ->searchBy($request->get('search'))
+            ->get()->each(function ($list) {
             $list->totalCount = $list->totalCount();
             $list->subscribersCount = $list->countByStatus('subscribed');
         });
@@ -116,7 +118,8 @@ class ListsController extends Controller
      */
     public function storeBulk(Request $request)
     {
-        foreach ($request->get('lists') as $list) {
+        $lists = $request->get('lists');
+        foreach ($lists as $list) {
             if (!$list['title'] || !$list['slug']) {
                 continue;
             }
@@ -129,7 +132,7 @@ class ListsController extends Controller
         }
 
         return $this->sendSuccess([
-            'message' => 'Provided Lists have been successfully created'
+            'message' => __('Provided Lists have been successfully created', 'fluent-crm')
         ]);
     }
 
@@ -145,7 +148,7 @@ class ListsController extends Controller
         Lists::where('id', $id)->delete();
         do_action('fc_list_deleted', $id);
         return $this->send([
-            'message' => 'Successfully removed the list.'
+            'message' => __('Successfully removed the list.', 'fluent-crm')
         ]);
     }
 }

@@ -32,7 +32,7 @@ class SetupController extends Controller
         }
 
         return $this->sendSuccess([
-            'message' => 'Installation has been completed'
+            'message' => __('Installation has been completed', 'fluent-crm')
         ]);
     }
 
@@ -48,6 +48,24 @@ class SetupController extends Controller
         ];
     }
 
+    public function handleFluentSmtpInstall()
+    {
+        if(!current_user_can('install_plugins')) {
+            return $this->sendError([
+                'message' => __('Sorry! you do not have permission to install plugin', 'fluent-crm')
+            ]);
+        }
+
+        $this->installFluentSMTP();
+
+        return [
+            'is_installed'     => defined('FLUENTMAIL'),
+            'config_url' => admin_url('options-general.php?page=fluent-mail#/'),
+            'message'   => __('FluentSMTP plugin has been installed and activated successfully', 'fluent-crm')
+        ];
+
+    }
+
     private function shareEmail($optinEmail)
     {
         $user = get_user_by('ID', get_current_user_id());
@@ -55,10 +73,14 @@ class SetupController extends Controller
             'answers'    => [
                 'website' => site_url(),
                 'email'   => $optinEmail,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
                 'name'    => $user->display_name
             ],
             'questions'  => [
                 'website' => 'website',
+                'first_name' => 'first_name',
+                'last_name' => 'last_name',
                 'email'   => 'email',
                 'name'    => 'name'
             ],
@@ -81,6 +103,17 @@ class SetupController extends Controller
             'name'      => 'Fluent Forms',
             'repo-slug' => 'fluentform',
             'file'      => 'fluentform.php',
+        ];
+        $this->backgroundInstaller($plugin, $plugin_id);
+    }
+
+    private function installFluentSMTP()
+    {
+        $plugin_id = 'fluent-smtp';
+        $plugin = [
+            'name'      => 'FluentSMTP',
+            'repo-slug' => 'fluent-smtp',
+            'file'      => 'fluent-smtp.php',
         ];
         $this->backgroundInstaller($plugin, $plugin_id);
     }

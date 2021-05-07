@@ -20,7 +20,9 @@ class TagsController extends Controller
             'order' => $request->get('sort_order', 'DESC')
         ];
 
-        $tags = Tag::orderBy($order['by'], $order['order'])->paginate();
+        $tags = Tag::orderBy($order['by'], $order['order'])
+            ->searchBy($request->get('search'))
+            ->paginate();
 
         foreach ($tags as $tag) {
             $tag->subscribersCount = $tag->countByStatus('subscribed');
@@ -35,8 +37,9 @@ class TagsController extends Controller
             $formattedTags = [];
             foreach ($allTags as $tag) {
                 $formattedTags[] = [
-                    'value' => strval($tag->id),
-                    'label' => $tag->title
+                    'id' => strval($tag->id),
+                    'title' => $tag->title,
+                    'slug' => $tag->slug
                 ];
             }
             $data['all_tags'] = $formattedTags;
@@ -85,7 +88,7 @@ class TagsController extends Controller
 
         return $this->sendSuccess([
             'lists'   => $tag,
-            'message' => 'Successfully saved the tag.'
+            'message' => __('Successfully saved the tag.', 'fluent-crm')
         ]);
     }
 
@@ -111,7 +114,7 @@ class TagsController extends Controller
 
         return $this->sendSuccess([
             'lists'   => $tag,
-            'message' => 'Successfully saved the tag.'
+            'message' => __('Successfully saved the tag.', 'fluent-crm')
         ]);
     }
 
@@ -143,7 +146,7 @@ class TagsController extends Controller
         }
 
         return $this->sendSuccess([
-            'message' => 'Successfully saved the tags.'
+            'message' => __('Successfully saved the tags.', 'fluent-crm')
         ]);
     }
 

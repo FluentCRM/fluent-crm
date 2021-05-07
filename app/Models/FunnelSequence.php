@@ -14,6 +14,8 @@ class FunnelSequence extends Model
     protected $fillable = [
         'funnel_id',
         'action_name',
+        'parent_id',
+        'condition_type',
         'title',
         'description',
         'status',

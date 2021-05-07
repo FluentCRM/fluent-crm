@@ -31,6 +31,11 @@ $app->addAction('wp_ajax_nopriv_fluentcrm_unsubscribe_ajax', 'ExternalPages@hand
 $app->addAction('wp_ajax_fluentcrm_manage_preferences_ajax', 'ExternalPages@handleManageSubPref');
 $app->addAction('wp_ajax_nopriv_fluentcrm_manage_preferences_ajax', 'ExternalPages@handleManageSubPref');
 
+// Fallback for funnel sequence save ajax
+
+$app->addAction('wp_ajax_fluentcrm_save_funnel_sequence_ajax', 'FunnelHandler@saveSequences');
+$app->addAction('wp_ajax_fluentcrm_export_funnel', 'FunnelHandler@exportFunnel');
+
 /*
  * Integrations
  */
@@ -50,6 +55,7 @@ $app->addAction('fluentcrm_campaign_deleted', 'Cleanup@deleteCampaignAssets', 10
 $app->addAction('fluentcrm_list_deleted', 'Cleanup@deleteListAssets', 10, 1);
 $app->addAction('fluentcrm_tag_deleted', 'Cleanup@deleteTagAssets', 10, 1);
 
+$app->addAction('fluentcrm_subscriber_status_to_unsubscribed', 'Cleanup@handleUnsubscribe');
 
 /*
  * Admin Bar
@@ -59,10 +65,14 @@ $app->addAction('admin_bar_menu', 'AdminBar@init');
 
 // This is required to instantly send emails
 add_action('wp_ajax_nopriv_fluentcrm-post-campaigns-send-now', function () use ($app) {
-    (new \FluentCrm\Includes\Mailer\Handler)->handle(
-        $app->request->get('campaign_id')
-    );
+    $nextCron =  wp_next_scheduled('fluentcrm_scheduled_minute_tasks') - time();
+     if( $nextCron > 3) { // If next cron is after more than 3 seconds we want to run this
+         (new \FluentCrm\Includes\Mailer\Handler)->handle(
+             $app->request->get('campaign_id')
+         );
+     }
 });
+
 
 /*
  * For Short URL Redirect
@@ -71,7 +81,6 @@ add_action('wp', function () use ($app) {
     if (isset($_GET['ns_url'])) {
         (new \FluentCrm\App\Hooks\Handlers\RedirectionHandler())->redirect($_GET);
     }
-
     if (isset($_GET['do_fluentcrm_scheduled_tasks'])) {
         do_action('fluentcrm_scheduled_minute_tasks');
     }
@@ -108,3 +117,7 @@ if (!empty($_GET['page']) && 'fluentcrm-setup' == $_GET['page']) {
 
 $app->addAction('user_register', 'AutoSubscribeHandler@userRegistrationHandler', 99, 1);
 $app->addAction('comment_post', 'AutoSubscribeHandler@handleCommentPost', 99, 3);
+
+$app->addAction('profile_update', 'AutoSubscribeHandler@syncUserUpdate', 10, 2);
+
+

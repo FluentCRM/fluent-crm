@@ -7,6 +7,38 @@ class Tag extends Model
     protected $table = 'fc_tags';
 
     /**
+     * $searchable Columns in table to search
+     * @var array
+     */
+    protected $searchable = [
+        'title',
+        'slug',
+        'description'
+    ];
+
+
+    /**
+     * Local scope to filter subscribers by search/query string
+     * @param ModelQueryBuilder $query
+     * @param string $search
+     * @return ModelQueryBuilder
+     */
+    public function scopeSearchBy($query, $search)
+    {
+        if ($search) {
+            $fields = $this->searchable;
+            $query->where(function ($query) use ($fields, $search) {
+                $query->where(array_shift($fields), 'LIKE', "%$search%");
+                foreach ($fields as $field) {
+                    $query->orWhere($field, 'LIKE', "$search%");
+                }
+            });
+        }
+
+        return $query;
+    }
+
+    /**
      * Get all of the subscribers that belongs to the tag.
      *
      * @return \WPManageNinja\WPOrm\Relation\BelongsToMany

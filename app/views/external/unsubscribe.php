@@ -8,13 +8,14 @@
     <title><?php esc_html_e('Unsubscribe', 'fluent-crm') ?></title>
     <?php
         wp_head();
-        do_action('fluentcrm_unsubscribe_head', $campaign_email);
+        do_action('fluentcrm_unsubscribe_head', $subscriber, $campaign_email);
     ?>
 </head>
 <body>
 <div class="fluentcrm_unsubscribe_wrapper">
+    <?php do_action('fluentcrm_before_unsubscribe_content', $subscriber, $campaign_email); ?>
     <div class="fluentcrm_un_title">
-        <?php if ($business['logo']): ?>
+        <?php if (!empty($business['logo'])): ?>
             <div class="fluentcrm_un_logo_wrapper">
                 <img src="<?php echo $business['logo']; ?>" alt="<?php echo $business['business_name']; ?>"/>
             </div>
@@ -23,19 +24,20 @@
         <?php endif; ?>
     </div>
     <div class="fluentcrm_un_form_wrapper">
-        <h3>Unsubscribe</h3>
-        <p>We're sorry to see you go! Enter your email address to unsubscribe from this list.</p>
+        <h3><?php echo $texts['heading']; ?></h3>
+        <p><?php echo $texts['heading_description']; ?></p>
+        <?php do_action('fluentcrm_before_unsubscribe_form', $subscriber, $campaign_email); ?>
         <form id="fluentcrm_unsubscribe_form" class="fluentcrm_public_pref_form">
             <input type="hidden" name="_e_id" value="<?php echo $campaign_email->id; ?>" />
             <input type="hidden" name="action" value="fluentcrm_unsubscribe_ajax" />
             <input type="hidden" name="combined_hash" value="<?php echo $combined_hash; ?>" />
             <input type="hidden" name="sub_hash" value="<?php echo $subscriber->hash; ?>" />
             <div class="fluentcrm_form_item">
-                <label><?php _e('Your Email Address', 'fluent-crm'); ?></label>
+                <label><?php echo $texts['email_label']; ?></label>
                 <input readonly="true" value="<?php echo $mask_email; ?>" class="fluentcrm_form_control" type="text" name="email_address" />
             </div>
             <div class="fluentcrm_form_item">
-                <label><?php _e('Please let us know a reason', 'fluent-crm'); ?></label>
+                <label><?php echo $texts['reason_label']; ?></label>
                 <div class="fluentcrm_radio_group">
                     <?php foreach ($reasons as $reasonKey => $reason): ?>
                     <label>
@@ -45,19 +47,20 @@
                 </div>
             </div>
             <div style="display: none;" id="fluentcrm_other_reason_wrapper" class="fluentcrm_form_item">
-                <input placeholder="Please specify" class="fluentcrm_form_control" type="text" name="other_reason" />
+                <input placeholder="<?php _e('Please specify', 'fluent-crm'); ?>" class="fluentcrm_form_control" type="text" name="other_reason" />
             </div>
             <?php do_action('fluentcrm_before_unsubscribe_submit', $campaign_email); ?>
             <div class="fluentcrm_form_item">
-                <input id="fluentcrm_unsubscribe_submit" type="submit" value="Unsubscribe"></input>
+                <input id="fluentcrm_unsubscribe_submit" type="submit" value="<?php echo $texts['button_text']; ?>"></input>
             </div>
         </form>
         <div class="fluentcrm_form_responses"></div>
     </div>
+    <?php do_action('fluentcrm_after_unsubscribe_content', $subscriber, $campaign_email); ?>
 </div>
 <?php
     wp_footer();
-    do_action('fluentcrm_unsubscribe_footer', $campaign_email);
+    do_action('fluentcrm_unsubscribe_footer', $subscriber, $campaign_email);
 ?>
 </body>
 </html>

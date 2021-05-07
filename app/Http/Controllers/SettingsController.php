@@ -2,6 +2,8 @@
 
 namespace FluentCrm\App\Http\Controllers;
 
+use FluentCrm\App\Models\CampaignEmail;
+use FluentCrm\App\Models\CampaignUrlMetric;
 use FluentCrm\App\Services\AutoSubscribe;
 use FluentCrm\App\Services\Helper;
 use FluentCrm\Includes\Request\Request;
@@ -61,28 +63,28 @@ class SettingsController extends Controller
             $data['settings_fields'] = [
                 'email_subject'         => [
                     'type'        => 'input-text-popper',
-                    'placeholder' => 'Optin Email Subject',
-                    'label'       => 'Email Subject',
-                    'help'        => 'Your double-optin email subject'
+                    'placeholder' => __('Optin Email Subject', 'fluent-crm'),
+                    'label'       => __('Email Subject', 'fluent-crm'),
+                    'help'        => __('Your double-optin email subject', 'fluent-crm')
                 ],
                 'email_body'            => [
                     'type'        => 'wp-editor',
-                    'placeholder' => 'Double-Optin Email Body',
-                    'label'       => 'Email Body',
-                    'help'        => 'Provide Email Body for the double-optin',
+                    'placeholder' => __('Double-Optin Email Body', 'fluent-crm'),
+                    'label'       => __('Email Body', 'fluent-crm'),
+                    'help'        => __('Provide Email Body for the double-optin', 'fluent-crm'),
                     'inline_help' => 'Use #activate_link# for plain url or {{crm.activate_button|Confirm Subscription}} for default button'
                 ],
                 'design_template'       => [
                     'type'    => 'image-radio',
-                    'label'   => 'Design Template',
-                    'help'    => 'Email Design Template for this double-optin email',
+                    'label'   => __('Design Template', 'fluent-crm'),
+                    'help'    => __('Email Design Template for this double-optin email', 'fluent-crm'),
                     'options' => Helper::getEmailDesignTemplates()
                 ],
                 'after_confirm_message' => [
                     'type'        => 'wp-editor',
-                    'placeholder' => 'After Confirmation Message',
-                    'label'       => 'After Confirmation Message',
-                    'help'        => 'This message will be shown after a subscriber confirm subscription'
+                    'placeholder' => __('After Confirmation Message', 'fluent-crm'),
+                    'label'       => __('After Confirmation Message', 'fluent-crm'),
+                    'help'        => __('This message will be shown after a subscriber confirm subscription', 'fluent-crm')
                 ]
             ];
         }
@@ -99,9 +101,9 @@ class SettingsController extends Controller
             'email_body'            => 'required',
             'after_confirm_message' => 'required'
         ], [
-            'email_subject.required'         => 'Email Subject is required',
-            'email_body.required'            => 'Email Body is required',
-            'after_confirm_message.required' => 'After Confirmation Message is required'
+            'email_subject.required'         => __('Email Subject is required', 'fluent-crm'),
+            'email_body.required'            => __('Email Body is required', 'fluent-crm'),
+            'after_confirm_message.required' => __('After Confirmation Message is required', 'fluent-crm')
         ]);
 
         // let's check if message contains #activate_link# or {{crm.activate_button
@@ -112,14 +114,14 @@ class SettingsController extends Controller
             strpos($emailBody, '{{crm.activate_button') === false
         ) {
             return $this->sendError([
-                'message' => 'Email Body need to contains activation link'
+                'message' => __('Email Body need to contains activation link', 'fluent-crm')
             ]);
         }
 
         fluentcrm_update_option('double_optin_settings', $settings);
 
         return $this->sendSuccess([
-                'message' => __('Double Opt-in settings has been updated')
+                'message' => __('Double Opt-in settings has been updated', 'fluent-crm')
             ]
         );
     }
@@ -136,13 +138,13 @@ class SettingsController extends Controller
     {
         if (!current_user_can('manage_options')) {
             return $this->sendError([
-                'message' => 'Sorry, You do not have admin permission to reset database'
+                'message' => __('Sorry, You do not have admin permission to reset database', 'fluent-crm')
             ]);
         }
 
         if (!defined('FLUENTCRM_IS_DEV_FEATURES') || !FLUENTCRM_IS_DEV_FEATURES) {
             return $this->sendError([
-                'message' => 'Development mode is not activated. So you can not use this feature. You can define "FLUENTCRM_IS_DEV_FEATURES" in your wp-config to enable this feature'
+                'message' => __('Development mode is not activated. So you can not use this feature. You can define "FLUENTCRM_IS_DEV_FEATURES" in your wp-config to enable this feature', 'fluent-crm')
             ]);
         }
 
@@ -180,11 +182,10 @@ class SettingsController extends Controller
         }
 
         return [
-            'message' => 'All FluentCRM Database Tables have been resetted',
+            'message' => __('All FluentCRM Database Tables have been resetted', 'fluent-crm'),
             'tables'  => $tables
         ];
     }
-
 
     public function getBounceConfigs()
     {
@@ -193,11 +194,31 @@ class SettingsController extends Controller
             $sesBounceKey = substr(md5(wp_generate_uuid4()), 0, 10); // first 8 digit
             fluentcrm_update_option('_fc_bounce_key', $sesBounceKey);
         }
-        return [
+
+        $data = [
             'bounce_settings' => [
                 'ses' => site_url('?fluentcrm=1&route=bounce_handler&provider=ses&verify_key=' . $sesBounceKey)
             ]
         ];
+
+        if(defined('FLUENTMAIL')) {
+            $smtpSettings = get_option('fluentmail-settings', []);
+            if(!$smtpSettings || !count($smtpSettings['connections'])) {
+                $data['fluentsmtp_info'] = [
+                    'configured' => false
+                ];
+            } else {
+                $data['fluentsmtp_info'] = [
+                    'configured' => true,
+                    'verified_senders' => array_keys($smtpSettings['mappings'])
+                ];
+            }
+            $data['fluentsmtp_info']['config_url'] = admin_url('options-general.php?page=fluent-mail#/connections');
+        } else {
+            $data['fluentsmtp_info'] = false;
+        }
+
+        return $data;
     }
 
     public function getAutoSubscribeSettings(Request $request)
@@ -206,13 +227,20 @@ class SettingsController extends Controller
 
         $data = [
             'registration_setting' => $autoSubscribeService->getRegistrationSettings(),
-            'comment_settings'     => $autoSubscribeService->getCommentSettings()
+            'comment_settings'     => $autoSubscribeService->getCommentSettings(),
+            'user_syncing_settings' => $autoSubscribeService->getUserSyncSettings()
         ];
 
         $with = $request->get('with', []);
         if (in_array('fields', $with)) {
             $data['registration_fields'] = $autoSubscribeService->getRegistrationFields();
             $data['comment_fields'] = $autoSubscribeService->getCommentFields();
+            $data['user_syncing_fields'] = $autoSubscribeService->getUserSyncFields();
+        }
+
+        if(defined('WC_PLUGIN_FILE') && defined('FLUENTCAMPAIGN_DIR_FILE')) {
+            $data['woo_checkout_fields'] = $autoSubscribeService->getWooCheckoutFields();
+            $data['woo_checkout_settings'] = $autoSubscribeService->getWooCheckoutSettings();
         }
 
         return $data;
@@ -222,9 +250,17 @@ class SettingsController extends Controller
     {
         $registrationSettings = $request->get('registration_setting', []);
         $commentSettings = $request->get('comment_settings', []);
+        $userSyncSettings = $request->get('user_syncing_settings', []);
+
 
         fluentcrm_update_option('user_registration_subscribe_settings', $registrationSettings);
         fluentcrm_update_option('comment_form_subscribe_settings', $commentSettings);
+        fluentcrm_update_option('user_syncing_settings', $userSyncSettings);
+
+        if(defined('WC_PLUGIN_FILE') && defined('FLUENTCAMPAIGN_DIR_FILE')) {
+            $wooCheckoutSettings = $request->get('woo_checkout_settings');
+            fluentcrm_update_option('woo_checkout_form_subscribe_settings', $wooCheckoutSettings);
+        }
 
         return [
             'message' => __('Settings has been updated', 'fluent-crm')
@@ -234,9 +270,10 @@ class SettingsController extends Controller
 
     public function getCronStatus()
     {
+
         $hookNames = [
-            'fluentcrm_scheduled_minute_tasks' => __('Scheduled Email Sending'),
-            'fluentcrm_scheduled_hourly_tasks' => __('Scheduled Automation Tasks')
+            'fluentcrm_scheduled_minute_tasks' => __('Scheduled Email Sending', 'fluent-crm'),
+            'fluentcrm_scheduled_hourly_tasks' => __('Scheduled Automation Tasks', 'fluent-crm')
         ];
 
         $crons = _get_cron_array();
@@ -267,13 +304,13 @@ class SettingsController extends Controller
     {
         $hookName = $request->get('hook');
         $hookNames = [
-            'fluentcrm_scheduled_minute_tasks' => __('Scheduled Email Sending'),
-            'fluentcrm_scheduled_hourly_tasks' => __('Scheduled Automation Tasks')
+            'fluentcrm_scheduled_minute_tasks' => __('Scheduled Email Sending', 'fluent-crm'),
+            'fluentcrm_scheduled_hourly_tasks' => __('Scheduled Automation Tasks', 'fluent-crm')
         ];
 
         if(!isset($hookNames[$hookName])) {
             return $this->sendError([
-                'message' => 'The provided hook name is not valid'
+                'message' => __('The provided hook name is not valid', 'fluent-crm')
             ]);
         }
 
@@ -281,6 +318,88 @@ class SettingsController extends Controller
 
         return [
             'message' => __('Selected CRON Event successfully ran', 'fluent-crm')
+        ];
+    }
+
+    public function getOldLogDetails(Request $request)
+    {
+        $data =  $request->all();
+        $this->validate($data, [
+            'days_before' => 'required|numeric|min:7',
+            'selected_logs' => 'array|required'
+        ]);
+
+        $selectedLogs = $data['selected_logs'];
+        $daysBefore = $data['days_before'];
+
+        $refDate = date('Y-m-d 00:00:01', time() - $daysBefore * 86400);
+
+        $dataCounters = [];
+        if(in_array('emails', $selectedLogs)) {
+            $dataCounters[] = [
+                'title' => __('Email History Logs', 'fluent-crm'),
+                'count' => CampaignEmail::where('created_at', '<', $refDate)
+                    ->where('status', 'sent')
+                    ->count()
+            ];
+        }
+
+        if(in_array('email_clicks', $selectedLogs)) {
+            $dataCounters[] = [
+                'title' => __('Email clicks', 'fluent-crm'),
+                'count' => CampaignUrlMetric::where('type', 'click')
+                    ->where('created_at', '<',  $refDate)
+                    ->count()
+            ];
+        }
+
+        if(in_array('email_open', $selectedLogs)) {
+            $dataCounters[] = [
+                'title' => __('Email clicks', 'fluent-crm'),
+                'count' => CampaignUrlMetric::where('type', 'open')
+                    ->where('created_at', '<',  $refDate)
+                    ->count()
+            ];
+        }
+
+        return [
+            'log_counts' => $dataCounters
+        ];
+    }
+
+    public function removeOldLogs(Request $request)
+    {
+        $data =  $request->all();
+        $this->validate($data, [
+            'days_before' => 'required|numeric|min:7',
+            'selected_logs' => 'array|required'
+        ]);
+
+        $selectedLogs = $data['selected_logs'];
+        $daysBefore = $data['days_before'];
+
+        $refDate = date('Y-m-d 00:00:01', time() - $daysBefore * 86400);
+        if(in_array('emails', $selectedLogs)) {
+            CampaignEmail::where('created_at', '<', $refDate)
+                ->where('status', 'sent')
+                ->delete();
+        }
+        $urlMetricsTypes = [];
+        if(in_array('email_clicks', $selectedLogs)) {
+            $urlMetricsTypes[] = 'click';
+        }
+        if(in_array('email_open', $selectedLogs)) {
+            $urlMetricsTypes[] = 'open';
+        }
+
+        if($urlMetricsTypes) {
+            CampaignUrlMetric::whereIn('type', $urlMetricsTypes)
+                ->where('created_at', '<',  $refDate)
+                ->delete();
+        }
+
+        return [
+            'message' => sprintf(__('Logs older than %d days have been deleted successfully', 'fluent-crm'), $daysBefore)
         ];
     }
 

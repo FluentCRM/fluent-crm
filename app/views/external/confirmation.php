@@ -14,7 +14,7 @@
 <body>
 <div class="fluentcrm_unsubscribe_wrapper">
     <div class="fluentcrm_un_title">
-        <?php if ($business['logo']): ?>
+        <?php if (!empty($business['logo'])): ?>
             <div class="fluentcrm_un_logo_wrapper">
                 <img src="<?php echo $business['logo']; ?>" alt="<?php echo $business['business_name']; ?>"/>
             </div>

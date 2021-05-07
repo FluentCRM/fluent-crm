@@ -18,8 +18,8 @@ class ApplyTagAction extends BaseAction
     public function getBlock()
     {
         return [
-            'title'       => 'Apply Tag',
-            'description' => 'Add this contact to the selected Tags',
+            'title'       => __('Apply Tag', 'fluent-crm'),
+            'description' => __('Add this contact to the selected Tags', 'fluent-crm'),
             'icon'        => fluentCrmMix('images/funnel_icons/apply_tag.svg'),
             'settings'    => [
                 'tags' => []
@@ -30,16 +30,16 @@ class ApplyTagAction extends BaseAction
     public function getBlockFields()
     {
         return [
-            'title'     => 'Apply Tag to the contact',
-            'sub_title' => 'Select which tag will be added to the contact',
+            'title'     => __('Apply Tag to the contact', 'fluent-crm'),
+            'sub_title' => __('Select which tag will be added to the contact', 'fluent-crm'),
             'fields'    => [
                 'tags' => [
                     'type'        => 'option_selectors',
                     'option_key'  => 'tags',
                     'is_multiple' => true,
                     'creatable'   => true,
-                    'label'       => 'Select Tags',
-                    'placeholder' => 'Select Tag'
+                    'label'       => __('Select Tags', 'fluent-crm'),
+                    'placeholder' => __('Select Tag', 'fluent-crm')
                 ]
             ]
         ];

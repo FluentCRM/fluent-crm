@@ -4,6 +4,7 @@ namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Services\Helper;
+use FluentCrm\Includes\Helpers\Arr;
 use FluentCrm\Includes\Request\Request;
 
 class UsersController extends Controller
@@ -44,7 +45,7 @@ class UsersController extends Controller
     public function import(Request $request)
     {
         $inputs = $request->only([
-            'map', 'tags', 'lists', 'roles', 'update', 'new_status'
+            'map', 'tags', 'lists', 'roles', 'update', 'new_status', 'double_optin_email'
         ]);
 
         $limit = apply_filters('fluentcrm_process_subscribers_per_request', 100);
@@ -83,8 +84,15 @@ class UsersController extends Controller
             }
         }
 
+        $sendDoubleOptin = Arr::get($inputs, 'double_optin_email') == 'yes';
+
         return Subscriber::import(
-            $subscribers, $inputs['tags'], $inputs['lists'], $inputs['update'], $inputs['new_status']
+            $subscribers,
+            $inputs['tags'],
+            $inputs['lists'],
+            $inputs['update'],
+            $inputs['new_status'],
+            $sendDoubleOptin
         );
     }
 

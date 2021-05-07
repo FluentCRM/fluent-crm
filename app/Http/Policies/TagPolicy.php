@@ -14,13 +14,7 @@ class TagPolicy extends Policy
      */
     public function index(Request $request)
     {
-        $permission = apply_filters('fluentcrm_permission', 'manage_options', 'tags', 'all');
-
-        if (!$permission) {
-            return false;
-        }
-
-        return current_user_can($permission);
+        return $this->currentUserCan('fcrm_manage_contact_cats');
     }
 
 }

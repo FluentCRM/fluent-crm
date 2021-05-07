@@ -8,6 +8,8 @@
 
 namespace FluentCrm\App\Hooks\Handlers;
 
+use FluentCrm\App\Services\PermissionManager;
+use FluentCrm\App\Services\TransStrings;
 use FluentCrm\Includes\Helpers\Arr;
 
 /**
@@ -22,7 +24,7 @@ class SetupWizard
     {
         if (apply_filters('fluentcrm_setup_wizard', true) && current_user_can('manage_options')) {
             fluentcrm_update_option('fluentcrm_setup_wizard_ran', 'yes');
-          //  add_action('wp_loaded', array($this, 'setup_wizard'), 9999);
+            //  add_action('wp_loaded', array($this, 'setup_wizard'), 9999);
 
             $this->setup_wizard();
         }
@@ -35,8 +37,8 @@ class SetupWizard
     {
         add_filter('user_can_richedit', '__return_true');
 
-        if ( current_user_can( 'upload_files' ) ) {
-            wp_enqueue_script( 'media-upload' );
+        if (current_user_can('upload_files')) {
+            wp_enqueue_script('media-upload');
         }
         add_thickbox();
 
@@ -58,16 +60,26 @@ class SetupWizard
             fluentCrmMix('admin/js/setup-wizard.js'), ['fluentcrm-boot'], date('Ymd'), true
         );
 
-        $existingSettings = get_option(FLUENTCRM.'-global-settings');
+        $existingSettings = get_option(FLUENTCRM . '-global-settings');
         $businessSettings = Arr::get($existingSettings, 'business_settings', []);
 
+        $currentUser = wp_get_current_user();
+
         wp_localize_script('fluentcrm-boot', 'fcAdmin', [
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'slug' => FLUENTCRM,
-            'rest'  => $this->getRestInfo(FluentCrm()),
-            'dashboard_url' => admin_url('admin.php?page=fluentcrm-admin&setup_complete='.time()),
+            'ajaxurl'           => admin_url('admin-ajax.php'),
+            'slug'              => FLUENTCRM,
+            'rest'              => $this->getRestInfo(FluentCrm()),
+            'trans'             => TransStrings::getStrings(),
+            'dashboard_url'     => admin_url('admin.php?page=fluentcrm-admin&setup_complete=' . time()),
             'business_settings' => (object) $businessSettings,
-            'has_fluentform' => defined('FLUENTFORM')
+            'has_fluentform'    => defined('FLUENTFORM'),
+            'auth' => [
+                'permissions' => PermissionManager::currentUserPermissions(),
+                'first_name' => $currentUser->first_name,
+                'last_name' => $currentUser->last_name,
+                'email' => $currentUser->user_email,
+                'avatar' => get_avatar($currentUser->user_email, 128)
+            ],
         ]);
 
         $this->outputHtml();

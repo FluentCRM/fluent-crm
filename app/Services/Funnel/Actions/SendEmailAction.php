@@ -23,14 +23,16 @@ class SendEmailAction extends BaseAction
     public function getBlock()
     {
         return [
-            'title'       => 'Send Custom Email',
-            'description' => 'Send a custom Email to your subscriber or custom email address',
+            'title'       => __('Send Custom Email', 'fluent-crm'),
+            'description' => __('Send a custom Email to your subscriber or custom email address', 'fluent-crm'),
             'icon' => fluentCrmMix('images/funnel_icons/custom_email.svg'),
             'settings'    => [
                 'reference_campaign' => '',
                 'send_email_to_type' => 'contact',
                 'send_email_custom'  => '',
-                'campaign'           => FunnelCampaign::getMock()
+                'campaign'           => FunnelCampaign::getMock(),
+                'is_scheduled' => '',
+                'scheduled_at' => ''
             ]
         ];
     }
@@ -38,28 +40,30 @@ class SendEmailAction extends BaseAction
     public function getBlockFields()
     {
         return [
-            'title'     => 'Send Custom Email',
-            'sub_title' => 'Please provide email details that you want to send',
+            'title'     => __('Send Custom Email', 'fluent-crm'),
+            'sub_title' => __('Please provide email details that you want to send', 'fluent-crm'),
             'fields'    => [
                 'send_email_to_type' => [
                     'type'    => 'radio',
-                    'label'   => 'Send Email to',
+                    'wrapper_class' => 'fc_half_field',
+                    'label'   => __('Send Email to', 'fluent-crm'),
                     'options' => [
                         [
                             'id'    => 'contact',
-                            'title' => 'Send To the contact'
+                            'title' => __('Send To the contact', 'fluent-crm')
                         ],
                         [
                             'id'    => 'custom',
-                            'title' => 'Send to Custom Email Address'
+                            'title' => __('Send to Custom Email Address', 'fluent-crm')
                         ]
                     ]
                 ],
                 'send_email_custom'  => [
+                    'wrapper_class' => 'fc_half_field',
                     'type'        => 'input-text',
-                    'label'       => 'Send To Email Addresses (If Custom)',
-                    'placeholder' => 'Custom Email Addresses',
-                    'inline_help' => 'Use comma separated values for multiple',
+                    'label'       => __('Send To Email Addresses (If Custom)', 'fluent-crm'),
+                    'placeholder' => __('Custom Email Addresses', 'fluent-crm'),
+                    'inline_help' => __('Use comma separated values for multiple', 'fluent-crm'),
                     'dependency'  => [
                         'depends_on'    => 'send_email_to_type',
                         'operator' => '=',
@@ -69,6 +73,23 @@ class SendEmailAction extends BaseAction
                 'campaign'           => [
                     'label' => '',
                     'type'  => 'email_campaign_composer'
+                ],
+                'is_scheduled' => [
+                    'type' => 'yes_no_check',
+                    'check_label' => __('Schedule this email to a specific date', 'fluent-crm'),
+                    'wrapper_class' => 'fc_half_field',
+                ],
+                'scheduled_at' => [
+                    'label' => __('Schedule Date and Time', 'fluent-crm'),
+                    'type' => 'date_time',
+                    'wrapper_class' => 'fc_half_field',
+                    'placeholder' => __('Select Date and Time', 'fluent-crm'),
+                    'inline_help' => __('If schedule date is past in the runtime then email will be sent immediately', 'fluent-crm'),
+                    'dependency'  => [
+                        'depends_on'    => 'is_scheduled',
+                        'operator' => '=',
+                        'value'    => 'yes'
+                    ]
                 ]
             ]
         ];
@@ -77,14 +98,16 @@ class SendEmailAction extends BaseAction
 
     public function savingAction($sequence, $funnel)
     {
+
         $funnelCampaign = Arr::get($sequence, 'settings.campaign', []);
+
         $funnelCampaignId = Arr::get($funnelCampaign, 'id');
 
         $data = Arr::only($funnelCampaign, array_keys(FunnelCampaign::getMock()));
 
-        $sequenceId = Arr::get($sequence,'id');
+        $sequenceId = Arr::get($sequence, 'id');
 
-        if ($funnelCampaignId && $funnel->id == Arr::get($sequence, 'parent_id')) {
+        if ($funnelCampaignId && $funnel->id == Arr::get($data, 'parent_id')) {
             // We have this campaign
             $data['settings'] = \maybe_serialize($data['settings']);
             $data['type'] = 'funnel_email_campaign';
@@ -112,6 +135,7 @@ class SendEmailAction extends BaseAction
                 $refCampaignData = Arr::only($refCampaign->toArray(), array_keys(FunnelCampaign::getMock()));
             }
         }
+
         $sequence['settings']['campaign'] = $refCampaignData;
         return $sequence;
     }
@@ -139,9 +163,17 @@ class SendEmailAction extends BaseAction
             return;
         }
 
+        $scheduledAt = current_time('mysql');
+        if(Arr::get($settings, 'is_scheduled') == 'yes') {
+            $providedDate = Arr::get($settings, 'scheduled_at');
+            if( $providedDate && strtotime($providedDate) > strtotime($scheduledAt) ) {
+                $scheduledAt = $providedDate;
+            }
+        }
+
         $args = [
             'status' => 'scheduled',
-            'scheduled_at' => current_time('mysql'),
+            'scheduled_at' => $scheduledAt,
             'email_type' => 'funnel_email_campaign',
             'note' => 'Email Sent From Funnel: '.$campaign->title
         ];

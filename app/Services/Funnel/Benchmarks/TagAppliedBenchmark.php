@@ -21,8 +21,8 @@ class TagAppliedBenchmark extends BaseBenchMark
     public function getBlock()
     {
         return [
-            'title'       => 'Tag Applied',
-            'description' => 'This will run when selected Tags will be applied to a contact',
+            'title'       => __('Tag Applied', 'fluent-crm'),
+            'description' => __('This will run when selected Tags have been applied to a contact', 'fluent-crm'),
             'icon' => fluentCrmMix('images/funnel_icons/tag-applied.svg'),
             'settings'    => [
                 'tags'        => [],
@@ -44,28 +44,28 @@ class TagAppliedBenchmark extends BaseBenchMark
     public function getBlockFields($funnel)
     {
         return [
-            'title'     => 'Tag Applied',
-            'sub_title' => 'This will run when selected Tags will be applied to a contact',
+            'title'     => __('Tag Applied', 'fluent-crm'),
+            'sub_title' => __('This will run when selected Tags have been applied to a contact', 'fluent-crm'),
             'fields'    => [
                 'tags'        => [
                     'type'        => 'option_selectors',
                     'option_key'  => 'tags',
                     'creatable'   => true,
                     'is_multiple' => true,
-                    'label'       => 'Select Tags',
-                    'placeholder' => 'Select Tags'
+                    'label'       => __('Select Tags', 'fluent-crm'),
+                    'placeholder' => __('Select Tags', 'fluent-crm')
                 ],
                 'select_type' => [
-                    'label'      => 'Run When',
+                    'label'      => __('Run When', 'fluent-crm'),
                     'type'       => 'radio',
                     'options'    => [
                         [
                             'id'    => 'any',
-                            'title' => 'contact added in any of the selected Tags'
+                            'title' => __('contact added in any of the selected Tags', 'fluent-crm')
                         ],
                         [
                             'id'    => 'all',
-                            'title' => 'contact added in all of the selected Tags'
+                            'title' => __('contact added in all of the selected Tags', 'fluent-crm')
                         ]
                     ],
                     'dependency' => [
@@ -114,7 +114,6 @@ class TagAppliedBenchmark extends BaseBenchMark
         }
 
         return $isMatched;
-
     }
 
 }

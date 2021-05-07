@@ -14,6 +14,7 @@ class FunnelCampaign extends Campaign
         $defaultTemplate = Helper::getDefaultEmailTemplate();
         return [
             'id'               => '',
+            'parent_id'        => '',
             'title'            => 'Funnel Campaign Holder',
             'status'           => 'published',
             'template_id'      => '',

@@ -3,7 +3,10 @@
 namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\Hooks\Handlers\FunnelHandler;
+use FluentCrm\App\Models\Campaign;
+use FluentCrm\App\Models\CustomEmailCampaign;
 use FluentCrm\App\Models\Funnel;
+use FluentCrm\App\Models\FunnelCampaign;
 use FluentCrm\App\Models\FunnelMetric;
 use FluentCrm\App\Models\FunnelSequence;
 use FluentCrm\App\Models\FunnelSubscriber;
@@ -17,7 +20,12 @@ class FunnelController extends Controller
 {
     public function funnels(Request $request)
     {
-        $funnelQuery = Funnel::orderBy('id', 'DESC');
+        $this->maybeMigrateDB();
+
+        $orderBy = $request->get('sort_by', 'id');
+        $orderType = $request->get('sort_type', 'DESC');
+
+        $funnelQuery = Funnel::orderBy($orderBy, $orderType);
         if ($search = $request->get('search')) {
             $funnelQuery->where('title', 'LIKE', '%%' . $search . '%%');
         }
@@ -42,14 +50,8 @@ class FunnelController extends Controller
     {
         $with = $request->get('with', []);
 
-        $funnel = Funnel::find($funnelId);
+        $funnel = Funnel::findOrFail($funnelId);
 
-
-        if (!$funnel) {
-            return $this->sendError([
-                'message' => 'No Funnel found'
-            ]);
-        }
         $triggers = $this->getTriggers();
         if (isset($triggers[$funnel->trigger_name])) {
             $funnel->trigger = $triggers[$funnel->trigger_name];
@@ -93,7 +95,7 @@ class FunnelController extends Controller
 
             return $this->sendSuccess([
                 'funnel'  => $funnel,
-                'message' => __('Funnel has been created. Please configure now')
+                'message' => __('Funnel has been created. Please configure now', 'fluent-crm')
             ]);
         } catch (ValidationException $e) {
             return $this->validationErrors($e);
@@ -107,7 +109,7 @@ class FunnelController extends Controller
         FunnelSubscriber::where('funnel_id', $funnelId)->delete();
 
         return $this->sendSuccess([
-            'message' => __('Funnel has been deleted', 'fluentcampaign')
+            'message' => __('Funnel has been deleted', 'fluent-crm')
         ]);
     }
 
@@ -128,110 +130,52 @@ class FunnelController extends Controller
 
     public function getFunnelSequences($funnel, $isFiltered = false)
     {
-        $sequences = FunnelSequence::where('funnel_id', $funnel->id)
-            ->orderBy('sequence', 'ASC')
-            ->get();
-
-
-        if (!$isFiltered) {
-            return $sequences;
-        }
-
+        $sequences = FunnelHelper::getFunnelSequences($funnel, $isFiltered);
         $formattedSequences = [];
+        $childs = [];
+
         foreach ($sequences as $sequence) {
-            $sequenceArray = $sequence->toArray();
-            $formattedSequences[] = apply_filters('fluentcrm_funnel_sequence_filtered_' . $sequence->action_name, $sequenceArray, $funnel);
+
+            if($sequence['type'] == 'conditional') {
+                $sequence['children'] = [
+                  'yes' => [],
+                  'no' => []
+                ];
+            }
+
+            if($parentId = Arr::get($sequence, 'parent_id')) {
+                if(!isset($childs[$parentId]['yes'])) {
+                    $childs[$parentId]['yes'] = [];
+                }
+                if(!isset($childs[$parentId]['no'])) {
+                    $childs[$parentId]['no'] = [];
+                }
+                $childs[$parentId][$sequence['condition_type']][] = $sequence;
+            } else {
+                $formattedSequences[$sequence['id']] = $sequence;
+            }
         }
 
-        return $formattedSequences;
+        if($childs) {
+            foreach ($childs as $sequenceId => $children) {
+                if(isset($formattedSequences[$sequenceId])) {
+                    $formattedSequences[$sequenceId]['children'] = $children;
+                }
+            }
+        }
+
+        return array_values($formattedSequences);
     }
 
     public function saveSequences(Request $request, $funnelId)
     {
-        $funnelSettings = \json_decode($request->get('funnel_settings'), true);
+        $data = $request->all();
 
-        $funnelConditions = \json_decode($request->get('conditions', []), true);
-
-        $funnel = Funnel::findOrFail($funnelId);
-        $funnel->settings = $funnelSettings;
-        if ($funnelTitle = $request->get('funnel_title')) {
-            $funnel->title = sanitize_text_field($funnelTitle);
-        }
-
-        $funnel->conditions = $funnelConditions;
-        $funnel->status = $request->get('status');
-        $funnel->save();
-
-        $sequences = \json_decode($request->get('sequences'), true);
-
-        $sequenceIds = [];
-        $cDelay = 0;
-        $delay = 0;
-
-        foreach ($sequences as $index => $sequence) {
-            // it's creatable
-            $sequence['funnel_id'] = $funnel->id;
-            $sequence['status'] = 'published';
-            $sequence['conditions'] = [];
-            $sequence['sequence'] = $index + 1;
-            $sequence['c_delay'] = $cDelay;
-            $sequence['delay'] = $delay;
-            $delay = 0;
-
-            $actionName = $sequence['action_name'];
-
-            if ($actionName == 'fluentcrm_wait_times') {
-                $unit = Arr::get($sequence, 'settings.wait_time_unit');
-                $converter = 86400; // default day
-                if ($unit == 'hours') {
-                    $converter = 3600; // hour
-                } else if ($unit == 'minutes') {
-                    $converter = 60;
-                }
-                $time = Arr::get($sequence, 'settings.wait_time_amount');
-                $delay = intval($time * $converter);
-                $cDelay += $delay;
-            }
-
-            $sequence = apply_filters('fluentcrm_funnel_sequence_saving_' . $sequence['action_name'], $sequence, $funnel);
-            if (Arr::get($sequence, 'type') == 'benchmark') {
-                $delay = $sequence['delay'];
-            }
-
-            if (empty($sequence['id'])) {
-                $sequence['created_by'] = get_current_user_id();
-                $createdSequence = FunnelSequence::create($sequence);
-                $sequenceIds[] = $createdSequence->id;
-            } else {
-                $sequenceId = $sequence['id'];
-                $sequenceIds[] = $sequenceId;
-                $sequence['updated_at'] = current_time('mysql');
-                $sequence['settings'] = \maybe_serialize($sequence['settings']);
-                $sequence['conditions'] = \maybe_serialize($sequence['conditions']);
-                FunnelSequence::where('id', $sequenceId)->update($sequence);
-            }
-        }
-
-        if ($sequenceIds) {
-            $deletingSequences = FunnelSequence::whereNotIn('id', $sequenceIds)
-                ->where('funnel_id', $funnel->id)
-                ->get();
-        } else {
-            $deletingSequences = FunnelSequence::where('funnel_id', $funnel->id)->get();
-        }
-
-        if ($deletingSequences->count()) {
-            foreach ($deletingSequences as $deletingSequence) {
-                do_action('fluentcrm_funnel_sequence_deleting_' . $deletingSequence->action_name, $deletingSequence, $funnel);
-                $deletingSequence->delete();
-            }
-        }
-
-        (new FunnelHandler())->resetFunnelIndexes();
+        $funnel = FunnelHelper::saveFunnelSequence($funnelId, $data);
 
         return $this->sendSuccess([
             'sequences' => $this->getFunnelSequences($funnel, true),
-            'message'   => __('Sequence successfully updated', 'fluentcampaign')
+            'message'   => __('Sequence successfully updated', 'fluent-crm')
         ]);
     }
 
@@ -287,6 +231,7 @@ class FunnelController extends Controller
     public function cloneFunnel(Request $request, $funnelId)
     {
         $oldFunnel = Funnel::findOrFail($funnelId);
+
         $newFunnelData = [
             'title'        => '[Copy] ' . $oldFunnel->title,
             'trigger_name' => $oldFunnel->trigger_name,
@@ -298,13 +243,109 @@ class FunnelController extends Controller
 
         $funnel = Funnel::create($newFunnelData);
 
-        $sequences = $this->getFunnelSequences($oldFunnel, true);
+        $sequences = FunnelHelper::getFunnelSequences($oldFunnel, true);
 
         $sequenceIds = [];
         $cDelay = 0;
         $delay = 0;
 
+        $childs = [];
+        $oldNewMaps = [];
+
         foreach ($sequences as $index => $sequence) {
+            $oldId = $sequence['id'];
+            unset($sequence['id']);
+            unset($sequence['created_at']);
+            unset($sequence['updated_at']);
+
+            // it's creatable
+            $sequence['funnel_id'] = $funnel->id;
+            $sequence['status'] = 'published';
+            $sequence['conditions'] = [];
+            $sequence['sequence'] = $index + 1;
+            $sequence['c_delay'] = $cDelay;
+            $sequence['delay'] = $delay;
+            $delay = 0;
+
+            $actionName = $sequence['action_name'];
+
+            if ($actionName == 'fluentcrm_wait_times') {
+                $unit = Arr::get($sequence, 'settings.wait_time_unit');
+                $converter = 86400; // default day
+                if ($unit == 'hours') {
+                    $converter = 3600; // hour
+                } else if ($unit == 'minutes') {
+                    $converter = 60;
+                }
+                $time = Arr::get($sequence, 'settings.wait_time_amount');
+                $delay = intval($time * $converter);
+                $cDelay += $delay;
+            }
+
+            $sequence = apply_filters('fluentcrm_funnel_sequence_saving_' . $sequence['action_name'], $sequence, $funnel);
+            if (Arr::get($sequence, 'type') == 'benchmark') {
+                $delay = $sequence['delay'];
+            }
+
+            $sequence['created_by'] = get_current_user_id();
+
+            $parentId = Arr::get($sequence, 'parent_id');
+
+            if($parentId) {
+                $childs[$parentId][] = $sequence;
+            } else {
+                $createdSequence = FunnelSequence::create($sequence);
+                $sequenceIds[] = $createdSequence->id;
+                $oldNewMaps[$oldId] = $createdSequence->id;
+            }
+        }
+
+        if($childs) {
+            foreach ($childs as $oldParentId => $childBlocks) {
+                foreach ($childBlocks as $childBlock) {
+                    $newParentId = Arr::get($oldNewMaps, $oldParentId);
+                    if($newParentId) {
+                        $childBlock['parent_id'] = $newParentId;
+                        $createdSequence = FunnelSequence::create($childBlock);
+                        $sequenceIds[] = $createdSequence->id;
+                    }
+                }
+            }
+        }
+
+        (new FunnelHandler())->resetFunnelIndexes();
+
+        return [
+            'message' => __('Funnel has been successfully cloned', 'fluent-crm'),
+            'funnel'  => $funnel
+        ];
+    }
+
+    public function importFunnel(Request $request)
+    {
+        $funnelArray = $request->get('funnel');
+        $sequences = $request->get('sequences');
+
+        $newFunnelData = [
+            'title'        => $funnelArray['title'],
+            'trigger_name' => $funnelArray['trigger_name'],
+            'status'       => 'draft',
+            'conditions'   => Arr::get($funnelArray, 'conditions', []),
+            'settings'     => $funnelArray['settings'],
+            'created_by'   => get_current_user_id()
+        ];
+
+        $funnel = Funnel::create($newFunnelData);
+
+        $sequenceIds = [];
+        $cDelay = 0;
+        $delay = 0;
+
+        $childs = [];
+        $oldNewMaps = [];
+
+        foreach ($sequences as $index => $sequence) {
+            $oldId = $sequence['id'];
             unset($sequence['id']);
             unset($sequence['created_at']);
             unset($sequence['updated_at']);
@@ -338,15 +379,36 @@ class FunnelController extends Controller
             }
 
             $sequence['created_by'] = get_current_user_id();
-            $createdSequence = FunnelSequence::create($sequence);
-            $sequenceIds[] = $createdSequence->id;
+
+            $parentId = Arr::get($sequence, 'parent_id');
+
+            if($parentId) {
+                $childs[$parentId][] = $sequence;
+            } else {
+                $createdSequence = FunnelSequence::create($sequence);
+                $sequenceIds[] = $createdSequence->id;
+                $oldNewMaps[$oldId] = $createdSequence->id;
+            }
+        }
+
+        if($childs) {
+            foreach ($childs as $oldParentId => $childBlocks) {
+                foreach ($childBlocks as $childBlock) {
+                    $newParentId = Arr::get($oldNewMaps, $oldParentId);
+                    if($newParentId) {
+                        $childBlock['parent_id'] = $newParentId;
+                        $createdSequence = FunnelSequence::create($childBlock);
+                        $sequenceIds[] = $createdSequence->id;
+                    }
+                }
+            }
         }
 
         (new FunnelHandler())->resetFunnelIndexes();
 
         return [
-            'message' => __('Funnel has been successfully cloned'),
-            'funnel' => $funnel
+            'message' => __('Funnel has been successfully imported', 'fluent-crm'),
+            'funnel'  => $funnel
         ];
 
     }
@@ -355,7 +417,7 @@ class FunnelController extends Controller
     {
         $funnel = Funnel::findOrFail($funnelId);
         $ids = $request->get('subscriber_ids');
-        if(!$ids) {
+        if (!$ids) {
             return $this->sendError([
                 'message' => 'subscriber_ids parameter is required'
             ]);
@@ -387,9 +449,9 @@ class FunnelController extends Controller
     public function updateSubscriptionStatus(Request $request, $funnelId, $subscriberId)
     {
         $status = $request->get('status');
-        if(!$status) {
+        if (!$status) {
             $this->sendError([
-                'message' => 'Subscription status is required'
+                'message' => __('Subscription status is required', 'fluent-crm')
             ]);
         }
 
@@ -397,15 +459,15 @@ class FunnelController extends Controller
             ->where('subscriber_id', $subscriberId)
             ->first();
 
-        if(!$funnelSubscriber) {
+        if (!$funnelSubscriber) {
             $this->sendError([
-                'message' => 'No Corresponding report found'
+                'message' => __('No Corresponding report found', 'fluent-crm')
             ]);
         }
 
-        if($funnelSubscriber->status == 'completed') {
+        if ($funnelSubscriber->status == 'completed') {
             $this->sendError([
-                'message' => 'The status already completed state'
+                'message' => __('The status already completed state', 'fluent-crm')
             ]);
         }
 
@@ -413,7 +475,48 @@ class FunnelController extends Controller
         $funnelSubscriber->save();
 
         return [
-            'message' => 'Status has been updated to '.$status
+            'message' => sprintf( esc_html__('Status has been updated to %s', 'fluent-crm'), $status)
+        ];
+    }
+
+    private function maybeMigrateDB()
+    {
+        $sequence = \FluentCrm\App\Models\FunnelSequence::first();
+        $isMigrated = false;
+        global $wpdb;
+        if($sequence) {
+            $attributes = $sequence->getAttributes();
+            if(isset($attributes['parent_id'])) {
+                $isMigrated = true;
+            }
+        } else {
+            $isMigrated = $wpdb->get_col($wpdb->prepare("SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND COLUMN_NAME='parent_id' AND TABLE_NAME=%s", $wpdb->prefix.'fc_funnel_sequences'));
+        }
+
+        if(!$isMigrated) {
+            $sequenceTable = $wpdb->prefix.'fc_funnel_sequences';
+            $wpdb->query("ALTER TABLE {$sequenceTable} ADD COLUMN `parent_id` bigint NOT NULL DEFAULT '0', ADD `condition_type` varchar(192) NULL AFTER `parent_id`");
+        }
+    }
+
+    public function getEmailReports(Request $request, $funnelId)
+    {
+        $funnel = Funnel::findOrFail($funnelId);
+        $emailSequences = FunnelSequence::where('funnel_id', $funnel->id)
+                            ->orderBy('sequence', 'ASC')
+                            ->where('action_name', 'send_custom_email')
+                            ->get();
+        foreach ($emailSequences as $emailSequence) {
+            $campaign = FunnelCampaign::where('id', $emailSequence->settings['reference_campaign'])->first();
+            $emailSequence->campaign = [
+                'subject' => $campaign->email_subject,
+                'id' => $campaign->id,
+                'stats' => $campaign->stats()
+            ];
+        }
+
+        return [
+            'email_sequences' => $emailSequences
         ];
     }
 }

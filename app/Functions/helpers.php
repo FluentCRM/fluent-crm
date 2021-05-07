@@ -347,29 +347,29 @@ function fluentcrm_subscriber_editable_statuses()
 function fluentcrm_contact_types()
 {
     return apply_filters('fluentcrm_contact_types', [
-        'lead',
-        'customer'
+        'lead' => __('Lead', 'fluent-crm'),
+        'customer' => __('Customer', 'fluent-crm')
     ]);
 }
 
 function fluentcrm_activity_types()
 {
     return apply_filters('fluentcrm_contact_activity_types', [
-        'note'              => 'Note',
-        'call'              => 'Call',
-        'email'             => 'Email',
-        'meeting'           => 'Meeting',
-        'quote_sent'        => 'Quote: Sent',
-        'quote_accepted'    => 'Quote: Accepted',
-        'quote_refused'     => 'Quote: Refused',
-        'invoice_sent'      => 'Invoice: Sent',
-        'invoice_part_paid' => 'Invoice: Part Paid',
-        'invoice_paid'      => 'Invoice: Paid',
-        'invoice_refunded'  => 'Invoice: Refunded',
-        'transaction'       => 'Transaction',
-        'feedback'          => 'Feedback',
-        'tweet'             => 'Tweet',
-        'facebook_post'     => 'Facebook Post'
+        'note'              => __('Note', 'fluent-crm'),
+        'call'              => __('Call', 'fluent-crm'),
+        'email'             => __('Email', 'fluent-crm'),
+        'meeting'           => __('Meeting', 'fluent-crm'),
+        'quote_sent'        => __('Quote: Sent', 'fluent-crm'),
+        'quote_accepted'    => __('Quote: Accepted', 'fluent-crm'),
+        'quote_refused'     => __('Quote: Refused', 'fluent-crm'),
+        'invoice_sent'      => __('Invoice: Sent', 'fluent-crm'),
+        'invoice_part_paid' => __('Invoice: Part Paid', 'fluent-crm'),
+        'invoice_paid'      => __('Invoice: Paid', 'fluent-crm'),
+        'invoice_refunded'  => __('Invoice: Refunded', 'fluent-crm'),
+        'transaction'       => __('Transaction', 'fluent-crm'),
+        'feedback'          => __('Feedback', 'fluent-crm'),
+        'tweet'             => __('Tweet', 'fluent-crm'),
+        'facebook_post'     => __('Facebook Post', 'fluent-crm')
     ]);
 }
 
@@ -495,6 +495,9 @@ function fluentcrm_contact_removed_from_lists($detachedListIds, Subscriber $subs
     );
 }
 
+/*
+ * @return object \FluentCrm\App\Models\Subscriber
+ */
 function fluentcrm_get_current_contact()
 {
     $subscriber = false;
@@ -507,10 +510,17 @@ function fluentcrm_get_current_contact()
             $subscriber = Subscriber::where('email', $user->user_email)->first();
         }
     } else {
-        $subscriberId = intval(FluentCrm\Includes\Helpers\Arr::get($_COOKIE, 'fc_sid'));
-        if ($subscriberId) {
-            $subscriber = Subscriber::where('id', $subscriberId)->first();
+        $fcSubscriberHash = FluentCrm\Includes\Helpers\Arr::get($_COOKIE, 'fc_s_hash');
+        if($fcSubscriberHash) {
+            $subscriber = Subscriber::where('hash', $fcSubscriberHash)->first();
+        } else {
+            // @todo: We will remove this after february
+            $subscriberId = intval(FluentCrm\Includes\Helpers\Arr::get($_COOKIE, 'fc_sid'));
+            if ($subscriberId) {
+                $subscriber = Subscriber::where('id', $subscriberId)->first();
+            }
         }
+
     }
 
     return $subscriber;
@@ -522,8 +532,8 @@ function fluentcrm_get_crm_profile_html($userIdOrEmail, $checkPermission = true,
         return '';
     }
     if ($checkPermission) {
-        $contactPermission = apply_filters('fluentcrm_permission', 'manage_options', 'contacts', 'admin_menu');
-        if (!current_user_can($contactPermission)) {
+        $contactPermission = \FluentCrm\App\Services\PermissionManager::currentUserCan('fcrm_read_contacts');
+        if (!$contactPermission) {
             return '';
         }
     }
@@ -657,4 +667,30 @@ function fluentcrm_get_crm_profile_html($userIdOrEmail, $checkPermission = true,
 <?php endif; ?>
     <?php
     return ob_get_clean();
+}
+
+
+function fluentcrm_maybe_disable_fsmtp_log($status, $settings)
+{
+    if(!$status) {
+        return $status;
+    }
+
+    if(isset($settings['disable_fluentcrm_logs']) && $settings['disable_fluentcrm_logs'] == 'yes') {
+        return false;
+    }
+
+    return $status;
+}
+
+
+function fluentcrm_get_custom_contact_fields()
+{
+    static $fields;
+    if($fields) {
+        return $fields;
+    }
+    $fields = fluentcrm_get_option('contact_custom_fields', []);
+
+    return $fields;
 }

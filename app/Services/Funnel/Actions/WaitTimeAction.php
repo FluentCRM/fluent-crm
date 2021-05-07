@@ -17,8 +17,8 @@ class WaitTimeAction extends BaseAction
     public function getBlock()
     {
         return [
-            'title'       => 'Wait X Days/Hours',
-            'description' => 'Wait defined timespan before execute the next action',
+            'title'       => __('Wait X Days/Hours', 'fluent-crm'),
+            'description' => __('Wait defined timespan before execute the next action', 'fluent-crm'),
             'icon' => fluentCrmMix('images/funnel_icons/wait_time.svg'),
             'settings'    => [
                 'wait_time_amount' => '',
@@ -30,28 +30,28 @@ class WaitTimeAction extends BaseAction
     public function getBlockFields()
     {
         return [
-            'title'     => 'Wait X Days/Hours',
-            'sub_title' => 'Wait defined timespan before execute the next action',
+            'title'     => __('Wait X Days/Hours', 'fluent-crm'),
+            'sub_title' => __('Wait defined timespan before execute the next action', 'fluent-crm'),
             'fields'    => [
                 'wait_time_amount' => [
-                    'label' => 'Wait Time',
+                    'label' => __('Wait Time', 'fluent-crm'),
                     'type'  => 'input-number'
                 ],
                 'wait_time_unit'   => [
-                    'label'   => 'Wait Time Unit',
+                    'label'   => __('Wait Time Unit', 'fluent-crm'),
                     'type'    => 'select',
                     'options' => [
                         [
                             'id'    => 'days',
-                            'title' => 'Days'
+                            'title' => __('Days', 'fluent-crm')
                         ],
                         [
                             'id'    => 'hours',
-                            'title' => 'Hours'
+                            'title' => __('Hours', 'fluent-crm')
                         ],
                         [
                             'id'    => 'minutes',
-                            'title' => 'Minutes'
+                            'title' => __('Minutes', 'fluent-crm')
                         ]
                     ]
                 ]

@@ -42,4 +42,27 @@ class Cleanup
     {
         SubscriberPivot::where('object_type', 'FluentCrm\App\Models\Tag')->where('object_id', $listId)->delete();
     }
+
+    public function handleUnsubscribe($subscriber)
+    {
+        CampaignEmail::where('subscriber_id', $subscriber->id)
+            ->whereIn('status', ['pending', 'scheduled', 'draft'])
+            ->update([
+                'status' => 'cancelled'
+            ]);
+
+        FunnelSubscriber::where('subscriber_id', $subscriber->id)
+            ->where('status', 'active')
+            ->update([
+                'status' => 'cancelled'
+            ]);
+
+        if(defined('FLUENTCAMPAIGN')) {
+            \FluentCampaign\App\Models\SequenceTracker::where('subscriber_id', $subscriber->id)
+                ->where('status', 'active')
+                ->update([
+                    'status' => 'cancelled'
+                ]);
+        }
+    }
 }

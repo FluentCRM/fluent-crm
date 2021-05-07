@@ -32,7 +32,7 @@ class SubscriberNotes
                 `type` VARCHAR(50) DEFAULT 'note',
                 `is_private` TINYINT DEFAULT 1,
                 `title` VARCHAR(192) NULL,
-                `description` tinytext NULL,
+                `description` LONGTEXT NULL,
                 `created_at` TIMESTAMP NULL,
                 `updated_at` TIMESTAMP NULL,
                 INDEX `{$indexPrefix}_s_id_idx` (`subscriber_id` DESC),
@@ -40,6 +40,10 @@ class SubscriberNotes
             ) $charsetCollate;";
 
             dbDelta($sql);
+        } else {
+            $charsetCollate = $wpdb->collate;
+            $sql = "ALTER TABLE {$table} CHANGE `description` `description` longtext COLLATE '".$charsetCollate."' NULL AFTER `title`;";
+            $wpdb->query($sql);
         }
     }
 }

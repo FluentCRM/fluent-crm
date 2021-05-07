@@ -35,7 +35,7 @@ class OptionsController extends Controller
             ];
         }
 
-        throw new \Exception('Missing requested option names.', 422);
+        throw new \Exception('Missing requested fields field.', 422);
     }
 
     /**
@@ -136,11 +136,19 @@ class OptionsController extends Controller
         $statuses = fluentcrm_subscriber_statuses();
         $formattedStatues = [];
 
+        $transMaps = [
+            'subscribed' => __('Subscribed', 'fluent-crm'),
+            'pending' => __('Pending', 'fluent-crm'),
+            'unsubscribed' => __('Unsubscribed', 'fluent-crm'),
+            'bounced' => __('Bounced', 'fluent-crm'),
+            'complained' => __('Complained', 'fluent-crm')
+        ];
+
         foreach ($statuses as $status) {
             $formattedStatues[] = [
                 'id'    => $status,
                 'slug'  => $status,
-                'title' => ucfirst($status)
+                'title' => isset($transMaps[$status]) ? $transMaps[$status] :  ucfirst($status)
             ];
         }
 
@@ -163,11 +171,20 @@ class OptionsController extends Controller
 
         $statuses = array_diff($statuses, $unEditableStatuses);
 
+        $transMaps = [
+            'subscribed' => __('Subscribed', 'fluent-crm'),
+            'pending' => __('Pending', 'fluent-crm'),
+            'unsubscribed' => __('Unsubscribed', 'fluent-crm'),
+            'bounced' => __('Bounced', 'fluent-crm'),
+            'complained' => __('Complained', 'fluent-crm')
+        ];
+
+
         foreach ($statuses as $status) {
             $formattedStatues[] = [
                 'id'    => $status,
                 'slug'  => $status,
-                'title' => ucfirst($status)
+                'title' => isset($transMaps[$status]) ? $transMaps[$status] :  ucfirst($status)
             ];
         }
 
@@ -186,11 +203,11 @@ class OptionsController extends Controller
         $types = fluentcrm_contact_types();
         $formattedTypes = [];
 
-        foreach ($types as $type) {
+        foreach ($types as $type => $label) {
             $formattedTypes[] = [
                 'id'    => $type,
                 'slug'  => $type,
-                'title' => ucfirst($type)
+                'title' => $label
             ];
         }
 

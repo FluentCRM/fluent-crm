@@ -80,15 +80,23 @@ class Contacts
         return $this->instance->updateOrCreate($data, $forceUpdate, $deleteOtherValues, $sync);
     }
 
-    public function getCurrentContact()
+    public function getCurrentContact($cached = true)
     {
+        static $currentContact;
+
+        if($cached && $currentContact) {
+            return $currentContact;
+        }
+
         $userId = get_current_user_id();
         if(!$userId) {
             return false;
         }
 
         $user = get_user_by('ID', $userId);
-        return $this->instance->where('user_id', $user->ID)->orWhere('email', $user->user_email)->first();
+        $currentContact = $this->instance->where('user_id', $user->ID)->orWhere('email', $user->user_email)->first();
+
+        return $currentContact;
     }
 
     public function getInstance()

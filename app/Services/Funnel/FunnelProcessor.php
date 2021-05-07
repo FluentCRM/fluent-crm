@@ -69,11 +69,9 @@ class FunnelProcessor
 
     public function startSequences($subscriber, $funnel, $funnelSubArgs = [])
     {
-        $sequences = FunnelSequence::where('funnel_id', $funnel->id)
-            ->orderBy('sequence', 'ASC')
-            ->get();
+        $sequencePoints = (new SequencePoints($funnel));
 
-        if ($sequences->isEmpty()) {
+        if (!$sequencePoints->hasSequences()) {
             return;
         }
 
@@ -87,57 +85,34 @@ class FunnelProcessor
             $data = wp_parse_args($funnelSubArgs, $data);
         }
 
+        if($subscriber->status == 'subscribed') {
+            $data['status'] = 'active';
+        }
+
         // let's create an empty sequence_subscriber
         $funnelSubscriber = FunnelSubscriber::create($data);
 
         if ($funnelSubscriber->status != 'pending') {
-            $this->processSequences($sequences, $subscriber, $funnelSubscriber);
+            $this->processSequencePoints($sequencePoints, $subscriber, $funnelSubscriber);
         }
     }
 
-    public function processSequences($sequences, $subscriber, $funnelSubscriber)
+    public function processSequencePoints(SequencePoints $sequencePoints, $subscriber, $funnelSubscriber)
     {
-        if ($sequences->isEmpty()) {
+        if (!$sequencePoints->hasSequences()) {
             $this->completeFunnelSequence($funnelSubscriber);
             return;
         }
 
-        $immediateSequences = [];
-        $nextSequence = false;
-        $firstSequence = $sequences[0];
-
-        $requiredBenchMark = false;
-
-        foreach ($sequences as $sequence) {
-            if ($requiredBenchMark) {
-                continue;
-            }
-
-            /*
-             * Check if there has a required sequence for this.
-             */
-            if ($sequence->type == 'benchmark') {
-                if ($sequence->settings['type'] == 'required') {
-                    $requiredBenchMark = $sequence;
-                }
-                continue;
-            }
-
-            if ($sequence->c_delay == $firstSequence->c_delay) {
-                $immediateSequences[] = $sequence;
-            } else {
-                if (!$nextSequence) {
-                    $nextSequence = $sequence;
-                }
-                if ($sequence->c_delay < $nextSequence->c_delay) {
-                    $nextSequence = $sequence;
-                }
+        foreach ($sequencePoints->getCurrentSequences() as $sequence) {
+            $this->processSequence($subscriber, $sequence, $funnelSubscriber->id);
+            if($sequence->action_name == 'end_this_funnel') {
+                return;
             }
         }
 
-        foreach ($immediateSequences as $immediateSequence) {
-            $this->processSequence($subscriber, $immediateSequence, $funnelSubscriber->id);
-        }
+        $nextSequence = $sequencePoints->getNextSequence();
+        $requiredBenchMark = $sequencePoints->getRequiredBenchmark();
 
         if ($nextSequence && $requiredBenchMark) {
             if ($nextSequence->sequence < $requiredBenchMark->sequence) {
@@ -157,18 +132,36 @@ class FunnelProcessor
             return;
         }
 
-        if (!$nextSequence) {
+        if (!$sequencePoints->hasNext()) {
             $this->completeFunnelSequence($funnelSubscriber);
             return;
         }
 
-        FunnelSubscriber::where('id', $funnelSubscriber->id)
-            ->update([
-                'next_sequence'       => $nextSequence->sequence,
-                'next_sequence_id'    => $nextSequence->id,
-                'next_execution_time' => date('Y-m-d H:i:s', strtotime(current_time('mysql')) + $nextSequence->delay),
-                'status'              => 'active'
-            ]);
+        if ($nextSequence) {
+            FunnelSubscriber::where('id', $funnelSubscriber->id)
+                ->update([
+                    'next_sequence'       => $nextSequence->sequence,
+                    'next_sequence_id'    => $nextSequence->id,
+                    'next_execution_time' => date('Y-m-d H:i:s', strtotime(current_time('mysql')) + $nextSequence->delay),
+                    'status'              => 'active'
+                ]);
+        }
+    }
+
+    /**
+     * @param $sequences
+     * @param $subscriber
+     * @param $funnelSubscriber
+     * @deprecated 1.2.0 Use processSequencePoints method
+     */
+    public function processSequences($sequences, $subscriber, $funnelSubscriber)
+    {
+        _deprecated_function(__METHOD__, '1.2.0', "(new FunnelProcessor)->processSequencePoints()");
+        error_log('This method should not be called');
+
+        $funnel = $this->getFunnel($funnelSubscriber->funnel_id);
+        $funnelPoints = new SequencePoints($funnel, $funnelSubscriber);
+        $this->processSequencePoints($funnelPoints, $subscriber, $funnelSubscriber);
     }
 
     public function processSequence($subscriber, $sequence, $funnelSubscriberId)
@@ -214,17 +207,9 @@ class FunnelProcessor
             return false;
         }
 
-        $upcomingSequences = FunnelSequence::where('funnel_id', $funnel->id)
-            ->orderBy('sequence', 'ASC')
-            ->where('sequence', '>=', $funnelSubscriber->next_sequence)
-            ->get();
+        $sequencePoints = new SequencePoints($funnel, $funnelSubscriber);
 
-        if (!$upcomingSequences) {
-            $this->completeFunnelSequence($funnelSubscriber);
-            return;
-        }
-
-        $this->processSequences($upcomingSequences, $subscriber, $funnelSubscriber);
+        $this->processSequencePoints($sequencePoints, $subscriber, $funnelSubscriber);
     }
 
     public function startFunnelFromSequencePoint($startSequence, $subscriber, $args = [], $metricArgs = [])
@@ -291,12 +276,11 @@ class FunnelProcessor
             return; // We need double-optin from this user.
         }
 
-        $upcomingSequences = FunnelSequence::where('funnel_id', $startSequence->funnel_id)
-            ->orderBy('sequence', 'ASC')
-            ->where('sequence', '>=', $funnelSubscriber->next_sequence)
-            ->get();
+        $funnel = $this->getFunnel($startSequence->funnel_id);
 
-        $this->processSequences($upcomingSequences, $subscriber, $funnelSubscriber);
+        $sequencePoints = new SequencePoints($funnel, $funnelSubscriber);
+
+        $this->processSequencePoints($sequencePoints, $subscriber, $funnelSubscriber);
     }
 
     public function recordFunnelMetric($subscriber, $sequence, $metricArgs = [])
@@ -316,5 +300,78 @@ class FunnelProcessor
             'sequence_id'   => $sequence->id,
             'subscriber_id' => $subscriber->id
         ]);
+    }
+
+    public function initChildSequences($parent, $isMatched, $subscriber, $funnelSubscriberId, $funnelMetric)
+    {
+        $conditionType = 'no';
+        if($isMatched) {
+            $conditionType = 'yes';
+        }
+        // find the corresponding sequence
+        $sequences = FunnelSequence::where('funnel_id', $parent->funnel_id)
+            ->where('parent_id', $parent->id)
+            ->where('condition_type', $conditionType)
+            ->get();
+
+        $immediateSequences = [];
+        $firstSequence = $sequences[0];
+        $nextSequence = false;
+
+        foreach ($sequences as $sequence) {
+            if ($sequence->c_delay == $firstSequence->c_delay) {
+                $immediateSequences[] = $sequence;
+            } else {
+                if (!$nextSequence) {
+                    $nextSequence = $sequence;
+                }
+                if ($sequence->c_delay < $nextSequence->c_delay) {
+                    $nextSequence = $sequence;
+                }
+            }
+        }
+
+
+        $waitTimes = 0;
+        foreach ($immediateSequences as $immediateSequence) {
+           $this->processSequence($subscriber, $immediateSequence, $funnelSubscriberId);
+           if($immediateSequence->action_name == 'end_this_funnel') {
+               return ;
+           }
+
+           if($immediateSequence->action_name == 'fluentcrm_wait_times') {
+               $waitTimes = FunnelHelper::getDelayInSecond($immediateSequence);
+           }
+        }
+
+        if($nextSequence) {
+            return FunnelSubscriber::where('id', $funnelSubscriberId)
+                ->update([
+                    'next_sequence'       => $nextSequence->sequence,
+                    'next_sequence_id'    => $nextSequence->id,
+                    'next_execution_time' => date('Y-m-d H:i:s', strtotime(current_time('mysql')) + $nextSequence->delay),
+                    'status'              => 'active'
+                ]);
+        }
+
+        $funnel = $this->getFunnel($parent->funnel_id);
+        $funnelSubscriber = FunnelSubscriber::where('id', $funnelSubscriberId)->first();
+
+        $funnelSubscriber->last_sequence_id = $parent->id;
+        // we don't have next sequence so we have to loop back to the parent
+        $sequencePoints = new SequencePoints($funnel, $funnelSubscriber);
+
+        if($waitTimes && $currentNextSequences = $sequencePoints->getCurrentSequences()) {
+            $nextSequence = $currentNextSequences[0];
+            return FunnelSubscriber::where('id', $funnelSubscriberId)
+                ->update([
+                    'next_sequence'       => $nextSequence->sequence,
+                    'next_sequence_id'    => $nextSequence->id,
+                    'next_execution_time' => date('Y-m-d H:i:s', strtotime(current_time('mysql')) + $waitTimes),
+                    'status'              => 'active'
+                ]);
+        }
+
+        $this->processSequencePoints($sequencePoints, $subscriber, $funnelSubscriber);
     }
 }

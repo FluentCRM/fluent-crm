@@ -40,7 +40,7 @@ class RedirectionHandler
             return $urlData->url;
         }
 
-        $campaignEmail = CampaignEmail::with('campaign')->find($mailId);
+        $campaignEmail = CampaignEmail::with(['campaign', 'subscriber'])->find($mailId);
 
         if (!$campaignEmail) {
             return $urlData->url;
@@ -55,7 +55,7 @@ class RedirectionHandler
         ]);
 
         if (apply_filters('fluentcrm_will_use_cookie', true)) {
-            setcookie("fc_sid", $campaignEmail->subscriber_id, time() + 9676800);  /* expire in 28 days */
+            setcookie("fc_s_hash", $campaignEmail->subscriber->hash, time() + 9676800);  /* expire in 28 days */
             if ($campaignEmail->campaign_id) {
                 setcookie("fc_cid", $campaignEmail->campaign_id, time() + 9676800);  /* expire in 28 days */
             }

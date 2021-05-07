@@ -14,12 +14,6 @@ class CustomFieldsPolicy extends Policy
      */
     public function verifyRequest(Request $request)
     {
-        $permission = apply_filters('fluentcrm_permission', 'manage_options', 'custom_fields', 'all');
-
-        if (!$permission) {
-            return false;
-        }
-
-        return current_user_can($permission);
+        return $this->currentUserCan('fcrm_manage_settings');
     }
 }

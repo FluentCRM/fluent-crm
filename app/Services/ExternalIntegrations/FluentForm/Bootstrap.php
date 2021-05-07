@@ -30,7 +30,7 @@ class Bootstrap extends IntegrationManager
 
         $this->logo = FLUENTCRM_PLUGIN_URL . 'assets/images/fluentcrm-logo.png';
 
-        $this->description = 'Connect FluentCRM with WP Fluent Forms and subscribe a contact when a form is submitted.';
+        $this->description = __('Connect FluentCRM with WP Fluent Forms and subscribe a contact when a form is submitted.', 'fluent-crm');
 
         $this->registerAdminHooks();
 
@@ -43,10 +43,10 @@ class Bootstrap extends IntegrationManager
             'title'                 => $this->title . ' Integration',
             'logo'                  => $this->logo,
             'is_active'             => $this->isConfigured(),
-            'configure_title'       => 'Configuration required!',
+            'configure_title'       => __('Configuration required!', 'fluent-crm'),
             'global_configure_url'  => '#',
-            'configure_message'     => 'FluentCRM is not configured yet! Please configure your FluentCRM api first',
-            'configure_button_text' => 'Set FluentCRM'
+            'configure_message'     => __('FluentCRM is not configured yet! Please configure your FluentCRM api first', 'fluent-crm'),
+            'configure_button_text' => __('Set FluentCRM', 'fluent-crm')
         ];
         return $integrations;
     }
@@ -100,16 +100,16 @@ class Bootstrap extends IntegrationManager
             'fields'              => [
                 [
                     'key'         => 'name',
-                    'label'       => 'Feed Name',
+                    'label'       => __('Feed Name', 'fluent-crm'),
                     'required'    => true,
-                    'placeholder' => 'Your Feed Name',
+                    'placeholder' => __('Your Feed Name', 'fluent-crm'),
                     'component'   => 'text'
                 ],
                 [
                     'key'         => 'list_id',
-                    'label'       => 'FluentCRM List',
-                    'placeholder' => 'Select FluentCRM List',
-                    'tips'        => 'Select the FluentCRM List you would like to add your contacts to.',
+                    'label'       => __('FluentCRM List', 'fluent-crm'),
+                    'placeholder' => __('Select FluentCRM List', 'fluent-crm'),
+                    'tips'        => __('Select the FluentCRM List you would like to add your contacts to.', 'fluent-crm'),
                     'component'   => 'select',
                     'required'    => true,
                     'options'     => $this->getLists(),
@@ -117,48 +117,48 @@ class Bootstrap extends IntegrationManager
                 [
                     'key'                => 'CustomFields',
                     'require_list'       => false,
-                    'label'              => 'Primary Fields',
-                    'tips'               => 'Associate your FluentCRM merge tags to the appropriate Fluent Form fields by selecting the appropriate form field from the list.',
+                    'label'              => __('Primary Fields', 'fluent-crm'),
+                    'tips'               => __('Associate your FluentCRM merge tags to the appropriate Fluent Form fields by selecting the appropriate form field from the list.', 'fluent-crm'),
                     'component'          => 'map_fields',
-                    'field_label_remote' => 'FluentCRM Field',
-                    'field_label_local'  => 'Form Field',
+                    'field_label_remote' => __('FluentCRM Field', 'fluent-crm'),
+                    'field_label_local'  => __('Form Field', 'fluent-crm'),
                     'primary_fileds'     => [
                         [
                             'key'           => 'email',
-                            'label'         => 'Email Address',
+                            'label'         => __('Email Address', 'fluent-crm'),
                             'required'      => true,
                             'input_options' => 'emails'
                         ],
                         [
                             'key'   => 'first_name',
-                            'label' => 'First Name'
+                            'label' => __('First Name', 'fluent-crm')
                         ],
                         [
                             'key'   => 'last_name',
-                            'label' => 'Last Name'
+                            'label' => __('Last Name', 'fluent-crm')
                         ],
                         [
                             'key'       => 'full_name',
-                            'label'     => 'Full Name',
-                            'help_text' => 'If First Name & Last Name is not available full name will be used to get first name and last name'
+                            'label'     => __('Full Name', 'fluent-crm'),
+                            'help_text' => __('If First Name & Last Name is not available full name will be used to get first name and last name', 'fluent-crm')
                         ]
                     ]
                 ],
                 [
                     'key'                => 'other_fields',
                     'require_list'       => false,
-                    'label'              => 'Other Fields',
+                    'label'              => __('Other Fields', 'fluent-crm'),
                     'tips'               => 'Select which Fluent Form fields pair with their<br /> respective FlunentCRM fields.',
                     'component'          => 'dropdown_many_fields',
-                    'field_label_remote' => 'FluentCRM Field',
-                    'field_label_local'  => 'Form Field',
+                    'field_label_remote' => __('FluentCRM Field', 'fluent-crm'),
+                    'field_label_local'  => __('Form Field', 'fluent-crm'),
                     'options'            => $fieldOptions
                 ],
                 [
                     'key'          => 'tag_ids',
                     'require_list' => false,
-                    'label'        => 'Contact Tags',
-                    'placeholder' => 'Select Tags',
+                    'label'        => __('Contact Tags', 'fluent-crm'),
+                    'placeholder' => __('Select Tags', 'fluent-crm'),
                     'component'    => 'selection_routing',
                     'simple_component' => 'select',
                     'routing_input_type' => 'select',
@@ -166,29 +166,29 @@ class Bootstrap extends IntegrationManager
                     'settings_key' => 'tag_routers',
                     'is_multiple'  => true,
                     'labels'       => [
-                        'choice_label'      => 'Enable Dynamic Tag Selection',
+                        'choice_label'      => __('Enable Dynamic Tag Selection', 'fluent-crm'),
                         'input_label'       => '',
-                        'input_placeholder' => 'Set Tag'
+                        'input_placeholder' => __('Set Tag', 'fluent-crm')
                     ],
                     'options'      => $this->getTags()
                 ],
                 [
                     'key'            => 'skip_if_exists',
                     'require_list'   => false,
-                    'checkbox_label' => 'Skip if contact already exist in FluentCRM',
+                    'checkbox_label' => __('Skip if contact already exist in FluentCRM', 'fluent-crm'),
                     'component'      => 'checkbox-single'
                 ],
                 [
                     'key'            => 'double_opt_in',
                     'require_list'   => false,
-                    'checkbox_label' => 'Enable Double Option for new contacts',
+                    'checkbox_label' => __('Enable Double Option for new contacts', 'fluent-crm'),
                     'component'      => 'checkbox-single'
                 ],
                 [
                     'require_list' => false,
                     'key'          => 'conditionals',
-                    'label'        => 'Conditional Logics',
-                    'tips'         => 'Allow FluentCRM integration conditionally based on your submission values',
+                    'label'        => __('Conditional Logics', 'fluent-crm'),
+                    'tips'         => __('Allow FluentCRM integration conditionally based on your submission values', 'fluent-crm'),
                     'component'    => 'conditional_block'
                 ],
                 [
@@ -196,7 +196,7 @@ class Bootstrap extends IntegrationManager
                     'key'            => 'enabled',
                     'label'          => 'Status',
                     'component'      => 'checkbox-single',
-                    'checkbox_label' => 'Enable This feed'
+                    'checkbox_label' => __('Enable This feed', 'fluent-crm')
                 ]
             ],
             'button_require_list' => false,
@@ -268,11 +268,11 @@ class Bootstrap extends IntegrationManager
             $this->addLog(
                 $feed['settings']['name'],
                 'failed',
-                'FluentCRM API called skipped because no valid email available',
+                __('FluentCRM API called skipped because no valid email available', 'fluent-crm'),
                 $form->id,
                 $entry->id
             );
-            return;
+            return false;
         }
 
         $subscriber = Subscriber::where('email', $contact['email'])->first();
@@ -281,10 +281,11 @@ class Bootstrap extends IntegrationManager
             $this->addLog(
                 $feed['settings']['name'],
                 'info',
-                'Contact creation has been skipped because contact already exist in the database',
+                __('Contact creation has been skipped because contact already exist in the database', 'fluent-crm'),
                 $form->id,
                 $entry->id
             );
+            return false;
         }
 
         if ($subscriber) {
@@ -327,7 +328,7 @@ class Bootstrap extends IntegrationManager
             $this->addLog(
                 $feed['settings']['name'],
                 'success',
-                'Contact has been created in FluentCRM. Contact ID: ' . $subscriber->id,
+                __('Contact has been created in FluentCRM. Contact ID: ', 'fluent-crm') . $subscriber->id,
                 $form->id,
                 $entry->id
             );
@@ -354,14 +355,13 @@ class Bootstrap extends IntegrationManager
             $this->addLog(
                 $feed['settings']['name'],
                 'success',
-                'Contact has been updated in FluentCRM. Contact ID: ' . $subscriber->id,
+                __('Contact has been updated in FluentCRM. Contact ID: ', 'fluent-crm') . $subscriber->id,
                 $form->id,
                 $entry->id
             );
         }
-
     }
-
+    
     public function isConfigured()
     {
         return true;

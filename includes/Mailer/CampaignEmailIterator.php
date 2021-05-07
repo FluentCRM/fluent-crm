@@ -40,7 +40,7 @@ class CampaignEmailIterator implements \Iterator
 
     public function valid()
     {
-        $this->emails = CampaignEmail::whereIn('status', [ 'pending', 'scheduled' ])
+        $emails = CampaignEmail::whereIn('status', [ 'pending', 'scheduled' ])
             ->when($this->campaignId, function($query) {
                 $query->where('campaign_id', $this->campaignId);
             })
@@ -50,6 +50,17 @@ class CampaignEmailIterator implements \Iterator
             ->offset($this->offset)
             ->limit($this->limit)
             ->get();
+
+        $ids = $emails->pluck('id');
+        if($ids) {
+            CampaignEmail::whereIn('id', $ids)
+                ->update([
+                    'status' => 'processing',
+                    'updated_at' => date('Y-m-d H:i:s')
+                ]);
+        }
+
+        $this->emails = $emails;
 
         return !$this->emails->isEmpty();
     }

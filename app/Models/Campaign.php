@@ -567,13 +567,29 @@ class Campaign extends Model
             ->groupBy('subscriber_id')
             ->count();
 
-        return [
+        $revenue = fluentcrm_get_campaign_meta($this->id, '_campaign_revenue');
+
+        $stats = [
             'total'         => $totalEmails,
             'sent'          => $totalSent,
             'clicks'        => $clicks,
             'views'         => $views,
             'unsubscribers' => $unSubscribed
         ];
+
+        if($revenue && $revenue->value) {
+            $data = (array) $revenue->value;
+            foreach ($data as $currency => $cents) {
+                if($cents) {
+                    $stats['revenue'] = [
+                        'label' => 'Revenue ('.$currency.')',
+                        'total' => number_format($cents / 100, 2)
+                    ];
+                }
+            }
+        }
+
+        return $stats;
 
     }
 

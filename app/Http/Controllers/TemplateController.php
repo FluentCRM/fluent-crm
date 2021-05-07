@@ -26,7 +26,7 @@ class TemplateController extends Controller
         ]);
     }
 
-    public function template(Request $request, $templateId)
+    public function template(Request $request, $templateId = 0)
     {
         $template = Template::find($templateId);
 
@@ -119,7 +119,7 @@ class TemplateController extends Controller
         Template::findOrFail($id)->delete();
 
         return $this->sendSuccess([
-            'message' => 'The template has been deleted successfully.'
+            'message' => __('The template has been deleted successfully.', 'fluent-crm')
         ]);
     }
 

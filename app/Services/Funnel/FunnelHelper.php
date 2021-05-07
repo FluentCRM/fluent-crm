@@ -2,10 +2,15 @@
 
 namespace FluentCrm\App\Services\Funnel;
 
+use FluentCampaign\App\Models\SequenceTracker;
+use FluentCrm\App\Hooks\Handlers\FunnelHandler;
+use FluentCrm\App\Models\Funnel;
 use FluentCrm\App\Models\FunnelMetric;
+use FluentCrm\App\Models\FunnelSequence;
 use FluentCrm\App\Models\FunnelSubscriber;
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Services\Helper;
+use FluentCrm\Includes\Helpers\Arr;
 
 class FunnelHelper
 {
@@ -24,11 +29,11 @@ class FunnelHelper
         return [
             [
                 'id'    => 'update',
-                'title' => 'Update if Exist'
+                'title' => __('Update if Exist', 'fluent-crm')
             ],
             [
                 'id'    => 'skip_all_if_exist',
-                'title' => 'Skip this automation if contact already exist'
+                'title' => __('Skip this automation if contact already exist', 'fluent-crm')
             ]
         ];
     }
@@ -103,9 +108,6 @@ class FunnelHelper
     public static function syncTags($subscriber, $tags = [])
     {
         if ($tags) {
-            $tags = array_combine($tags, array_fill(
-                0, count($tags), ['object_type' => 'FluentCrm\App\Models\Tag']
-            ));
             $subscriber->attachTags($tags);
         }
     }
@@ -123,15 +125,15 @@ class FunnelHelper
         return [
             'first_name' => [
                 'type'  => 'value_options',
-                'label' => 'First Name'
+                'label' => __('First Name', 'fluent-crm')
             ],
             'last_name'  => [
                 'type'  => 'value_options',
-                'label' => 'Last Name'
+                'label' => __('Last Name', 'fluent-crm')
             ],
             'email'      => [
                 'type'  => 'value_options',
-                'label' => 'Email'
+                'label' => __('Email', 'fluent-crm')
             ]
         ];
     }
@@ -139,37 +141,37 @@ class FunnelHelper
     public static function getSecondaryContactFieldMaps()
     {
         $mainFields = [
-            'prefix' => [
-                'type' => 'value_options',
-                'label' => 'Name Prefix'
+            'prefix'         => [
+                'type'  => 'value_options',
+                'label' => __('Name Prefix', 'fluent-crm')
             ],
             'address_line_1' => [
                 'type'  => 'value_options',
-                'label' => 'Address Line 1'
+                'label' => __('Address Line 1', 'fluent-crm')
             ],
-            'address_line_2'  => [
+            'address_line_2' => [
                 'type'  => 'value_options',
-                'label' => 'Address Line 2'
+                'label' => __('Address Line 2', 'fluent-crm')
             ],
-            'postal_code'      => [
+            'postal_code'    => [
                 'type'  => 'value_options',
-                'label' => 'Postal Code'
+                'label' => __('Postal Code', 'fluent-crm')
             ],
-            'city'      => [
+            'city'           => [
                 'type'  => 'value_options',
-                'label' => 'City'
+                'label' => __('City', 'fluent-crm')
             ],
-            'state'      => [
+            'state'          => [
                 'type'  => 'value_options',
-                'label' => 'State'
+                'label' => __('State', 'fluent-crm')
             ],
-            'country'      => [
+            'country'        => [
                 'type'  => 'value_options',
-                'label' => 'country'
+                'label' => __('country', 'fluent-crm')
             ],
-            'phone'      => [
+            'phone'          => [
                 'type'  => 'value_options',
-                'label' => 'Phone'
+                'label' => __('Phone', 'fluent-crm')
             ]
         ];
 
@@ -177,7 +179,7 @@ class FunnelHelper
         if ($customFields) {
             foreach ($customFields as $item) {
                 $mainFields['custom.' . $item['slug']] = [
-                    'type' => 'value_options',
+                    'type'  => 'value_options',
                     'label' => $item['label']
                 ];
             }
@@ -197,5 +199,255 @@ class FunnelHelper
             ->whereIn('subscriber_id', $subscriberIds)
             ->delete();
         return true;
+    }
+
+    public static function saveFunnelSequence($funnelId, $data)
+    {
+        $funnelSettings = \json_decode(Arr::get($data, 'funnel_settings'), true);
+
+        $funnelConditions = \json_decode(Arr::get($data, 'conditions', []), true);
+
+        $funnel = Funnel::findOrFail($funnelId);
+        $funnel->settings = $funnelSettings;
+        if ($funnelTitle = Arr::get($data, 'funnel_title')) {
+            $funnel->title = sanitize_text_field($funnelTitle);
+        }
+
+        $funnel->conditions = $funnelConditions;
+        $funnel->status = Arr::get($data, 'status');
+        $funnel->save();
+
+
+        $sequences = \json_decode(Arr::get($data, 'sequences', []), true);
+
+        $sequenceIds = [];
+        $cDelay = 0;
+        $delay = 0;
+
+        $indexCount = 0;
+
+        foreach ($sequences as $index => $sequence) {
+            // it's creatable
+            $sequence['funnel_id'] = $funnel->id;
+            $sequence['status'] = 'published';
+            $sequence['conditions'] = [];
+            $sequence['sequence'] = $indexCount + 1;
+            $sequence['c_delay'] = $cDelay;
+            $sequence['delay'] = $delay;
+            $delay = 0;
+
+            $actionName = $sequence['action_name'];
+
+            if ($actionName == 'fluentcrm_wait_times') {
+                $delay = self::getDelayInSecond($sequence);
+                $cDelay += $delay;
+            }
+
+            $sequence = apply_filters('fluentcrm_funnel_sequence_saving_' . $sequence['action_name'], $sequence, $funnel);
+            if (Arr::get($sequence, 'type') == 'benchmark') {
+                $delay = $sequence['delay'];
+            }
+
+            $sequence['id'] = self::createOrUpdateSequence($sequence);
+            $sequenceIds[] = $sequence['id'];
+
+            // We have to handle the children if it's conditional block
+            if ($sequence['type'] == 'conditional') {
+                $childIds = self::saveChildSequences($sequence, $funnel);
+                $indexCount += count($childIds);
+                $sequenceIds = array_merge($sequenceIds, $childIds);
+            }
+
+            $indexCount += 1;
+        }
+
+        if ($sequenceIds) {
+            $deletingSequences = FunnelSequence::whereNotIn('id', $sequenceIds)
+                ->where('funnel_id', $funnel->id)
+                ->get();
+        } else {
+            $deletingSequences = FunnelSequence::where('funnel_id', $funnel->id)->get();
+        }
+
+        if ($deletingSequences->count()) {
+            foreach ($deletingSequences as $deletingSequence) {
+                do_action('fluentcrm_funnel_sequence_deleting_' . $deletingSequence->action_name, $deletingSequence, $funnel);
+                $deletingSequence->delete();
+            }
+        }
+
+        (new FunnelHandler())->resetFunnelIndexes();
+
+        return $funnel;
+    }
+
+    private static function createOrUpdateSequence($sequence)
+    {
+        if (empty($sequence['id'])) {
+            $sequence['created_by'] = get_current_user_id();
+            $createdSequence = FunnelSequence::create($sequence);
+            return $createdSequence->id;
+        }
+
+        $sequence['updated_at'] = current_time('mysql');
+        $sequence['settings'] = \maybe_serialize($sequence['settings']);
+        $sequence['conditions'] = \maybe_serialize($sequence['conditions']);
+
+        $sequenceId = $sequence['id'];
+        $data = Arr::only($sequence, (new FunnelSequence())->getFillable());
+
+        FunnelSequence::where('id', $sequenceId)->update($data);
+
+        return $sequenceId;
+    }
+
+    public static function getDelayInSecond($sequence)
+    {
+        $unit = Arr::get($sequence, 'settings.wait_time_unit');
+        $converter = 86400; // default day
+        if ($unit == 'hours') {
+            $converter = 3600; // hour
+        } else if ($unit == 'minutes') {
+            $converter = 60;
+        }
+        $time = Arr::get($sequence, 'settings.wait_time_amount');
+        return intval($time * $converter);
+    }
+
+    private static function saveChildSequences($sequence, $funnel)
+    {
+        $sequenceIds = [];
+        $indexCount = $sequence['sequence'];
+        $childCats = Arr::get($sequence, 'children');
+        foreach ($childCats as $category => $blocks) {
+            $childDelay = 0;
+            $childCDelay = 0;
+            foreach ($blocks as $childIndex => $childSequence) {
+                $childSequence['funnel_id'] = $funnel->id;
+                $childSequence['status'] = 'published';
+                $childSequence['parent_id'] = $sequence['id'];
+                $childSequence['condition_type'] = $category;
+                $childSequence['conditions'] = [];
+                $childSequence['sequence'] = $indexCount + 1;
+                $childSequence['c_delay'] = $sequence['c_delay'] + $childCDelay;
+                $childSequence['delay'] = $sequence['delay'] + $childDelay;
+
+                $childDelay = 0;
+
+                /*
+                 * For Delay Calculation
+                 */
+                $actionName = $childSequence['action_name'];
+                if ($actionName == 'fluentcrm_wait_times') {
+                    $childDelay = self::getDelayInSecond($childSequence);
+                    $childCDelay += $childDelay;
+                }
+
+                $childSequence = apply_filters('fluentcrm_funnel_sequence_saving_' . $childSequence['action_name'], $childSequence, $funnel);
+                $sequenceIds[] = self::createOrUpdateSequence($childSequence);
+                $indexCount += 1;
+            }
+        }
+        return $sequenceIds;
+    }
+
+    public static function getFunnelSequences($funnel, $isFiltered = false)
+    {
+        $sequences = FunnelSequence::where('funnel_id', $funnel->id)
+            ->orderBy('sequence', 'ASC')
+            ->get();
+
+        if (!$isFiltered) {
+            return $sequences;
+        }
+
+        $formattedSequences = [];
+        foreach ($sequences as $sequence) {
+            $sequenceArray = $sequence->toArray();
+            $formattedSequences[] = apply_filters('fluentcrm_funnel_sequence_filtered_' . $sequence->action_name, $sequenceArray, $funnel);
+        }
+
+        return $formattedSequences;
+    }
+
+    public static function getRuntimeSequences($funnel, $funnelSubscriber = false)
+    {
+        $lastSequence = false;
+        if($funnelSubscriber && $funnelSubscriber->last_sequence_id) {
+            $lastSequence = FunnelSequence::where('id', $funnelSubscriber->last_sequence_id);
+        }
+
+        if($lastSequence && $lastSequence->parent_id) {
+            // We just have to find the same child-block sequences
+            $sequences = FunnelSequence::where('parent_id', $lastSequence->parent_id)
+                ->where('condition_type', $lastSequence->condition_type)
+                ->where('sequence', '>', $lastSequence->sequence)
+                ->orderBy('sequence', 'ASC')
+                ->get();
+
+        }
+
+        $sequencesQuery = FunnelSequence::where('funnel_id', $funnel->id);
+        if($lastSequence) {
+            $sequencesQuery->where('sequence', '>', $lastSequence->sequence);
+        }
+
+        $sequences = $sequencesQuery->orderBy('sequence', 'ASC')->get();
+
+        if($sequences->isEmpty()) {
+            return [
+                'immediate_sequences' => [],
+                'next_sequence' => false
+            ];
+        }
+    }
+
+
+    public static function extractSequences($sequences)
+    {
+        if($sequences->isEmpty()) {
+            return [
+                'immediate_sequences' => [],
+                'next_sequence' => false
+            ];
+        }
+
+        $immediateSequences = [];
+        $nextSequence = false;
+        $firstSequence = $sequences[0];
+        $requiredBenchMark = false;
+        $conditionalBlock = false;
+
+        foreach ($sequences as $sequence) {
+            if ($requiredBenchMark || $conditionalBlock) {
+                continue;
+            }
+
+            /*
+             * Check if there has a required sequence for this.
+             */
+            if ($sequence->type == 'benchmark') {
+                if ($sequence->settings['type'] == 'required') {
+                    $requiredBenchMark = $sequence;
+                }
+                continue;
+            }
+
+            if ($sequence->type == 'conditional') {
+                $conditionalBlock = $sequence;
+                continue;
+            }
+
+            if ($sequence->c_delay == $firstSequence->c_delay) {
+                $immediateSequences[] = $sequence;
+            } else {
+                if (!$nextSequence) {
+                    $nextSequence = $sequence;
+                }
+                if ($sequence->c_delay < $nextSequence->c_delay) {
+                    $nextSequence = $sequence;
+                }
+            }
+        }
     }
 }

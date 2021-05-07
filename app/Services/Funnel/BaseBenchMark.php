@@ -66,19 +66,19 @@ abstract class BaseBenchMark
     public function benchmarkTypeField()
     {
         return [
-            'label'       => 'Benchmark type',
+            'label'       => __('Benchmark type', 'fluent-crm'),
             'type'        => 'radio',
             'options'     => [
                 [
                     'id'    => 'optional',
-                    'title' => '[Optional Point] This is an optional trigger point'
+                    'title' => __('[Optional Point] This is an optional trigger point', 'fluent-crm')
                 ],
                 [
                     'id'    => 'required',
-                    'title' => '[Essential Point] Select IF this step is required for processing further actions'
+                    'title' => __('[Essential Point] Select IF this step is required for processing further actions', 'fluent-crm')
                 ]
             ],
-            'inline_help' => 'If you select [Optional Point] it will work as an Optional Trigger otherwise, it will wait for full-fill this action'
+            'inline_help' => __('If you select [Optional Point] it will work as an Optional Trigger otherwise, it will wait for full-fill this action', 'fluent-crm')
         ];
     }
 

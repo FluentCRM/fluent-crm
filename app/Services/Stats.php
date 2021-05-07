@@ -74,42 +74,42 @@ Class Stats
 
         return apply_filters('fluentcrm_quick_links', [
             [
-                'title' => 'View Contacts',
+                'title' => __('View Contacts', 'fluent-crm'),
                 'url' => $urlBase.'subscribers',
                 'icon' => 'el-icon-user'
             ],
             [
-                'title' => 'Contact Segments',
+                'title' => __('Contact Segments', 'fluent-crm'),
                 'url' => $urlBase.'contact-groups/lists',
                 'icon' => 'el-icon-folder'
             ],
             [
-                'title' => 'Email Campaigns',
+                'title' => __('Email Campaigns', 'fluent-crm'),
                 'url' => $urlBase.'email/campaigns',
                 'icon' => 'el-icon-message'
             ],
             [
-                'title' => 'Email Sequences',
+                'title' => __('Email Sequences', 'fluent-crm'),
                 'url' => $urlBase.'email/sequences',
                 'icon' => 'el-icon-alarm-clock'
             ],
             [
-                'title' => 'Forms',
+                'title' => __('Forms', 'fluent-crm'),
                 'url' => $urlBase.'forms',
                 'icon' => 'el-icon-document-checked'
             ],
             [
-                'title' => 'Automations',
+                'title' => __('Automations', 'fluent-crm'),
                 'url' => $urlBase.'funnels',
                 'icon' => 'el-icon-cold-drink'
             ],
             [
-                'title' => 'Settings',
+                'title' => __('Settings', 'fluent-crm'),
                 'url' => $urlBase.'settings',
                 'icon' => 'el-icon-setting'
             ],
             [
-                'title' => 'Documentations',
+                'title' => __('Documentations', 'fluent-crm'),
                 'url' => 'https://fluentcrm.com/docs?utm_source=wp&utm_medium=quicklinks&utm_campaign=site',
                 'icon' => 'el-icon-document'
             ]
