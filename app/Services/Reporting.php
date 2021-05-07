@@ -134,7 +134,7 @@ class Reporting
 
         $formattedReports = [
             [
-                'label' => 'Entrance',
+                'label' => __('Entrance', 'fluent-crm'),
                 'count' => $totalSubscriberCount,
                 'sequence_id' => 0,
                 'type' => 'root',
@@ -159,17 +159,16 @@ class Reporting
                 'count' => intval($count),
                 'sequence_id' => $sequence->id,
                 'type' => $sequence->type,
-                'percent' => ceil(($count / $totalSubscriberCount) * 100),
+                'percent' => ($totalSubscriberCount) ? ceil(($count / $totalSubscriberCount) * 100) : 0,
                 'previous_step_count' => $prevCount,
                 'drop_count' => $dropCount,
-                'drop_percent' => ($dropCount && $count) ? floor((1 - ($count / $prevCount)) * 100) : 0
+                'drop_percent' => ($dropCount && $count && $prevCount) ? floor((1 - ($count / $prevCount)) * 100) : 0
             ];
 
             if ($items[$sequence->id]->benchmark_currency) {
                 $currency = $items[$sequence->id]->benchmark_currency;
             }
 
-            $prevCount = $count;
         }
 
         return [

@@ -26,9 +26,9 @@ class FluentFormSubmissionTrigger extends BaseTrigger
     public function getTrigger()
     {
         return [
-            'category'    => 'Forms',
-            'label'       => 'New Form Submission (Fluent Forms)',
-            'description' => 'This Funnel will be initiated when a new form submission will happen'
+            'category'    => 'CRM',
+            'label'       => __('New Form Submission (Fluent Forms)', 'fluent-crm'),
+            'description' => __('This Funnel will be initiated when a new form submission has been submitted', 'fluent-crm')
         ];
     }
 
@@ -57,37 +57,36 @@ class FluentFormSubmissionTrigger extends BaseTrigger
 
         $formId = Arr::get($funnel->settings, 'form_id');
 
-        $subtitle = 'This Funnel will be initiated when a new form submission will happen.';
+        $subtitle = __('This Funnel will be initiated when a new form submission has been submitted.', 'fluent-crm');
 
         if ($formId) {
             $subtitle .= ' Use shortcode <b> [fluentform id="' . $formId . '"] </b> to show the form in your WordPress page/posts. <a target="_blank" href="' . admin_url('admin.php?page=fluent_forms&route=editor&form_id=' . $formId) . '">Edit The Form</a>';
         }
 
         return [
-            'title'     => 'New Fluent Forms Submission Funnel',
+            'title'     => __('New Fluent Forms Submission Funnel', 'fluent-crm'),
             'sub_title' => $subtitle,
             'fields'    => [
                 'form_id'                  => [
                     'type'    => 'reload_field_selection',
-                    'label'   => 'Select your form',
+                    'label'   => __('Select your form', 'fluent-crm'),
                     'options' => $this->getForms($funnel)
                 ],
                 'primary_fields'           => [
-                    'label'         => 'Map Primary Data',
+                    'label'         => __('Map Primary Data', 'fluent-crm'),
                     'type'          => 'form-group-mapper',
                     'value_options' => $valueOptions,
-                    'local_label'   => 'Contact Field (CRM)',
-                    'remote_label'  => 'Form Field',
+                    'local_label'   => __('Contact Field (CRM)', 'fluent-crm'),
+                    'remote_label'  => __('Form Field', 'fluent-crm'),
                     'fields'        => FunnelHelper::getPrimaryContactFieldMaps()
                 ],
                 'other_fields'             => [
-                    'label'         => 'Map Other Data',
+                    'label'         => __('Map Other Data', 'fluent-crm'),
                     'type'          => 'form-many-drop-down-mapper',
                     'value_options' => $valueOptions,
-                    'local_label'   => 'Select Contact Property',
-                    'remote_label'  => 'Select Form Field',
-                    'fields'        => apply_filters(
-                        'fluentcrm_fluentform_other_map_fields',
+                    'local_label'   => __('Select Contact Property', 'fluent-crm'),
+                    'remote_label'  => __('Select Form Field', 'fluent-crm'),
+                    'fields'        => apply_filters('fluentcrm_fluentform_other_map_fields',
                         FunnelHelper::getSecondaryContactFieldMaps()
                     )
                 ],
@@ -95,8 +94,8 @@ class FluentFormSubmissionTrigger extends BaseTrigger
                     'type'        => 'option_selectors',
                     'option_key'  => 'editable_statuses',
                     'is_multiple' => false,
-                    'label'       => 'Subscription Status',
-                    'placeholder' => 'Select Status'
+                    'label'       => __('Subscription Status', 'fluent-crm'),
+                    'placeholder' => __('Select Status', 'fluent-crm')
                 ],
                 'subscription_status_info' => [
                     'type'       => 'html',
@@ -158,8 +157,8 @@ class FluentFormSubmissionTrigger extends BaseTrigger
             'run_only_one' => [
                 'type'        => 'yes_no_check',
                 'label'       => '',
-                'check_label' => 'Run this automation only once per contact. If unchecked then it will over-write existing flow',
-                'help'        => 'If you enable this then this will run only once per customer otherwise, It will delete the existing automation flow and start new',
+                'check_label' => __('Run this automation only once per contact. If unchecked then it will over-write existing flow', 'fluent-crm'),
+                'help'        => __('If you enable this then this will run only once per customer otherwise, It will delete the existing automation flow and start new', 'fluent-crm'),
                 'options'     => FunnelHelper::getUpdateOptions()
             ],
         ];

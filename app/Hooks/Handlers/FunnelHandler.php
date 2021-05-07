@@ -15,9 +15,14 @@ use FluentCrm\App\Services\Funnel\Benchmarks\ListAppliedBenchmark;
 use FluentCrm\App\Services\Funnel\Benchmarks\RemoveFromListBenchmark;
 use FluentCrm\App\Services\Funnel\Benchmarks\RemoveFromTagBenchmark;
 use FluentCrm\App\Services\Funnel\Benchmarks\TagAppliedBenchmark;
+use FluentCrm\App\Services\Funnel\FunnelHelper;
 use FluentCrm\App\Services\Funnel\FunnelProcessor;
+use FluentCrm\App\Services\Funnel\SequencePoints;
 use FluentCrm\App\Services\Funnel\Triggers\FluentFormSubmissionTrigger;
 use FluentCrm\App\Services\Funnel\Triggers\UserRegistrationTrigger;
+use FluentCrm\App\Services\PermissionManager;
+use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Includes\Request\Request;
 
 class FunnelHandler
 {
@@ -28,6 +33,11 @@ class FunnelHandler
         $this->initBlockActions();
         $this->initBenchMarkBlocks();
         $this->initTriggers();
+
+        if(!defined('FLUENTCAMPAIGN_DIR_FILE')) {
+            new \FluentCrm\App\Services\Funnel\ProFunnelItems();
+        }
+
         $triggers = get_option($this->settingsKey, []);
 
         $triggers = array_unique($triggers);
@@ -137,6 +147,7 @@ class FunnelHandler
     public function resumeSubscriberFunnels($subscriber, $oldStatus)
     {
         $funnelSubscribers = FunnelSubscriber::where('status', 'pending')
+            ->with(['funnel'])
             ->where('subscriber_id', $subscriber->id)
             ->whereHas('funnel', function ($query) {
                 $query->where('status', 'published');
@@ -146,27 +157,59 @@ class FunnelHandler
         $funnelProcessorClass = new FunnelProcessor();
 
         foreach ($funnelSubscribers as $funnelSubscriber) {
+            $funnel = $funnelSubscriber->funnel;
 
-            // check the last sequence ID here
-            $lastSequence = false;
-            if ($funnelSubscriber->last_sequence_id) {
-                $lastSequence = FunnelSequence::find($funnelSubscriber->last_sequence_id);
+            if(!$funnel || $funnel->status != 'published') {
+                continue;
             }
 
-            $sequences = FunnelSequence::where('funnel_id', $funnelSubscriber->funnel_id)
-                ->whereHas('funnel', function ($query) {
-                    $query->where('status', 'published');
-                })
-                ->orderBy('sequence', 'ASC');
-
-            if ($lastSequence) {
-                // If sequence already stated then we want to resume here
-                $sequences = $sequences->where('sequence', '>', $lastSequence->sequence);
-            }
-
-            $sequences = $sequences->get();
-
-            $funnelProcessorClass->processSequences($sequences, $subscriber, $funnelSubscriber);
+            $sequencePoints = new SequencePoints($funnel, $funnelSubscriber);
+            $funnelProcessorClass->processSequencePoints($sequencePoints, $subscriber, $funnelSubscriber);
         }
+    }
+
+    public function saveSequences()
+    {
+        $hasPermission  = PermissionManager::currentUserCan('fcrm_write_funnels');
+
+        if(!$hasPermission) {
+            wp_send_json([
+                'message' => __('Sorry, You do not have permission to do this action', 'fluent-crm')
+            ], 423);
+        }
+
+        $request = FluentCrm('request');
+        $data = $request->all();
+
+        $data['sequences'] = wp_unslash(Arr::get($data, 'sequences'));
+
+        $funnel = FunnelHelper::saveFunnelSequence($data['funnel_id'], $data);
+
+        wp_send_json([
+            'sequences' => FunnelHelper::getFunnelSequences($funnel, true),
+            'message'   => __('Sequence successfully updated', 'fluent-crm')
+        ]);
+    }
+
+    public function exportFunnel()
+    {
+        $permission = 'manage_options';
+        if( !current_user_can($permission) ) {
+            die('You do not have permission');
+        }
+
+        $funnelId = intval($_REQUEST['funnel_id']);
+        $funnel = Funnel::findOrFail($funnelId);
+        $funnel = apply_filters('fluentcrm_funnel_editor_details_' . $funnel->trigger_name, $funnel);
+
+        $funnel->sequences = FunnelHelper::getFunnelSequences($funnel, true);
+
+        $funnel->site_hash = md5(site_url());
+        $funnel->export_date = date('Y-m-d H:i:s');
+
+        header('Content-disposition: attachment; filename='.sanitize_title($funnel->title, 'funnel', 'display').'-'.$funnelId.'.json');
+        header('Content-type: application/json');
+        echo json_encode($funnel);
+        exit();
     }
 }

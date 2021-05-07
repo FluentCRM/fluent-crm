@@ -61,6 +61,28 @@ class UrlStores extends Model
         return $chars[intval($num)] . $string;
     }
 
+    public static function getStringByNumber($num)
+    {
+        $chars = apply_filters(FLUENTCRM . '_url_charset', 'abcdefghijklm1234567890nopqrstuvwxyz');
+        $string = '';
+        $len = strlen($chars);
+        while ($num >= $len) {
+            if (function_exists('bcmod')) {
+                $mod = bcmod($num, $len);
+            } else {
+                $mod = self::bcmodFallBack($num, $len);
+            }
+            if (function_exists('bcdiv')) {
+                $num = bcdiv($num, $len);
+            } else {
+                $num = self::bcDivFallBack($num, $len);
+            }
+
+            $string = $chars[$mod] . $string;
+        }
+        return $chars[intval($num)] . $string;
+    }
+
     private static function bcmodFallBack($x, $y)
     {
         // how many numbers to take at once? carefull not to exceed (int)

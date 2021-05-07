@@ -159,7 +159,7 @@ class Route
 
             $response = $this->app->call(
                 $this->app->parseRestHandler($this->handler),
-                $request->get_url_params()
+                array_values($request->get_url_params())
             );
 
             if (!($response instanceof \WP_REST_Response)) {

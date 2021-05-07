@@ -21,13 +21,17 @@ class Handler
 
     public function handle($campaignId = null)
     {
-        if (apply_filters('fluentcrm_disable_email_processing', false)) {
+        if( did_action('fluentcrm_sending_emails_starting') ) {
             return false;
         }
 
-        $this->maximumProcessingTime = apply_filters('fluentcrm_max_email_sending_time', 50);
+        if ( apply_filters('fluentcrm_disable_email_processing', false) ) {
+            return false;
+        }
 
-        $sendingPerChunk = apply_filters('fluentcrm_email_sending_per_chunk', 10);
+        $this->maximumProcessingTime = apply_filters('fluentcrm_max_email_sending_time', 10);
+
+        $sendingPerChunk = apply_filters('fluentcrm_email_sending_per_chunk', 7);
 
         $hadJobs = false;
 
@@ -36,6 +40,7 @@ class Handler
             if ($this->isProcessing()) {
                 return false;
             }
+
             $this->processing();
             $this->handleFailedLog();
             $this->startedAt = microtime(true);
@@ -43,11 +48,13 @@ class Handler
 
             foreach ((new CampaignEmailIterator($campaignId, $sendingPerChunk)) as $emailCollection) {
                 $hadJobs = true;
-                if (time() - $startedTimeStamp > $this->maximumProcessingTime) {
+                if ((time() - $startedTimeStamp) > $this->maximumProcessingTime) {
                     update_option(FLUENTCRM . '_is_sending_emails', null);
+                    if(!$this->memory_exceeded()) {
+                        $this->callBackGround();
+                    }
                     return false; // we don't want to run the process for more than 50 seconds
                 }
-
                 $this->updateProcessTime();
                 $this->sendEmails($emailCollection);
             }
@@ -57,7 +64,20 @@ class Handler
 
         update_option(FLUENTCRM . '_is_sending_emails', null);
 
-        if(!$hadJobs && mt_rand(1, 50) > 35) {
+        if ($hadJobs || mt_rand (1, 50) > 25 ) { // sometimes we want to check this
+            CampaignEmail::where('status', 'processing')
+                ->where('updated_at', '<', date('Y-m-d H:i:s', (time() - $this->maximumProcessingTime - 5)))
+                ->update([
+                    'status' => 'pending'
+                ]);
+        }
+
+        if ($hadJobs && !$this->memory_exceeded()) {
+            $this->callBackGround();
+            return false;
+        }
+
+        if (!$hadJobs && mt_rand(1, 50) > 20) {
             do_action('fluentcrm_scheduled_maybe_regular_tasks');
         }
 
@@ -71,7 +91,17 @@ class Handler
             ->with('campaign', 'subscriber')
             ->where('subscriber_id', $subscriberId)
             ->get();
-        $this->sendEmails($emailCollection);
+
+        $ids = $emailCollection->pluck('id');
+        if($ids) {
+            CampaignEmail::whereIn('id', $ids)
+                ->update([
+                    'status' => 'processing',
+                    'updated_at' => date('Y-m-d H:i:s')
+                ]);
+
+            $this->sendEmails($emailCollection);
+        }
     }
 
     protected function isProcessing()
@@ -99,6 +129,7 @@ class Handler
             })
             ->where('scheduled_at', '<=', fluentCrmUTCTimestamp())
             ->update(['status' => 'working']);
+
     }
 
     protected function updateProcessTime()
@@ -117,6 +148,10 @@ class Handler
     protected function sendEmails($campaignEmails)
     {
         do_action('fluentcrm_sending_emails_starting', $campaignEmails);
+
+        if (defined('FLUENTSMTP')) {
+            add_filter('fluentmail_will_log_email', 'fluentcrm_maybe_disable_fsmtp_log', 10, 2);
+        }
 
         $failedIds = [];
         $sentIds = [];
@@ -152,6 +187,11 @@ class Handler
                 'status' => 'failed'
             ]);
         }
+
+        if (defined('FLUENTSMTP')) {
+            remove_filter('fluentmail_will_log_email', 'fluentcrm_maybe_disable_fsmtp_log', 10);
+        }
+
         do_action('fluentcrm_sending_emails_done', $campaignEmails);
     }
 
@@ -199,7 +239,7 @@ class Handler
     protected function markArchiveCampaigns()
     {
         $campaigns = Campaign::where('status', 'working')->whereDoesNotHave('emails', function ($query) {
-            $query->whereIn('status', ['pending', 'failed', 'scheduled']);
+            $query->whereIn('status', ['pending', 'failed', 'scheduled', 'processing']);
         })->get();
 
         if (!$campaigns->isEmpty()) {
@@ -298,9 +338,80 @@ class Handler
             ],
             'subject' => $emailSubject,
             'body'    => $emailBody,
-            'headers'    => Helper::getMailHeader()
+            'headers' => Helper::getMailHeader()
         ];
         Mailer::send($data);
         return true;
+    }
+
+
+    /**
+     * Memory exceeded
+     *
+     * Ensures the batch process never exceeds 90% of the maximum WordPress memory.
+     *
+     * Based on WP_Background_Process::memory_exceeded()
+     *
+     * @return bool
+     */
+    protected function memory_exceeded()
+    {
+        $memory_limit = $this->get_memory_limit() * 0.90;
+        $current_memory = memory_get_usage(true);
+
+        $memory_exceeded = $current_memory >= $memory_limit;
+
+        return apply_filters('fluentcrm_memory_exceeded', $memory_exceeded, $this);
+    }
+
+    /**
+     * Get memory limit
+     *
+     * @return int
+     */
+    protected function get_memory_limit()
+    {
+        if (function_exists('ini_get')) {
+            $memory_limit = ini_get('memory_limit');
+        } else {
+            $memory_limit = '128M'; // Sensible default, and minimum required by WooCommerce
+        }
+
+        if (!$memory_limit || -1 === $memory_limit || '-1' === $memory_limit) {
+            // Unlimited, set to 12GB.
+            $memory_limit = '12G';
+        }
+
+
+        if (function_exists('wp_convert_hr_to_bytes')) {
+            return wp_convert_hr_to_bytes($memory_limit);
+        }
+
+        $value = strtolower(trim($memory_limit));
+        $bytes = (int)$value;
+
+        if (false !== strpos($value, 'g')) {
+            $bytes *= GB_IN_BYTES;
+        } elseif (false !== strpos($value, 'm')) {
+            $bytes *= MB_IN_BYTES;
+        } elseif (false !== strpos($value, 'k')) {
+            $bytes *= KB_IN_BYTES;
+        }
+
+        return min($bytes, PHP_INT_MAX);
+    }
+
+    private function callBackGround()
+    {
+        wp_remote_post(admin_url('admin-ajax.php'), [
+            'sslverify' => false,
+            'blocking'  => false,
+            'body'      => [
+                'campaign_id' => $this->campaignId,
+                'retry'       => 1,
+                'time' => time(),
+                'action'      => 'fluentcrm-post-campaigns-send-now'
+            ]
+        ]);
     }
 }

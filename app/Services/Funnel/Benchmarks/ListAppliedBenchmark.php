@@ -20,8 +20,8 @@ class ListAppliedBenchmark extends BaseBenchMark
     public function getBlock()
     {
         return [
-            'title'       => 'List Applied',
-            'description' => 'This will run when selected lists will be applied to a contact',
+            'title'       => __('List Applied', 'fluent-crm'),
+            'description' => __('This will run when selected lists have been applied to a contact', 'fluent-crm'),
             'icon'        => fluentCrmMix('images/funnel_icons/list_applied.svg'),
             'settings'    => [
                 'lists'       => [],
@@ -43,27 +43,27 @@ class ListAppliedBenchmark extends BaseBenchMark
     public function getBlockFields($funnel)
     {
         return [
-            'title'     => 'List Applied',
-            'sub_title' => 'This will run when selected lists will be applied to a contact',
+            'title'     => __('List Applied', 'fluent-crm'),
+            'sub_title' => __('This will run when selected lists have been applied to a contact', 'fluent-crm'),
             'fields'    => [
                 'lists'       => [
                     'type'        => 'option_selectors',
                     'option_key'  => 'lists',
                     'is_multiple' => true,
-                    'label'       => 'Select Lists',
-                    'placeholder' => 'Select List'
+                    'label'       => __('Select Lists', 'fluent-crm'),
+                    'placeholder' => __('Select List', 'fluent-crm')
                 ],
                 'select_type' => [
-                    'label'      => 'Run When',
+                    'label'      => __('Run When', 'fluent-crm'),
                     'type'       => 'radio',
                     'options'    => [
                         [
                             'id'    => 'any',
-                            'title' => 'contact added in any of the selected Lists'
+                            'title' => __('contact added in any of the selected Lists', 'fluent-crm')
                         ],
                         [
                             'id'    => 'all',
-                            'title' => 'contact added in all of the selected lists'
+                            'title' => __('contact added in all of the selected lists', 'fluent-crm')
                         ]
                     ],
                     'dependency' => [
@@ -73,19 +73,19 @@ class ListAppliedBenchmark extends BaseBenchMark
                     ]
                 ],
                 'type'        => [
-                    'label'       => 'Benchmark type',
+                    'label'       => __('Benchmark type', 'fluent-crm'),
                     'type'        => 'radio',
                     'options'     => [
                         [
                             'id'    => 'optional',
-                            'title' => '[Optional Point] This is an optional trigger point'
+                            'title' => __('[Optional Point] This is an optional trigger point', 'fluent-crm')
                         ],
                         [
                             'id'    => 'required',
-                            'title' => '[Essential Point] Select IF this step is required for processing further actions'
+                            'title' => __('[Essential Point] Select IF this step is required for processing further actions', 'fluent-crm')
                         ]
                     ],
-                    'inline_help' => 'If you select [Optional Point] it will work as an Optional Trigger otherwise, it will wait for full-fill this action'
+                    'inline_help' => __('If you select [Optional Point] it will work as an Optional Trigger otherwise, it will wait for full-fill this action', 'fluent-crm')
                 ]
             ]
         ];

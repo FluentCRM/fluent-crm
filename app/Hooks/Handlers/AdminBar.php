@@ -3,6 +3,7 @@
 namespace FluentCrm\App\Hooks\Handlers;
 
 use FluentCrm\App\Models\Subscriber;
+use FluentCrm\App\Services\PermissionManager;
 use FluentCrm\App\Services\Stats;
 use FluentCrm\Includes\Helpers\Arr;
 
@@ -10,9 +11,9 @@ class AdminBar
 {
     public function init()
     {
-        $contactPermission = apply_filters('fluentcrm_permission', 'manage_options', 'contacts', 'admin_menu');
+        $contactPermission = PermissionManager::currentUserCan('fcrm_read_contacts');
 
-        if (!is_admin() || !$contactPermission || !current_user_can($contactPermission)) {
+        if ( !is_admin() || !$contactPermission ) {
             return;
         }
 
@@ -59,13 +60,21 @@ class AdminBar
             'rest'            => $this->getRestInfo(),
             'links'           => (new Stats)->getQuickLinks(),
             'subscriber_base' => $urlBase . 'subscribers/',
-            'edit_user_vars'  => $editingUserVars
+            'edit_user_vars'  => $editingUserVars,
+            'trans' => [
+                'Search Contacts' => __('Search Contacts', 'fluent-crm'),
+                'Type and press enter' => __('Type and press enter', 'fluent-crm'),
+                'Type to search contacts' => __('Type to search contacts', 'fluent-crm'),
+                'Quick Links' => __('Quick Links', 'fluent-crm'),
+                'Sorry no contact found' => __('Sorry no contact found', 'fluent-crm'),
+                'Load More' => __('Load More', 'fluent-crm')
+            ]
         ]);
 
         $args = [
             'parent' => 'top-secondary',
             'id'     => 'fc_global_search',
-            'title'  => 'Search Contacts',
+            'title'  => __('Search Contacts', 'fluent-crm'),
             'href'   => '#',
             'meta'   => false
         ];

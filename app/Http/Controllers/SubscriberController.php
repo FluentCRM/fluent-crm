@@ -66,6 +66,8 @@ class SubscriberController extends Controller
 
         if ($subscriber->status == 'unsubscribed') {
             $subscriber->unsubscribe_reason = $subscriber->unsubscribeReason();
+        } else if($subscriber->status == 'bounced' || $subscriber->status == 'complained') {
+            $subscriber->unsubscribe_reason = $subscriber->unsubscribeReason('reason');
         }
 
         $data = [
@@ -109,7 +111,7 @@ class SubscriberController extends Controller
             return $this->sendError([
                 'message' => 'Value is not valid'
             ]);
-        } else if ($column == 'contact_type' && !in_array($value, $leadStatuses)) {
+        } else if ($column == 'contact_type' && !isset($leadStatuses[$value])) {
             return $this->sendError([
                 'message' => 'Value is not valid'
             ]);
@@ -151,7 +153,7 @@ class SubscriberController extends Controller
         do_action('fluentcrm_after_subscribers_deleted', $subscriberIds);
 
         return $this->sendSuccess([
-            'message' => 'Selected Subscribers has been deleted'
+            'message' => __('Selected Subscribers has been deleted', 'fluent-crm')
         ]);
     }
 
@@ -188,7 +190,7 @@ class SubscriberController extends Controller
             'email'  => 'required|email|unique:fc_subscribers',
             'status' => 'required'
         ], [
-            'email.unique' => __('Provided email already assigned to another subscriber.')
+            'email.unique' => __('Provided email already assigned to another subscriber.', 'fluent-crm')
         ]);
 
         if ($this->isNew()) {
@@ -197,7 +199,7 @@ class SubscriberController extends Controller
             do_action('fluentcrm_contact_created', $contact, $data);
 
             return [
-                'message' => 'Successfully added the subscriber.',
+                'message' => __('Successfully added the subscriber.', 'fluent-crm'),
                 'contact' => $contact
             ];
         }
@@ -211,7 +213,7 @@ class SubscriberController extends Controller
         $data = $this->validate($originalData, [
             'email' => 'required|email|unique:fc_subscribers,email,' . $id,
         ], [
-            'email.unique' => __('Provided email already assigned to another subscriber.')
+            'email.unique' => __('Provided email already assigned to another subscriber.', 'fluent-crm')
         ]);
 
         // Maybe update user id
@@ -243,7 +245,7 @@ class SubscriberController extends Controller
         }
 
         return $this->sendSuccess([
-            'message' => __('Subscriber successfully updated'),
+            'message' => __('Subscriber successfully updated', 'fluent-crm'),
             'contact' => $subscriber,
             'isDirty' => $isDirty
         ], 200);
@@ -325,7 +327,7 @@ class SubscriberController extends Controller
             ->whereIn('id', $emailIds)
             ->delete();
         return [
-            'message' => __('Selected emails has been deleted')
+            'message' => __('Selected emails has been deleted', 'fluent-crm')
         ];
     }
 
@@ -343,7 +345,7 @@ class SubscriberController extends Controller
 
         return $this->sendSuccess([
             'note'    => $subsciberNote,
-            'message' => __('Note successfully added')
+            'message' => __('Note successfully added', 'fluent-crm')
         ]);
     }
 
@@ -362,7 +364,7 @@ class SubscriberController extends Controller
 
         return $this->sendSuccess([
             'note'    => $subsciberNote,
-            'message' => __('Note successfully updated')
+            'message' => __('Note successfully updated', 'fluent-crm')
         ]);
     }
 
@@ -427,21 +429,21 @@ class SubscriberController extends Controller
 
         if ($subscriber == 'subscribed') {
             return $this->sendError([
-                'message' => 'Contact Already Subscribed'
+                'message' => __('Contact Already Subscribed', 'fluent-crm')
             ]);
         }
 
         $subscriber->sendDoubleOptinEmail();
 
         return $this->sendSuccess([
-            'message' => 'Double OptIn email has been sent'
+            'message' => __('Double OptIn email has been sent', 'fluent-crm')
         ]);
     }
 
     public function getTemplateMock(Request $request, $id)
     {
         $emailMock = CustomEmailCampaign::getMock();
-        $emailMock['title'] = __('Custom Email to Contact');
+        $emailMock['title'] = __('Custom Email to Contact', 'fluent-crm');
         return [
             'email_mock' => $emailMock
         ];
@@ -475,7 +477,7 @@ class SubscriberController extends Controller
         do_action('fluentcrm_process_contact_jobs', $contact);
 
         return [
-            'message' => __('Custom Email has been successfully sent')
+            'message' => __('Custom Email has been successfully sent', 'fluent-crm')
         ];
     }
 

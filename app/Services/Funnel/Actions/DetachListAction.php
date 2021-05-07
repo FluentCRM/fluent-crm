@@ -18,8 +18,8 @@ class DetachListAction extends BaseAction
     public function getBlock()
     {
         return [
-            'title'       => 'Remove From List',
-            'description' => 'Remove this contact from the selected lists',
+            'title'       => __('Remove From List', 'fluent-crm'),
+            'description' => __('Remove this contact from the selected lists', 'fluent-crm'),
             'icon' => fluentCrmMix('images/funnel_icons/list_remove.svg'),
             'settings'    => [
                 'lists' => []
@@ -30,15 +30,15 @@ class DetachListAction extends BaseAction
     public function getBlockFields()
     {
         return [
-            'title'     => 'Remove Contact from the Selected Lists',
-            'sub_title' => 'Select Lists that you want to remove from targeted Contact',
+            'title'     => __('Remove Contact from the Selected Lists', 'fluent-crm'),
+            'sub_title' => __('Select Lists that you want to remove from targeted Contact', 'fluent-crm'),
             'fields'    => [
                 'lists' => [
                     'type'        => 'option_selectors',
                     'option_key' => 'lists',
                     'is_multiple' => true,
-                    'label'       => 'Select Lists',
-                    'placeholder' => 'Select List'
+                    'label'       => __('Select Lists', 'fluent-crm'),
+                    'placeholder' => __('Select List', 'fluent-crm')
                 ]
             ]
         ];

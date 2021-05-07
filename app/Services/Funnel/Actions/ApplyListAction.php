@@ -18,8 +18,8 @@ class ApplyListAction extends BaseAction
     public function getBlock()
     {
         return [
-            'title'       => 'Apply List',
-            'description' => 'Add this contact to the selected lists',
+            'title'       => __('Apply List', 'fluent-crm'),
+            'description' => __('Add this contact to the selected lists', 'fluent-crm'),
             'icon' => fluentCrmMix('images/funnel_icons/apply_list.svg'),
             'settings'    => [
                 'lists' => []
@@ -30,15 +30,15 @@ class ApplyListAction extends BaseAction
     public function getBlockFields()
     {
         return [
-            'title'     => 'Apply List to the contact',
-            'sub_title' => 'Select which list will be added to the contact',
+            'title'     => __('Apply List to the contact', 'fluent-crm'),
+            'sub_title' => __('Select which list will be added to the contact', 'fluent-crm'),
             'fields'    => [
                 'lists' => [
                     'type'        => 'option_selectors',
                     'option_key'  => 'lists',
                     'is_multiple' => true,
-                    'label'       => 'Select Lists',
-                    'placeholder' => 'Select List'
+                    'label'       => __('Select Lists', 'fluent-crm'),
+                    'placeholder' => __('Select List', 'fluent-crm')
                 ]
             ]
         ];
@@ -56,6 +56,6 @@ class ApplyListAction extends BaseAction
         $renewedSubscriber = Subscriber::where('id', $subscriber->id)->first();
         $renewedSubscriber->attachLists($lists);
 
-        FunnelHelper::changeFunnelSubSequenceStatus($funnelSubscriberId, $sequence->id, 'skipped');
+        FunnelHelper::changeFunnelSubSequenceStatus($funnelSubscriberId, $sequence->id);
     }
 }

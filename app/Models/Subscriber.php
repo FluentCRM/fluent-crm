@@ -2,9 +2,11 @@
 
 namespace FluentCrm\App\Models;
 
+use FluentCrm\App\Services\Helper;
 use FluentCrm\Includes\Helpers\Arr;
 use FluentCrm\Includes\Mailer\Handler;
 use WPManageNinja\WPOrm\ModelCollection;
+use function Clue\StreamFilter\fun;
 
 class Subscriber extends Model
 {
@@ -47,6 +49,21 @@ class Subscriber extends Model
         static::saving(function ($model) {
             $model->hash = md5($model->email);
         });
+
+        static::updating(function ($model) {
+            if ($model->user_id && Helper::isUserSyncEnabled()) {
+                $user = get_user_by('email', $model->email);
+                if ($user) {
+                    if ($model->first_name) {
+                        update_user_meta($user->ID, 'first_name', $model->first_name);
+                    }
+                    if ($model->last_name) {
+                        update_user_meta($user->ID, 'last_name', $model->last_name);
+                    }
+                }
+                $model->user_id = $user->ID; // in case user id mismatch
+            }
+        });
     }
 
     /**
@@ -81,7 +98,7 @@ class Subscriber extends Model
                 $query->where(array_shift($fields), 'LIKE', "%$search%");
 
                 $nameArray = explode(' ', $search);
-                if(count($nameArray) >= 2) {
+                if (count($nameArray) >= 2) {
                     $query->orWhere(function ($q) use ($nameArray) {
                         $fname = array_shift($nameArray);
                         $lastName = implode(' ', $nameArray);
@@ -310,7 +327,7 @@ class Subscriber extends Model
      */
     public function custom_fields()
     {
-        $customFields = fluentcrm_get_option('contact_custom_fields', []);
+        $customFields = fluentcrm_get_custom_contact_fields();
 
         if (!$customFields || !is_array($customFields)) {
             return [];
@@ -373,6 +390,8 @@ class Subscriber extends Model
             }
         }
 
+        do_action('fluentcrm_contact_custom_data_updated', $newValues, $this);
+
         return $this;
     }
 
@@ -405,23 +424,13 @@ class Subscriber extends Model
 
         $tagIds = Arr::get($data, 'tags', []);
         if ($tagIds) {
-            $attachableTags = array_combine($tagIds, array_fill(
-                0, count($tagIds), ['object_type' => "FluentCrm\App\Models\\Tag"]
-            ));
-            $attachedTagIds = $model->tags()->attach($attachableTags);
-            fluentcrm_contact_added_to_tags($attachedTagIds, $model);
+            $model->attachTags($tagIds);
         }
 
         $listIds = Arr::get($data, 'lists', []);
         if ($listIds) {
-            $attachableLists = array_combine($listIds, array_fill(
-                0, count($listIds), ['object_type' => "FluentCrm\App\Models\\Lists"]
-            ));
-            $attachedListIds = $model->lists()->attach($attachableLists);
-
-            fluentcrm_contact_added_to_lists($attachedListIds, $model);
+            $model->attachLists($listIds);
         }
-
 
         if ($customValues = Arr::get($data, 'custom_values')) {
             $model->syncCustomFieldValues($customValues);
@@ -487,10 +496,16 @@ class Subscriber extends Model
      * @param array $lists
      * @param mixed $update string true/false or boolean true/false
      * @param string $newStatus status for the new subscribers
+     * @param boolean $doubleOptin Send Double Optin Emails for new pending contacts
      * @return array affected records/collection
      */
-    public static function import($data, $tags, $lists, $update, $newStatus = '')
+    public static function import($data, $tags, $lists, $update, $newStatus = '', $doubleOptin = false)
     {
+        if(!defined('FLUENTCRM_DOING_BULK_IMPORT')) {
+            define('FLUENTCRM_DOING_BULK_IMPORT', true);
+        }
+
+        ob_start();
         $insertables = [];
         $updateables = [];
         $insertedModels = new ModelCollection;
@@ -556,8 +571,10 @@ class Subscriber extends Model
             }
         }
 
+
         if ($insertables) {
             $insertIds = static::insert($insertables);
+
             $insertIds = array_filter($insertIds);
             $insertedModels = static::whereIn('id', $insertIds)->get();
 
@@ -584,7 +601,7 @@ class Subscriber extends Model
         }
 
         // Syncing Tags & Lists
-        if ($tags || $lists) {
+        if ($tags || $lists || $doubleOptin) {
             if ($shouldUpdate) {
                 foreach ($oldSubscribers->merge($insertedModels) as $model) {
                     $tags && $model->attachTags($tags);
@@ -594,6 +611,10 @@ class Subscriber extends Model
                 foreach ($insertedModels as $model) {
                     $tags && $model->attachTags($tags);
                     $lists && $model->attachLists($lists);
+
+                    if($doubleOptin && $model->status == 'pending') {
+                        $model->sendDoubleOptinEmail();
+                    }
                 }
             }
         }
@@ -601,10 +622,13 @@ class Subscriber extends Model
         do_action('fluentcrm_contacts_imported_bulk', $insertedModels);
         do_action('fluentcrm_contacts_updated_bulk', $updatedModels);
 
+        $errors = ob_get_clean();
+
         return [
             'inserted' => $insertedModels,
             'updated'  => $updatedModels,
-            'skips'    => $skips
+            'skips'    => $skips,
+            'errors' => $errors
         ];
     }
 
@@ -805,18 +829,31 @@ class Subscriber extends Model
         return $this;
     }
 
-    public function unsubscribeReason()
+    public function unsubscribeReason($metaKey = 'unsubscribe_reason')
     {
-        return fluentcrm_get_subscriber_meta($this->id, 'unsubscribe_reason', '');
+        return fluentcrm_get_subscriber_meta($this->id, $metaKey, '');
     }
 
     public function hasAnyTagId($tagIds)
     {
-        if(!$tagIds || !is_array($tagIds)) {
+        if (!$tagIds || !is_array($tagIds)) {
             return false;
         }
         foreach ($this->tags as $tag) {
-            if(in_array($tag->id, $tagIds)) {
+            if (in_array($tag->id, $tagIds)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function hasAnyListId($listIds)
+    {
+        if (!$listIds || !is_array($listIds)) {
+            return false;
+        }
+        foreach ($this->lists as $list) {
+            if (in_array($list->id, $listIds)) {
                 return true;
             }
         }

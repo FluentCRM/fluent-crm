@@ -54,18 +54,33 @@ class CampaignUrlMetric extends Model
             ->groupBy('type')
             ->get();
 
+        $clickCount = 0;
+        $openCount = 0;
+
         foreach ($stats as $stat) {
+            if($stat->type == 'open') {
+                $openCount = $stat->total;
+            } else if($stat->type == 'click') {
+                $clickCount = $stat->total;
+            }
             $stat->is_percent = true;
             $stat->label = ucfirst($stat->type) . ' Rate' . ' ('.$stat->total.')';
         }
 
+        if($openCount && $clickCount) {
+            $stats['ctor'] = [
+                'total' => number_format( ($clickCount / $openCount) * 100, 2) . '%',
+                'label' => 'Click To Open Rate',
+            ];
+        }
+        
         $revenue = fluentcrm_get_campaign_meta($campaignId, '_campaign_revenue');
 
         if($revenue && $revenue->value) {
             $data = (array) $revenue->value;
             foreach ($data as $currency => $cents) {
                 if($cents) {
-                    $stats[] = [
+                    $stats['revenue'] = [
                         'label' => 'Revenue ('.$currency.')',
                         'total' => number_format($cents / 100, 2)
                     ];

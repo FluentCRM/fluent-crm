@@ -5,6 +5,7 @@ namespace FluentCrm\App\Hooks\Handlers;
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Services\AutoSubscribe;
 use FluentCrm\App\Services\Funnel\FunnelHelper;
+use FluentCrm\App\Services\Helper;
 use FluentCrm\Includes\Helpers\Arr;
 
 class AutoSubscribeHandler
@@ -18,17 +19,17 @@ class AutoSubscribeHandler
         }
 
         $subscriberData = FunnelHelper::prepareUserData($userId);
-        if($listId = Arr::get($settings, 'target_list')) {
+        if ($listId = Arr::get($settings, 'target_list')) {
             $subscriberData['lists'] = [$listId];
         }
 
-        if($tags = Arr::get($settings, 'target_tags')) {
+        if ($tags = Arr::get($settings, 'target_tags')) {
             $subscriberData['tags'] = $tags;
         }
 
         $isDoubleOptin = Arr::get($settings, 'double_optin') == 'yes';
 
-        if($isDoubleOptin) {
+        if ($isDoubleOptin) {
             $subscriberData['status'] = 'pending';
         } else {
             $subscriberData['status'] = 'subscribed';
@@ -37,7 +38,7 @@ class AutoSubscribeHandler
 
         $contact = FunnelHelper::createOrUpdateContact($subscriberData);
 
-        if($contact->status == 'pending') {
+        if ($contact->status == 'pending') {
             $contact->sendDoubleOptinEmail();
         }
     }
@@ -49,54 +50,54 @@ class AutoSubscribeHandler
 
         $settings = apply_filters('fluentcrm_comment_form_subscribe_settings', $settings);
 
-        if(Arr::get($settings, 'status') != 'yes') {
+        if (Arr::get($settings, 'status') != 'yes') {
             return $buttonHtml;
         }
 
-        if(Arr::get($settings, 'show_only_new') == 'yes') {
-            if($userId = get_current_user_id()) {
+        if (Arr::get($settings, 'show_only_new') == 'yes') {
+            if ($userId = get_current_user_id()) {
                 $user = get_user_by('ID', $userId);
                 $contact = Subscriber::where('user_id', $userId)->orWhere('email', $user->user_email)->first();
-                if($contact && $contact->status == 'subscribed') {
-                    return  $buttonHtml;
+                if ($contact && $contact->status == 'subscribed') {
+                    return $buttonHtml;
                 }
             }
         }
 
         $label = Arr::get($settings, 'checkbox_label');
-        if(!$label) {
+        if (!$label) {
             $label = __('Subscribe to newsletter', 'fluent-crm');
         }
 
         $checkedTag = '';
 
-        if(Arr::get($settings, 'auto_checked') == 'yes') {
+        if (Arr::get($settings, 'auto_checked') == 'yes') {
             $checkedTag = 'checked="true"';
         }
 
-        $html = '<p class="comment-form-fc-consent comment-form-cookies-consent"><input '.$checkedTag.' id="wp-comment-fc-consent" name="wp-comment-fc-consent" type="checkbox" value="yes"><label for="wp-comment-fc-consent">'.$label.'</label></p>';
+        $html = '<p class="comment-form-fc-consent comment-form-cookies-consent"><input ' . $checkedTag . ' id="wp-comment-fc-consent" name="wp-comment-fc-consent" type="checkbox" value="yes"><label for="wp-comment-fc-consent">' . $label . '</label></p>';
 
-        return $html.$buttonHtml;
+        return $html . $buttonHtml;
     }
 
     public function handleCommentPost($commentId, $isApproved, $commentData)
     {
         $isChecked = Arr::get($_REQUEST, 'wp-comment-fc-consent') == 'yes';
-        if(!$isChecked) {
+        if (!$isChecked) {
             return false;
         }
         // is this a spam comment?
-        if ( $isApproved === 'spam' ) {
+        if ($isApproved === 'spam') {
             return false;
         }
 
-        $subscriberData  = [
-            'full_name' => Arr::get($commentData, 'comment_author'),
-            'email' => Arr::get($commentData, 'comment_author_email'),
+        $subscriberData = [
+            'full_name'  => Arr::get($commentData, 'comment_author'),
+            'email'      => Arr::get($commentData, 'comment_author_email'),
             'ip_address' => Arr::get($commentData, 'comment_author_IP')
         ];
 
-        if($userId = Arr::get($commentData, 'user_id')) {
+        if ($userId = Arr::get($commentData, 'user_id')) {
             $subscriberData['user_id'] = $userId;
         }
 
@@ -104,26 +105,91 @@ class AutoSubscribeHandler
 
         $settings = (new AutoSubscribe())->getCommentSettings();
 
-        if($listId = Arr::get($settings, 'target_list')) {
+        if ($listId = Arr::get($settings, 'target_list')) {
             $subscriberData['lists'] = [$listId];
         }
 
-        if($tags = Arr::get($settings, 'target_tags')) {
+        if ($tags = Arr::get($settings, 'target_tags')) {
             $subscriberData['tags'] = $tags;
         }
 
         $isDoubleOptin = Arr::get($settings, 'double_optin') == 'yes';
 
-        if($isDoubleOptin) {
+        if ($isDoubleOptin) {
             $subscriberData['status'] = 'pending';
         }
 
         $contact = FunnelHelper::createOrUpdateContact($subscriberData);
 
-        if($contact->status == 'pending') {
+        if ($contact->status == 'pending') {
             $contact->sendDoubleOptinEmail();
         }
 
         return true;
+    }
+
+    public function syncUserUpdate($userId, $oldData)
+    {
+        if (!Helper::isUserSyncEnabled()) {
+            return false;
+        }
+
+        // check if user email has been changed
+        $user = get_user_by('ID', $userId);
+
+        if ($user->user_email != $oldData->user_email) {
+            // email has been changed
+            $oldSubscriber = Subscriber::where('email', $oldData->user_email)->first();
+
+            // check if a contact is exist with the new email id
+            $newSubscriber = Subscriber::where('email', $user->user_email)->first();
+
+            if ($newSubscriber) {
+                wpFluent()->table('fc_subscribers')
+                    ->where('id', $oldSubscriber->id)
+                    ->update([
+                        'user_id' => ''
+                    ]);
+                $oldSubscriber = false;
+            }
+
+            if ($oldSubscriber) {
+                $updateData = [
+                    'email'      => $user->user_email,
+                    'hash'       => md5($user->user_email),
+                    'updated_at' => current_time('mysql'),
+                    'user_id'    => $user->ID
+                ];
+
+                if ($user->first_name) {
+                    $updateData['first_name'] = $user->first_name;
+                }
+
+                if ($user->last_name) {
+                    $updateData['last_name'] = $user->last_name;
+                }
+
+                return wpFluent()->table('fc_subscribers')
+                    ->where('id', $oldSubscriber->id)
+                    ->update($updateData);
+            }
+        }
+
+
+        // we just have to change the first name and lastname
+        $updateData = Helper::getWPMapUserInfo($user);
+
+        unset($updateData['email']);
+
+        if (!$updateData) {
+            return false;
+        }
+
+        $updateData['updated_at'] = current_time('mysql');
+
+        return wpFluent()->table('fc_subscribers')
+            ->where('email', $user->user_email)
+            ->update($updateData);
+
     }
 }

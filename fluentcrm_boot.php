@@ -6,7 +6,7 @@ define('FLUENTCRM', 'fluentcrm');
 define('FLUENTCRM_UPLOAD_DIR', '/fluentcrm');
 define('FLUENTCRM_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('FLUENTCRM_PLUGIN_PATH', plugin_dir_path(__FILE__));
-define('FLUENTCRM_PLUGIN_VERSION', '1.1.91');
+define('FLUENTCRM_PLUGIN_VERSION', '2.0.3');
 
 spl_autoload_register(function ($class) {
     $match = 'FluentCrm';
@@ -25,12 +25,16 @@ spl_autoload_register(function ($class) {
 
 // Keep it here, doesn't work in plugin files/classes
 add_filter('cron_schedules', function ($schedules) {
+    if(!is_array($schedules)) {
+        $schedules = [];
+    }
+
     $schedules['fluentcrm_every_minute'] = array(
         'interval' => 60,
         'display'  => esc_html__('Every Minute (FluentCRM)', 'fluentform'),
     );
     return $schedules;
-});
+}, 100);
 
 add_action('init', function () {
     $hookName = 'fluentcrm_scheduled_minute_tasks';
@@ -42,7 +46,7 @@ add_action('init', function () {
     if (!wp_next_scheduled($dailyHook)) {
         wp_schedule_event(time(), 'hourly', $dailyHook);
     }
-});
+}, 10);
 
 
 include 'includes/WPFluent/wpfluent.php';

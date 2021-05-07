@@ -134,6 +134,7 @@ $app->group(function ($app) {
 
     $app->get('/', 'FunnelController@funnels');
     $app->post('/', 'FunnelController@create');
+    $app->post('import', 'FunnelController@importFunnel');
 
     $app->get('subscriber/{subscriber_id}/automations', 'FunnelController@subscriberAutomations');
 
@@ -144,6 +145,8 @@ $app->group(function ($app) {
     $app->delete('{id}/subscribers', 'FunnelController@deleteSubscribers')->int('id');
     $app->delete('{id}', 'FunnelController@delete')->int('id');
     $app->get('{id}/report', 'FunnelController@report')->int('id');
+
+    $app->get('{id}/email_reports', 'FunnelController@getEmailReports')->int('id');
 
     $app->put('{id}/subscribers/{subscriber_id}/status', 'FunnelController@updateSubscriptionStatus')->int('id')->int('subscriber_id');
 
@@ -163,6 +166,9 @@ $app->group(function ($app) {
 
     $app->get('options', 'OptionsController@index');
 
+    $app->get('emails', 'ReportingController@getEmails');
+    $app->delete('emails', 'ReportingController@deleteEmails');
+
 })->prefix('reports')->withPolicy('ReportPolicy');
 
 
@@ -175,6 +181,7 @@ $app->group(function ($app) {
     $app->put('double-optin', 'SettingsController@saveDoubleOptinSettings');
 
     $app->post('install-fluentform', 'SetupController@handleFluentFormInstall');
+    $app->post('install-fluentsmtp', 'SetupController@handleFluentSmtpInstall');
 
     $app->get('bounce_configs', 'SettingsController@getBounceConfigs');
 
@@ -187,6 +194,8 @@ $app->group(function ($app) {
     $app->delete('test', 'SettingsController@TestRequestResolver');
 
     $app->post('reset_db', 'SettingsController@resetDB');
+    $app->get('old_logs', 'SettingsController@getOldLogDetails');
+    $app->delete('old_logs', 'SettingsController@removeOldLogs');
 
     $app->get('cron_status', 'SettingsController@getCronStatus');
     $app->post('run_cron', 'SettingsController@runCron');
@@ -227,8 +236,19 @@ $app->group(function ($app) {
  * Fluent Forms Wrapper
  */
 $app->group(function ($app) {
+
     $app->get('/', 'FormsController@index');
     $app->post('/', 'FormsController@create');
     $app->get('templates', 'FormsController@getTemplates');
 
 })->prefix('forms')->withPolicy('FormsPolicy');
+
+
+/*
+ * Fluent Forms Wrapper
+ */
+$app->group(function ($app) {
+
+    $app->get('/', 'DocsController@index');
+
+})->prefix('docs')->withPolicy('SettingsPolicy');

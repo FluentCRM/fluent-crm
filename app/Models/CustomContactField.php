@@ -77,14 +77,22 @@ class CustomContactField
 
         $formattedFields = [];
 
+        $keys = [];
         foreach ($fields as $field) {
 
             if (empty($field['slug'])) {
                 $field['slug'] = $this->generateSlug($field, $slugs);
             }
 
+            if(in_array($field['slug'], $keys)) {
+                continue;
+            }
+
+            $keys[] = $field['slug'];
+
             $formattedFields[] = $field;
         }
+
 
         fluentcrm_update_option($this->globalMetaName, $formattedFields);
 
@@ -95,7 +103,7 @@ class CustomContactField
     {
         $label = str_replace(' ', '_', $field['label']);
         $label = sanitize_title($label, 'custom_field', 'view');
-        $label = substr($label, 0, 16);
+        $label = substr($label, 0, 25);
         $originalLabel = $label;
 
         if (is_numeric($label)) {
@@ -134,7 +142,7 @@ class CustomContactField
         }
 
         foreach ($values as $valueKey => $value) {
-            if(Arr::get($fields, $valueKey.'.type') == 'checkbox') {
+            if(!is_array($value) && Arr::get($fields, $valueKey.'.type') == 'checkbox') {
                 $itemValues = explode(',', $value);
                 $trimmedvalues = [];
                 foreach ($itemValues as $itemValue) {

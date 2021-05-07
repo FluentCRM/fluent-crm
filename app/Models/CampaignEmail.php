@@ -77,7 +77,7 @@ class CampaignEmail extends Model
         $email_subject = $this->getEmailSubject();
         $email_body = $this->getEmailBody();
         $headers = Helper::getMailHeader($this->email_headers);
-        
+
         return [
             'to'            => [
                 'email' => $this->email_address
@@ -153,8 +153,20 @@ class CampaignEmail extends Model
         $subscriber = $this->subscriber;
         $subscriber->email_id = $this->id;
 
+        $designTemplate = 'classic';
+
+        if($this->campaign) {
+            $designTemplate = $this->campaign->design_template;
+        }
+
         if (!$this->is_parsed) {
-            $emailBody = $this->getParsedEmailBody();
+
+            if($designTemplate == 'raw_html') {
+                $emailBody = $this->campaign->email_body;
+            } else {
+                $emailBody = $this->getParsedEmailBody();
+            }
+
             $emailBody = apply_filters('fluentcrm-parse_campaign_email_text', $emailBody, $subscriber);
             $emailBody = apply_filters('fluentcrm_email_body_text', $emailBody, $subscriber, $this);
             $campaignUrls = $this->getCampaignUrls($emailBody);
@@ -182,12 +194,6 @@ class CampaignEmail extends Model
             'footer_text' => $footerText,
             'config'      => $templateConfig
         ];
-
-        $designTemplate = 'classic';
-
-        if($this->campaign) {
-            $designTemplate = $this->campaign->design_template;
-        }
 
         $content = apply_filters(
             'fluentcrm-email-design-template-' . $designTemplate,

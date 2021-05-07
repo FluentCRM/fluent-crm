@@ -16,10 +16,10 @@
     <?php do_action('fluentform_email_header', 'simple'); ?>
     <?php include(FLUENTCRM_PLUGIN_PATH.'app/views/emails/common-style.php'); ?>
 </head>
-<body style="none no-repeat center/cover;height: 100%;margin: 0;padding: 0;width: 100%;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;background-image: none;background-repeat: no-repeat;background-position: center;background-size: cover;">
+<body style="background: none no-repeat center/cover;height: 100%;margin: 0;padding: 0;width: 100%;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;background-image: none;background-repeat: no-repeat;background-position: center;background-size: cover;">
 <?php if ($preHeader): ?><span class="fcPreviewText" style="display:none; font-size:0px; line-height:0px; max-height:0px; max-width:0px; opacity:0; overflow:hidden; visibility:hidden; mso-hide:all;"><?php echo $preHeader; ?></span><?php endif; ?>
 <center>
-    <table align="center" border="0" cellpadding="0" cellspacing="0" height="100%" width="100%" id="bodyTable" style="background:##FAFAFA none no-repeat center/cover;border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;height: 100%;margin: 0;padding: 0;width: 100%;background-color: ##FAFAFA;background-image: none;background-repeat: no-repeat;background-position: center;background-size: cover;">
+    <table<?php if(is_rtl()) { echo ' dir="rtl"'; }  ?> id="templateWrapper" align="center" border="0" cellpadding="0" cellspacing="0" height="100%" width="100%" id="bodyTable" style="border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;height: 100%;margin: 0;padding: 0;width: 100%;background-image: none;background-repeat: no-repeat;background-position: center;background-size: cover;">
         <tr>
             <td align="center" valign="top" id="bodyCell" style="mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;height: 100%;margin: 0;padding: 10px;width: 100%;border-top: 0;">
                 <!-- BEGIN TEMPLATE // -->

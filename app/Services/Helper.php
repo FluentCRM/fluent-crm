@@ -10,12 +10,12 @@ class Helper
 {
     public static function urlReplaces($string)
     {
-        preg_match_all('/(href\="http)(.*?)(")/', $string, $urls);
-        $replaces = array_unique($urls[0]);
-        $urls = array_unique($urls[2]);
+        preg_match_all('/<a[^>]+(href\=["|\'](http.*?)["|\'])/m', $string, $urls);
+        $replaces = $urls[1];
+        $urls = $urls[2];
         $formatted = [];
         foreach ($urls as $index => $url) {
-            $urlSlug = UrlStores::getUrlSlug('http' . $url);
+            $urlSlug = UrlStores::getUrlSlug($url);
             $formatted[$replaces[$index]] = add_query_arg([
                 'ns_url' => $urlSlug
             ], site_url());
@@ -41,14 +41,19 @@ class Helper
         if (!$hash) {
             return $emailBody;
         }
+
+        if (apply_filters('fluentcrm_disable_email_open_tracking', false)) {
+            return $emailBody;
+        }
+
         $preViewUrl = site_url('?fluentcrm=1&route=email_preview&_e_hash=' . $hash);
         // Replace Web Preview
         $emailBody = str_replace('##web_preview_url##', $preViewUrl, $emailBody);
 
         $trackImageUrl = add_query_arg([
             'fluentcrm' => 1,
-            'route' => 'open',
-            '_e_hash' => $hash
+            'route'     => 'open',
+            '_e_hash'   => $hash
         ], site_url());
         $trackPixelHtml = '<img src="' . $trackImageUrl . '" alt="" />';
 
@@ -67,12 +72,12 @@ class Helper
         $sections = [
             'subscriber'        => [
                 'name'    => 'subscriber',
-                'title'   => 'Overview',
+                'title'   => __('Overview', 'fluent-crm'),
                 'handler' => 'route'
             ],
             'subscriber_emails' => [
                 'name'    => 'subscriber_emails',
-                'title'   => 'Emails',
+                'title'   => __('Emails', 'fluent-crm'),
                 'handler' => 'route'
             ],
         ];
@@ -80,7 +85,7 @@ class Helper
         if (defined('WC_PLUGIN_FILE') || class_exists('\Easy_Digital_Downloads')) {
             $sections['subscriber_purchases'] = [
                 'name'    => 'subscriber_purchases',
-                'title'   => 'Purchase History',
+                'title'   => __('Purchase History', 'fluent-crm'),
                 'handler' => 'route'
             ];
         }
@@ -88,22 +93,23 @@ class Helper
         if (defined('FLUENTFORM')) {
             $sections['subscriber_form_submissions'] = [
                 'name'    => 'subscriber_form_submissions',
-                'title'   => 'Form Submissions',
+                'title'   => __('Form Submissions', 'fluent-crm'),
                 'handler' => 'route'
             ];
         }
 
-        if (class_exists('\Awesome_Support')) {
+        $supportProviders = apply_filters('fluentcrm-support_tickets_providers', []);
+        if ($supportProviders) {
             $sections['subscriber_support_tickets'] = [
                 'name'    => 'subscriber_support_tickets',
-                'title'   => 'Support Tickets',
+                'title'   => __('Support Tickets', 'fluent-crm'),
                 'handler' => 'route'
             ];
         }
 
         $sections['subscriber_notes'] = [
             'name'    => 'subscriber_notes',
-            'title'   => 'Notes & Activities',
+            'title'   => __('Notes & Activities', 'fluent-crm'),
             'handler' => 'route'
         ];
 
@@ -119,24 +125,24 @@ class Helper
     {
         $smartCodes[] = [
             'key'        => 'contact',
-            'title'      => 'Contact',
+            'title'      => __('Contact', 'fluent-crm'),
             'shortcodes' => apply_filters('fluentcrm_contact_smartcodes', [
-                '{{contact.full_name}}'      => 'Full Name',
-                '{{contact.prefix}}'         => 'Name Prefix',
-                '{{contact.first_name}}'     => 'First Name',
-                '{{contact.last_name}}'      => 'Last Name',
-                '{{contact.email}}'          => 'Contact Email',
-                '{{contact.id}}'             => 'Contact ID',
-                '{{contact.user_id}}'        => 'User ID',
-                '{{contact.address_line_1}}' => 'Address Line 1',
-                '{{contact.address_line_2}}' => 'Address Line 2',
-                '{{contact.city}}'           => 'City',
-                '{{contact.state}}'          => 'State',
-                '{{contact.postal_code}}'    => 'Postal Code',
-                '{{contact.country}}'        => 'Country',
-                '{{contact.phone}}'          => 'Phone Number',
-                '{{contact.status}}'         => 'Status',
-                '{{contact.date_of_birth}}'  => 'Date of Birth'
+                '{{contact.full_name}}'      => __('Full Name', 'fluent-crm'),
+                '{{contact.prefix}}'         => __('Name Prefix', 'fluent-crm'),
+                '{{contact.first_name}}'     => __('First Name', 'fluent-crm'),
+                '{{contact.last_name}}'      => __('Last Name', 'fluent-crm'),
+                '{{contact.email}}'          => __('Contact Email', 'fluent-crm'),
+                '{{contact.id}}'             => __('Contact ID', 'fluent-crm'),
+                '{{contact.user_id}}'        => __('User ID', 'fluent-crm'),
+                '{{contact.address_line_1}}' => __('Address Line 1', 'fluent-crm'),
+                '{{contact.address_line_2}}' => __('Address Line 2', 'fluent-crm'),
+                '{{contact.city}}'           => __('City', 'fluent-crm'),
+                '{{contact.state}}'          => __('State', 'fluent-crm'),
+                '{{contact.postal_code}}'    => __('Postal Code', 'fluent-crm'),
+                '{{contact.country}}'        => __('Country', 'fluent-crm'),
+                '{{contact.phone}}'          => __('Phone Number', 'fluent-crm'),
+                '{{contact.status}}'         => __('Status', 'fluent-crm'),
+                '{{contact.date_of_birth}}'  => __('Date of Birth', 'fluent-crm')
             ])
         ];
 
@@ -156,14 +162,14 @@ class Helper
 
         $smartCodes[] = [
             'key'        => 'general',
-            'title'      => 'General',
+            'title'      => __('General', 'fluent-crm'),
             'shortcodes' => apply_filters('fluentcrm_general_smartcodes', [
-                '{{crm.business_name}}'           => 'Business Name',
-                '{{crm.business_address}}'        => 'Business Address',
-                '{{wp.admin_email}}'              => 'Admin Email',
-                '{{wp.url}}'                      => 'Site URL',
-                '##crm.unsubscribe_url##'         => 'Unsubscribe URL',
-                '##crm.manage_subscription_url##' => 'Manage Subscription URL'
+                '{{crm.business_name}}'           => __('Business Name', 'fluent-crm'),
+                '{{crm.business_address}}'        => __('Business Address', 'fluent-crm'),
+                '{{wp.admin_email}}'              => __('Admin Email', 'fluent-crm'),
+                '{{wp.url}}'                      => __('Site URL', 'fluent-crm'),
+                '##crm.unsubscribe_url##'         => __('Unsubscribe URL', 'fluent-crm'),
+                '##crm.manage_subscription_url##' => __('Manage Subscription URL', 'fluent-crm')
             ])
         ];
 
@@ -209,6 +215,7 @@ class Helper
             'content_width'        => 700,
             'headings_font_family' => '',
             'text_color'           => '#202020',
+            'link_color'           => '',
             'headings_color'       => '#202020',
             'body_bg_color'        => '#FAFAFA',
             'content_bg_color'     => '#FFFFFF',
@@ -222,25 +229,25 @@ class Helper
         return apply_filters('fluentcrm_email_design_templates', [
             'simple'   => [
                 'id'     => 'simple',
-                'label'  => 'Simple Boxed',
+                'label'  => __('Simple Boxed', 'fluent-crm'),
                 'image'  => fluentCrm()['url.assets'] . 'images/simple.png',
                 'config' => $defaultDesignConfig
             ],
             'plain'    => [
                 'id'     => 'plain',
-                'label'  => 'Plain Centered',
+                'label'  => __('Plain Centered', 'fluent-crm'),
                 'image'  => fluentCrm()['url.assets'] . 'images/plain-centered.png',
                 'config' => $plainConfig
             ],
             'classic'  => [
                 'id'     => 'classic',
-                'label'  => 'Classic',
+                'label'  => __('Classic', 'fluent-crm'),
                 'image'  => fluentCrm()['url.assets'] . 'images/classic.png',
                 'config' => $plainConfig
             ],
             'raw_html' => [
                 'id'     => 'raw_html',
-                'label'  => 'Raw HTML',
+                'label'  => __('Raw HTML', 'fluent-crm'),
                 'image'  => fluentCrm()['url.assets'] . 'images/raw-html.png',
                 'config' => []
             ]
@@ -249,7 +256,7 @@ class Helper
 
     public static function getTemplateConfig($templateName = '')
     {
-        if(!$templateName) {
+        if (!$templateName) {
             $templateName = self::getDefaultEmailTemplate();
         }
         return Arr::get(self::getEmailDesignTemplates(), $templateName . '.config', []);
@@ -320,70 +327,93 @@ class Helper
 
     public static function getThemePrefScheme()
     {
-        list($color_palette) = get_theme_support('editor-color-palette');
+        static $pref;
+        if(!$pref) {
+            list($color_palette) = get_theme_support('editor-color-palette');
 
 
-        if (empty($color_palette) || !is_array($color_palette) || count($color_palette) < 2) {
-            $color_palette = [
-                [
-                    'name'  => 'Accent',
-                    'slug'  => 'fc-accent-color',
-                    'color' => '#3182CE'
-                ],
-                [
-                    'name'  => 'Accent',
-                    'slug'  => 'fc-accent-color-alt',
-                    'color' => '#2B6CB0'
-                ],
-                [
-                    'name'  => 'White or offwhite',
-                    'slug'  => 'fc-color-white',
-                    'color' => '#ffffff'
-                ]
-            ];
+            if (empty($color_palette) || !is_array($color_palette) || count($color_palette) < 2) {
+                $color_palette = [
+                    [
+                        'name'  => 'Accent',
+                        'slug'  => 'fc-accent-color',
+                        'color' => '#3182CE'
+                    ],
+                    [
+                        'name'  => 'Accent',
+                        'slug'  => 'fc-accent-color-alt',
+                        'color' => '#2B6CB0'
+                    ],
+                    [
+                        'name'  => 'White or offwhite',
+                        'slug'  => 'fc-color-white',
+                        'color' => '#ffffff'
+                    ]
+                ];
+            }
+
+            list($font_sizes) = (array) get_theme_support('editor-font-sizes');
+
+            if (empty($font_sizes)) {
+                $font_sizes = [
+                    [
+                        'name'      => 'Small',
+                        'shortName' => 'S',
+                        'size'      => 14,
+                        'slug'      => 'small'
+                    ],
+                    [
+                        'name'      => 'Medium',
+                        'shortName' => 'M',
+                        'size'      => 18,
+                        'slug'      => 'medium'
+                    ],
+                    [
+                        'name'      => 'Large',
+                        'shortName' => 'L',
+                        'size'      => 24,
+                        'slug'      => 'large'
+                    ],
+                    [
+                        'name'      => 'Larger',
+                        'shortName' => 'XL',
+                        'size'      => 32,
+                        'slug'      => 'larger'
+                    ]
+                ];
+            }
+
+            $pref = apply_filters('fluentcrm_theme_pref', [
+                'colors'     => (array)$color_palette,
+                'font_sizes' => (array)$font_sizes
+            ]);
         }
 
-        list($font_sizes) = (array)get_theme_support('editor-font-sizes');
+        return $pref;
 
-        if (empty($font_sizes)) {
-            $font_sizes = [
-                [
-                    'name'      => 'Small',
-                    'shortName' => 'S',
-                    'size'      => 14,
-                    'slug' => 'small'
-                ],
-                [
-                    'name'      => 'Medium',
-                    'shortName' => 'M',
-                    'size'      => 18,
-                    'slug' => 'medium'
-                ],
-                [
-                    'name'      => 'Large',
-                    'shortName' => 'L',
-                    'size'      => 24,
-                    'slug' => 'large'
-                ],
-                [
-                    'name'      => 'Larger',
-                    'shortName' => 'XL',
-                    'size'      => 32,
-                    'slug' => 'larger'
-                ]
-            ];
+    }
+
+    public static function getColorSchemeValue($colorName)
+    {
+        static $colorMap = [];
+        if(isset($colorMap[$colorName])) {
+            return $colorMap[$colorName];
         }
-
-        return apply_filters('fluentcrm_theme_pref', [
-            'colors'     => (array) $color_palette,
-            'font_sizes' => (array) $font_sizes
-        ]);
+        $pref = self::getThemePrefScheme();
+        $colors = $pref['colors'];
+        foreach ($colors as $color) {
+            $colorMap[$color['slug']] = $color['color'];
+            if($color['slug'] == $colorName) {
+                return $color['color'];
+            }
+        }
+        return '';
     }
 
     public static function generateThemePrefCss()
     {
         static $color_css;
-        if($color_css) {
+        if ($color_css) {
             return $color_css;
         }
         $pref = self::getThemePrefScheme();
@@ -391,17 +421,18 @@ class Helper
         $css = '';
         if (isset($pref['colors'])) {
             foreach ($pref['colors'] as $color) {
-                if(isset($color['slug']) && isset($color['color'])) {
+                if (isset($color['slug']) && isset($color['color'])) {
                     $slug = self::kebabCase($color['slug']);
                     $css .= '.has-' . $slug . '-color  { color: ' . $color['color'] . ';} ';
                     $css .= '.has-' . $slug . '-background-color  { background-color: ' . $color['color'] . '; background: ' . $color['color'] . '; } ';
+                    $css .= 'a.has-' . $slug . '-background-color  { border: 1px solid ' . $color['color'] . '; } ';
                 }
             }
         }
 
         if ($pref['font_sizes']) {
             foreach ($pref['font_sizes'] as $size) {
-                if(isset($size['slug']) && isset($size['size']) ) {
+                if (isset($size['slug']) && isset($size['size'])) {
                     $slug = self::kebabCase($size['slug']);
                     $css .= '.fc_email_body .has-' . $slug . '-font-size  { font-size: ' . $size['size'] . 'px !important;} ';
                 }
@@ -423,21 +454,21 @@ class Helper
             $emailSettings = fluentcrmGetGlobalSettings('email_settings', []);
         }
 
-        if(empty($emailSettings)) {
+        if (empty($emailSettings)) {
             return [];
         }
 
         $headers = [];
-        if ($emailSettings['from_name'] && $emailSettings['from_email']) {
+        if (Arr::get($emailSettings, 'from_name') && Arr::get($emailSettings,'from_email')) {
             $headers['From'] = $emailSettings['from_name'] . ' <' . $emailSettings['from_email'] . '>';
-        } else if ($emailSettings['from_email']) {
-            $headers['From'] = $emailSettings['from_email'];
+        } else if ($fromEmail = Arr::get($emailSettings,'from_email')) {
+            $headers['From'] = $fromEmail;
         }
 
-        if ($emailSettings['reply_to_name'] && $emailSettings['reply_to_email']) {
+        if (Arr::get($emailSettings, 'reply_to_name') && Arr::get($emailSettings, 'reply_to_email')) {
             $headers['Reply-To'] = $emailSettings['reply_to_name'] . ' <' . $emailSettings['reply_to_email'] . '>';
-        } else if ($emailSettings['reply_to_email']) {
-            $headers['Reply-To'] = $emailSettings['reply_to_email'];
+        } else if ($replyTo = Arr::get($emailSettings, 'reply_to_email')) {
+            $headers['Reply-To'] = $replyTo;
         }
 
         return $headers;
@@ -494,7 +525,7 @@ class Helper
         }
 
         if ($isRefunded) {
-            if($data[$currency] > $amount) {
+            if ($data[$currency] > $amount) {
                 $data[$currency] -= $amount;
             }
         } else {
@@ -507,47 +538,59 @@ class Helper
 
     public static function getWPMapUserInfo($user)
     {
-        if(is_numeric($user)) {
+        if (is_numeric($user)) {
             $user = get_user_by('ID', $user);
         }
 
-        $subscriber =  array_filter([
+        $subscriber = array_filter([
             'user_id'    => $user->ID,
             'first_name' => $user->first_name,
             'last_name'  => $user->last_name,
             'email'      => $user->user_email
         ]);
 
-        if($address1 = get_user_meta($user->ID, 'billing_address_1', true)) {
+        if ($address1 = get_user_meta($user->ID, 'billing_address_1', true)) {
             $subscriber['address_line_1'] = $address1;
         }
 
-        if($address2 = get_user_meta($user->ID, 'billing_address_2', true)) {
+        if ($address2 = get_user_meta($user->ID, 'billing_address_2', true)) {
             $subscriber['address_line_2'] = $address2;
         }
 
-        if($city = get_user_meta($user->ID, 'billing_city', true)) {
+        if ($city = get_user_meta($user->ID, 'billing_city', true)) {
             $subscriber['city'] = $city;
         }
 
-        if($postalCode = get_user_meta($user->ID, 'billing_postcode', true)) {
+        if ($postalCode = get_user_meta($user->ID, 'billing_postcode', true)) {
             $subscriber['postal_code'] = $postalCode;
         }
 
-        if($country = get_user_meta($user->ID, 'billing_country', true)) {
+        if ($country = get_user_meta($user->ID, 'billing_country', true)) {
             $subscriber['country'] = $country;
         }
 
-        if($state = get_user_meta($user->ID, 'billing_state', true)) {
+        if ($state = get_user_meta($user->ID, 'billing_state', true)) {
             $subscriber['state'] = $state;
         }
 
-        if($state = get_user_meta($user->ID, 'billing_phone', true)) {
+        if ($state = get_user_meta($user->ID, 'billing_phone', true)) {
             $subscriber['phone'] = $state;
         }
 
         $subscriber = array_filter($subscriber);
 
         return apply_filters('fluentcrm_user_map_data', $subscriber, $user);
+    }
+
+    public static function isUserSyncEnabled()
+    {
+        static $result = null;
+        if ($result === null) {
+            $settings = fluentcrm_get_option('user_syncing_settings', []);
+
+            $result = $settings && isset($settings['status']) && $settings['status'] == 'yes';
+        }
+
+        return $result;
     }
 }

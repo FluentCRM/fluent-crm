@@ -21,8 +21,8 @@ class RemoveFromTagBenchmark extends BaseBenchMark
     public function getBlock()
     {
         return [
-            'title'       => 'Tag Removed',
-            'description' => 'This will run when selected Tags will be removed from a contact',
+            'title'       => __('Tag Removed', 'fluent-crm'),
+            'description' => __('This will run when selected Tags have been removed from a contact', 'fluent-crm'),
             'icon' => fluentCrmMix('images/funnel_icons/tag_removed.svg'),
             'settings'    => [
                 'tags'        => [],
@@ -44,27 +44,27 @@ class RemoveFromTagBenchmark extends BaseBenchMark
     public function getBlockFields($funnel)
     {
         return [
-            'title'     => 'Tag Removed From Contact',
-            'sub_title' => 'This will run when selected Tags will be removed from a contact',
+            'title'     => __('Tag Removed From Contact', 'fluent-crm'),
+            'sub_title' => __('This will run when selected Tags have been removed from a contact', 'fluent-crm'),
             'fields'    => [
                 'tags'        => [
                     'type'        => 'option_selectors',
                     'option_key'  => 'tags',
                     'is_multiple' => true,
-                    'label'       => 'Select Tags',
-                    'placeholder' => 'Select a Tag'
+                    'label'       => __('Select Tags', 'fluent-crm'),
+                    'placeholder' => __('Select a Tag', 'fluent-crm')
                 ],
                 'select_type' => [
-                    'label'      => 'Run When',
+                    'label'      => __('Run When', 'fluent-crm'),
                     'type'       => 'radio',
                     'options'    => [
                         [
                             'id'    => 'any',
-                            'title' => 'Run if any selected tag removed from a contact'
+                            'title' => __('Run if any selected tag removed from a contact', 'fluent-crm')
                         ],
                         [
                             'id'    => 'all',
-                            'title' => 'Need all selected tags removed from the contact'
+                            'title' => __('Need all selected tags removed from the contact', 'fluent-crm')
                         ]
                     ],
                     'dependency' => [

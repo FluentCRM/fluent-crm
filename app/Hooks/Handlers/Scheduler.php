@@ -14,7 +14,9 @@ class Scheduler
 
     public static function processForSubscriber($subscriber)
     {
-        (new \FluentCrm\Includes\Mailer\Handler)->processSubscriberEmail($subscriber->id);
+        if(!defined('FLUENTCRM_DOING_BULK_IMPORT')) {
+            (new \FluentCrm\Includes\Mailer\Handler)->processSubscriberEmail($subscriber->id);
+        }
     }
 
     public static function processHourly()

@@ -23,7 +23,7 @@ class CustomContactFieldsController extends Controller
 
         return $this->sendSuccess([
             'fields'  => $fields,
-            'message' => 'Fields saved successfully!'
+            'message' => __('Fields saved successfully!', 'fluent-crm')
         ]);
     }
 }

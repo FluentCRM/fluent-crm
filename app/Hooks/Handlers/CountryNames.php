@@ -4,7 +4,7 @@ namespace FluentCrm\App\Hooks\Handlers;
 
 class CountryNames
 {
-    private $names = [];
+    private $names;
 
     /**
      * Construct country names from an array.
@@ -13,1001 +13,1001 @@ class CountryNames
     {
         $this->names = [
             [
-                'title' => __('Afghanistan', 'fluent-crm'),
-                'code'  => 'AF'
+                'code'  => 'AF',
+                'title' => __('Afghanistan', 'fluent-crm')
             ],
             [
-                'title' => __('Åland Islands', 'fluent-crm'),
-                'code'  => 'AX'
+                'code'  => 'AX',
+                'title' => __('Åland Islands', 'fluent-crm')
             ],
             [
-                'title' => __('Albania', 'fluent-crm'),
-                'code'  => 'AL'
+                'code'  => 'AL',
+                'title' => __('Albania', 'fluent-crm')
             ],
             [
-                'title' => __('Algeria', 'fluent-crm'),
-                'code'  => 'DZ'
+                'code'  => 'DZ',
+                'title' => __('Algeria', 'fluent-crm')
             ],
             [
-                'title' => __('American Samoa', 'fluent-crm'),
-                'code'  => 'AS'
+                'code'  => 'AS',
+                'title' => __('American Samoa', 'fluent-crm')
             ],
             [
-                'title' => __('Andorra', 'fluent-crm'),
-                'code'  => 'AD'
+                'code'  => 'AD',
+                'title' => __('Andorra', 'fluent-crm')
             ],
             [
-                'title' => __('Angola', 'fluent-crm'),
-                'code'  => 'AO'
+                'code'  => 'AO',
+                'title' => __('Angola', 'fluent-crm')
             ],
             [
-                'title' => __('Anguilla', 'fluent-crm'),
-                'code'  => 'AI'
+                'code'  => 'AI',
+                'title' => __('Anguilla', 'fluent-crm')
             ],
             [
-                'title' => __('Antarctica', 'fluent-crm'),
-                'code'  => 'AQ'
+                'code'  => 'AQ',
+                'title' => __('Antarctica', 'fluent-crm')
             ],
             [
-                'title' => __('Antigua and Barbuda', 'fluent-crm'),
-                'code'  => 'AG'
+                'code'  => 'AG',
+                'title' => __('Antigua and Barbuda', 'fluent-crm')
             ],
             [
-                'title' => __('Argentina', 'fluent-crm'),
-                'code'  => 'AR'
+                'code'  => 'AR',
+                'title' => __('Argentina', 'fluent-crm')
             ],
             [
-                'title' => __('Armenia', 'fluent-crm'),
-                'code'  => 'AM'
+                'code'  => 'AM',
+                'title' => __('Armenia', 'fluent-crm')
             ],
             [
-                'title' => __('Aruba', 'fluent-crm'),
-                'code'  => 'AW'
+                'code'  => 'AW',
+                'title' => __('Aruba', 'fluent-crm')
             ],
             [
-                'title' => __('Australia', 'fluent-crm'),
-                'code'  => 'AU'
+                'code'  => 'AU',
+                'title' => __('Australia', 'fluent-crm')
             ],
             [
-                'title' => __('Austria', 'fluent-crm'),
-                'code'  => 'AT'
+                'code'  => 'AT',
+                'title' => __('Austria', 'fluent-crm')
             ],
             [
-                'title' => __('Azerbaijan', 'fluent-crm'),
-                'code'  => 'AZ'
+                'code'  => 'AZ',
+                'title' => __('Azerbaijan', 'fluent-crm')
             ],
             [
-                'title' => __('Bahamas', 'fluent-crm'),
-                'code'  => 'BS'
+                'code'  => 'BS',
+                'title' => __('Bahamas', 'fluent-crm')
             ],
             [
-                'title' => __('Bahrain', 'fluent-crm'),
-                'code'  => 'BH'
+                'code'  => 'BH',
+                'title' => __('Bahrain', 'fluent-crm')
             ],
             [
-                'title' => __('Bangladesh', 'fluent-crm'),
-                'code'  => 'BD'
+                'code'  => 'BD',
+                'title' => __('Bangladesh', 'fluent-crm')
             ],
             [
-                'title' => __('Barbados', 'fluent-crm'),
-                'code'  => 'BB'
+                'code'  => 'BB',
+                'title' => __('Barbados', 'fluent-crm')
             ],
             [
-                'title' => __('Belarus', 'fluent-crm'),
-                'code'  => 'BY'
+                'code'  => 'BY',
+                'title' => __('Belarus', 'fluent-crm')
             ],
             [
-                'title' => __('Belgium', 'fluent-crm'),
-                'code'  => 'BE'
+                'code'  => 'BE',
+                'title' => __('Belgium', 'fluent-crm')
             ],
             [
-                'title' => __('Belau', 'fluent-crm'),
-                'code'  => 'PW'
+                'code'  => 'PW',
+                'title' => __('Belau', 'fluent-crm')
             ],
             [
-                'title' => __('Belize', 'fluent-crm'),
-                'code'  => 'BZ'
+                'code'  => 'BZ',
+                'title' => __('Belize', 'fluent-crm')
             ],
             [
-                'title' => __('Benin', 'fluent-crm'),
-                'code'  => 'BJ'
+                'code'  => 'BJ',
+                'title' => __('Benin', 'fluent-crm')
             ],
             [
-                'title' => __('Bermuda', 'fluent-crm'),
-                'code'  => 'BM'
+                'code'  => 'BM',
+                'title' => __('Bermuda', 'fluent-crm')
             ],
             [
-                'title' => __('Bhutan', 'fluent-crm'),
-                'code'  => 'BT'
+                'code'  => 'BT',
+                'title' => __('Bhutan', 'fluent-crm')
             ],
             [
-                'title' => __('Bolivia', 'fluent-crm'),
-                'code'  => 'BO'
+                'code'  => 'BO',
+                'title' => __('Bolivia', 'fluent-crm')
             ],
             [
-                'title' => __('Bonaire, Saint Eustatius and Saba', 'fluent-crm'),
-                'code'  => 'BQ'
+                'code'  => 'BQ',
+                'title' => __('Bonaire, Saint Eustatius and Saba', 'fluent-crm')
             ],
             [
-                'title' => __('Bosnia and Herzegovina', 'fluent-crm'),
-                'code'  => 'BA'
+                'code'  => 'BA',
+                'title' => __('Bosnia and Herzegovina', 'fluent-crm')
             ],
             [
-                'title' => __('Botswana', 'fluent-crm'),
-                'code'  => 'BW'
+                'code'  => 'BW',
+                'title' => __('Botswana', 'fluent-crm')
             ],
             [
-                'title' => __('Bouvet Island', 'fluent-crm'),
-                'code'  => 'BV'
+                'code'  => 'BV',
+                'title' => __('Bouvet Island', 'fluent-crm')
             ],
             [
-                'title' => __('Brazil', 'fluent-crm'),
-                'code'  => 'BR'
+                'code'  => 'BR',
+                'title' => __('Brazil', 'fluent-crm')
             ],
             [
-                'title' => __('British Indian Ocean Territory', 'fluent-crm'),
-                'code'  => 'IO'
+                'code'  => 'IO',
+                'title' => __('British Indian Ocean Territory', 'fluent-crm')
             ],
             [
-                'title' => __('British Virgin Islands', 'fluent-crm'),
-                'code'  => 'VG'
+                'code'  => 'BN',
+                'title' => __('Brunei', 'fluent-crm')
             ],
             [
-                'title' => __('Brunei', 'fluent-crm'),
-                'code'  => 'BN'
+                'code'  => 'BG',
+                'title' => __('Bulgaria', 'fluent-crm')
             ],
             [
-                'title' => __('Bulgaria', 'fluent-crm'),
-                'code'  => 'BG'
+                'code'  => 'BF',
+                'title' => __('Burkina Faso', 'fluent-crm')
             ],
             [
-                'title' => __('Burkina Faso', 'fluent-crm'),
-                'code'  => 'BF'
+                'code'  => 'BI',
+                'title' => __('Burundi', 'fluent-crm')
             ],
             [
-                'title' => __('Burundi', 'fluent-crm'),
-                'code'  => 'BI'
+                'code'  => 'KH',
+                'title' => __('Cambodia', 'fluent-crm')
             ],
             [
-                'title' => __('Cambodia', 'fluent-crm'),
-                'code'  => 'KH'
+                'code'  => 'CM',
+                'title' => __('Cameroon', 'fluent-crm')
             ],
             [
-                'title' => __('Cameroon', 'fluent-crm'),
-                'code'  => 'CM'
+                'code'  => 'CA',
+                'title' => __('Canada', 'fluent-crm')
             ],
             [
-                'title' => __('Canada', 'fluent-crm'),
-                'code'  => 'CA'
+                'code'  => 'CV',
+                'title' => __('Cape Verde', 'fluent-crm')
             ],
             [
-                'title' => __('Cape Verde', 'fluent-crm'),
-                'code'  => 'CV'
+                'code'  => 'KY',
+                'title' => __('Cayman Islands', 'fluent-crm')
             ],
             [
-                'title' => __('Cayman Islands', 'fluent-crm'),
-                'code'  => 'KY'
+                'code'  => 'CF',
+                'title' => __('Central African Republic', 'fluent-crm')
             ],
             [
-                'title' => __('Central African Republic', 'fluent-crm'),
-                'code'  => 'CF'
+                'code'  => 'TD',
+                'title' => __('Chad', 'fluent-crm')
             ],
             [
-                'title' => __('Chad', 'fluent-crm'),
-                'code'  => 'TD'
+                'code'  => 'CL',
+                'title' => __('Chile', 'fluent-crm')
             ],
             [
-                'title' => __('Chile', 'fluent-crm'),
-                'code'  => 'CL'
+                'code'  => 'CN',
+                'title' => __('China', 'fluent-crm')
             ],
             [
-                'title' => __('China', 'fluent-crm'),
-                'code'  => 'CN'
+                'code'  => 'CX',
+                'title' => __('Christmas Island', 'fluent-crm')
             ],
             [
-                'title' => __('Christmas Island', 'fluent-crm'),
-                'code'  => 'CX'
+                'code'  => 'CC',
+                'title' => __('Cocos (Keeling) Islands', 'fluent-crm')
             ],
             [
-                'title' => __('Cocos (Keeling) Islands', 'fluent-crm'),
-                'code'  => 'CC'
+                'code'  => 'CO',
+                'title' => __('Colombia', 'fluent-crm')
             ],
             [
-                'title' => __('Colombia', 'fluent-crm'),
-                'code'  => 'CO'
+                'code'  => 'KM',
+                'title' => __('Comoros', 'fluent-crm')
             ],
             [
-                'title' => __('Comoros', 'fluent-crm'),
-                'code'  => 'KM'
+                'code'  => 'CG',
+                'title' => __('Congo (Brazzaville)', 'fluent-crm')
             ],
             [
-                'title' => __('Congo (Brazzaville)', 'fluent-crm'),
-                'code'  => 'CG'
+                'code'  => 'CD',
+                'title' => __('Congo (Kinshasa)', 'fluent-crm')
             ],
             [
-                'title' => __('Congo (Kinshasa)', 'fluent-crm'),
-                'code'  => 'CD'
+                'code'  => 'CK',
+                'title' => __('Cook Islands', 'fluent-crm')
             ],
             [
-                'title' => __('Cook Islands', 'fluent-crm'),
-                'code'  => 'CK'
+                'code'  => 'CR',
+                'title' => __('Costa Rica', 'fluent-crm')
             ],
             [
-                'title' => __('Costa Rica', 'fluent-crm'),
-                'code'  => 'CR'
+                'code'  => 'HR',
+                'title' => __('Croatia', 'fluent-crm')
             ],
             [
-                'title' => __('Croatia', 'fluent-crm'),
-                'code'  => 'HR'
+                'code'  => 'CU',
+                'title' => __('Cuba', 'fluent-crm')
             ],
             [
-                'title' => __('Cuba', 'fluent-crm'),
-                'code'  => 'CU'
+                'code'  => 'CW',
+                'title' => __('Cura&ccedil;ao', 'fluent-crm')
             ],
             [
-                'title' => __('Cura&ccedil;ao', 'fluent-crm'),
-                'code'  => 'CW'
+                'code'  => 'CY',
+                'title' => __('Cyprus', 'fluent-crm')
             ],
             [
-                'title' => __('Cyprus', 'fluent-crm'),
-                'code'  => 'CY'
+                'code'  => 'CZ',
+                'title' => __('Czechia (Czech Republic)', 'fluent-crm')
             ],
             [
-                'title' => __('Czech Republic', 'fluent-crm'),
-                'code'  => 'CZ'
+                'code'  => 'DK',
+                'title' => __('Denmark', 'fluent-crm')
             ],
             [
-                'title' => __('Denmark', 'fluent-crm'),
-                'code'  => 'DK'
+                'code'  => 'DJ',
+                'title' => __('Djibouti', 'fluent-crm')
             ],
             [
-                'title' => __('Djibouti', 'fluent-crm'),
-                'code'  => 'DJ'
+                'code'  => 'DM',
+                'title' => __('Dominica', 'fluent-crm')
             ],
             [
-                'title' => __('Dominica', 'fluent-crm'),
-                'code'  => 'DM'
+                'code'  => 'DO',
+                'title' => __('Dominican Republic', 'fluent-crm')
             ],
             [
-                'title' => __('Dominican Republic', 'fluent-crm'),
-                'code'  => 'DO'
+                'code'  => 'EC',
+                'title' => __('Ecuador', 'fluent-crm')
             ],
             [
-                'title' => __('Ecuador', 'fluent-crm'),
-                'code'  => 'EC'
+                'code'  => 'EG',
+                'title' => __('Egypt', 'fluent-crm')
             ],
             [
-                'title' => __('Egypt', 'fluent-crm'),
-                'code'  => 'EG'
+                'code'  => 'SV',
+                'title' => __('El Salvador', 'fluent-crm')
             ],
             [
-                'title' => __('El Salvador', 'fluent-crm'),
-                'code'  => 'SV'
+                'code'  => 'GQ',
+                'title' => __('Equatorial Guinea', 'fluent-crm')
             ],
             [
-                'title' => __('Equatorial Guinea', 'fluent-crm'),
-                'code'  => 'GQ'
+                'code'  => 'ER',
+                'title' => __('Eritrea', 'fluent-crm')
             ],
             [
-                'title' => __('Eritrea', 'fluent-crm'),
-                'code'  => 'ER'
+                'code'  => 'EE',
+                'title' => __('Estonia', 'fluent-crm')
             ],
             [
-                'title' => __('Estonia', 'fluent-crm'),
-                'code'  => 'EE'
+                'code'  => 'ET',
+                'title' => __('Ethiopia', 'fluent-crm')
             ],
             [
-                'title' => __('Ethiopia', 'fluent-crm'),
-                'code'  => 'ET'
+                'code'  => 'FK',
+                'title' => __('Falkland Islands', 'fluent-crm')
             ],
             [
-                'title' => __('Falkland Islands', 'fluent-crm'),
-                'code'  => 'FK'
+                'code'  => 'FO',
+                'title' => __('Faroe Islands', 'fluent-crm')
             ],
             [
-                'title' => __('Faroe Islands', 'fluent-crm'),
-                'code'  => 'FO'
+                'code'  => 'FJ',
+                'title' => __('Fiji', 'fluent-crm')
             ],
             [
-                'title' => __('Fiji', 'fluent-crm'),
-                'code'  => 'FJ'
+                'code'  => 'FI',
+                'title' => __('Finland', 'fluent-crm')
             ],
             [
-                'title' => __('Finland', 'fluent-crm'),
-                'code'  => 'FI'
+                'code'  => 'FR',
+                'title' => __('France', 'fluent-crm')
             ],
             [
-                'title' => __('France', 'fluent-crm'),
-                'code'  => 'FR'
+                'code'  => 'GF',
+                'title' => __('French Guiana', 'fluent-crm')
             ],
             [
-                'title' => __('French Guiana', 'fluent-crm'),
-                'code'  => 'GF'
+                'code'  => 'PF',
+                'title' => __('French Polynesia', 'fluent-crm')
             ],
             [
-                'title' => __('French Polynesia', 'fluent-crm'),
-                'code'  => 'PF'
+                'code'  => 'TF',
+                'title' => __('French Southern Territories', 'fluent-crm')
             ],
             [
-                'title' => __('French Southern Territories', 'fluent-crm'),
-                'code'  => 'TF'
+                'code'  => 'GA',
+                'title' => __('Gabon', 'fluent-crm')
             ],
             [
-                'title' => __('Gabon', 'fluent-crm'),
-                'code'  => 'GA'
+                'code'  => 'GM',
+                'title' => __('Gambia', 'fluent-crm')
             ],
             [
-                'title' => __('Gambia', 'fluent-crm'),
-                'code'  => 'GM'
+                'code'  => 'GE',
+                'title' => __('Georgia', 'fluent-crm')
             ],
             [
-                'title' => __('Georgia', 'fluent-crm'),
-                'code'  => 'GE'
+                'code'  => 'DE',
+                'title' => __('Germany', 'fluent-crm')
             ],
             [
-                'title' => __('Germany', 'fluent-crm'),
-                'code'  => 'DE'
+                'code'  => 'GH',
+                'title' => __('Ghana', 'fluent-crm')
             ],
             [
-                'title' => __('Ghana', 'fluent-crm'),
-                'code'  => 'GH'
+                'code'  => 'GI',
+                'title' => __('Gibraltar', 'fluent-crm')
             ],
             [
-                'title' => __('Gibraltar', 'fluent-crm'),
-                'code'  => 'GI'
+                'code'  => 'GR',
+                'title' => __('Greece', 'fluent-crm')
             ],
             [
-                'title' => __('Greece', 'fluent-crm'),
-                'code'  => 'GR'
+                'code'  => 'GL',
+                'title' => __('Greenland', 'fluent-crm')
             ],
             [
-                'title' => __('Greenland', 'fluent-crm'),
-                'code'  => 'GL'
+                'code'  => 'GD',
+                'title' => __('Grenada', 'fluent-crm')
             ],
             [
-                'title' => __('Grenada', 'fluent-crm'),
-                'code'  => 'GD'
+                'code'  => 'GP',
+                'title' => __('Guadeloupe', 'fluent-crm')
             ],
             [
-                'title' => __('Guadeloupe', 'fluent-crm'),
-                'code'  => 'GP'
+                'code'  => 'GU',
+                'title' => __('Guam', 'fluent-crm')
             ],
             [
-                'title' => __('Guam', 'fluent-crm'),
-                'code'  => 'GU'
+                'code'  => 'GT',
+                'title' => __('Guatemala', 'fluent-crm')
             ],
             [
-                'title' => __('Guatemala', 'fluent-crm'),
-                'code'  => 'GT'
+                'code'  => 'GG',
+                'title' => __('Guernsey', 'fluent-crm')
             ],
             [
-                'title' => __('Guernsey', 'fluent-crm'),
-                'code'  => 'GG'
+                'code'  => 'GN',
+                'title' => __('Guinea', 'fluent-crm')
             ],
             [
-                'title' => __('Guinea', 'fluent-crm'),
-                'code'  => 'GN'
+                'code'  => 'GW',
+                'title' => __('Guinea-Bissau', 'fluent-crm')
             ],
             [
-                'title' => __('Guinea-Bissau', 'fluent-crm'),
-                'code'  => 'GW'
+                'code'  => 'GY',
+                'title' => __('Guyana', 'fluent-crm')
             ],
             [
-                'title' => __('Guyana', 'fluent-crm'),
-                'code'  => 'GY'
+                'code'  => 'HT',
+                'title' => __('Haiti', 'fluent-crm')
             ],
             [
-                'title' => __('Haiti', 'fluent-crm'),
-                'code'  => 'HT'
+                'code'  => 'HM',
+                'title' => __('Heard Island and McDonald Islands', 'fluent-crm')
             ],
             [
-                'title' => __('Heard Island and McDonald Islands', 'fluent-crm'),
-                'code'  => 'HM'
+                'code'  => 'HN',
+                'title' => __('Honduras', 'fluent-crm')
             ],
             [
-                'title' => __('Honduras', 'fluent-crm'),
-                'code'  => 'HN'
+                'code'  => 'HK',
+                'title' => __('Hong Kong', 'fluent-crm')
             ],
             [
-                'title' => __('Hong Kong', 'fluent-crm'),
-                'code'  => 'HK'
+                'code'  => 'HU',
+                'title' => __('Hungary', 'fluent-crm')
             ],
             [
-                'title' => __('Hungary', 'fluent-crm'),
-                'code'  => 'HU'
+                'code'  => 'IS',
+                'title' => __('Iceland', 'fluent-crm')
             ],
             [
-                'title' => __('Iceland', 'fluent-crm'),
-                'code'  => 'IS'
+                'code'  => 'IN',
+                'title' => __('India', 'fluent-crm')
             ],
             [
-                'title' => __('India', 'fluent-crm'),
-                'code'  => 'IN'
+                'code'  => 'ID',
+                'title' => __('Indonesia', 'fluent-crm')
             ],
             [
-                'title' => __('Indonesia', 'fluent-crm'),
-                'code'  => 'ID'
+                'code'  => 'IR',
+                'title' => __('Iran', 'fluent-crm')
             ],
             [
-                'title' => __('Iran', 'fluent-crm'),
-                'code'  => 'IR'
+                'code'  => 'IQ',
+                'title' => __('Iraq', 'fluent-crm')
             ],
             [
-                'title' => __('Iraq', 'fluent-crm'),
-                'code'  => 'IQ'
+                'code'  => 'IE',
+                'title' => __('Ireland', 'fluent-crm')
             ],
             [
-                'title' => __('Ireland', 'fluent-crm'),
-                'code'  => 'IE'
+                'code'  => 'IM',
+                'title' => __('Isle of Man', 'fluent-crm')
             ],
             [
-                'title' => __('Isle of Man', 'fluent-crm'),
-                'code'  => 'IM'
+                'code'  => 'IL',
+                'title' => __('Israel', 'fluent-crm')
             ],
             [
-                'title' => __('Israel', 'fluent-crm'),
-                'code'  => 'IL'
+                'code'  => 'IT',
+                'title' => __('Italy', 'fluent-crm')
             ],
             [
-                'title' => __('Italy', 'fluent-crm'),
-                'code'  => 'IT'
+                'code'  => 'CI',
+                'title' => __('Ivory Coast', 'fluent-crm')
             ],
             [
-                'title' => __('Ivory Coast', 'fluent-crm'),
-                'code'  => 'CI'
+                'code'  => 'JM',
+                'title' => __('Jamaica', 'fluent-crm')
             ],
             [
-                'title' => __('Jamaica', 'fluent-crm'),
-                'code'  => 'JM'
+                'code'  => 'JP',
+                'title' => __('Japan', 'fluent-crm')
             ],
             [
-                'title' => __('Japan', 'fluent-crm'),
-                'code'  => 'JP'
+                'code'  => 'JE',
+                'title' => __('Jersey', 'fluent-crm')
             ],
             [
-                'title' => __('Jersey', 'fluent-crm'),
-                'code'  => 'JE'
+                'code'  => 'JO',
+                'title' => __('Jordan', 'fluent-crm')
             ],
             [
-                'title' => __('Jordan', 'fluent-crm'),
-                'code'  => 'JO'
+                'code'  => 'KZ',
+                'title' => __('Kazakhstan', 'fluent-crm')
             ],
             [
-                'title' => __('Kazakhstan', 'fluent-crm'),
-                'code'  => 'KZ'
+                'code'  => 'KE',
+                'title' => __('Kenya', 'fluent-crm')
             ],
             [
-                'title' => __('Kenya', 'fluent-crm'),
-                'code'  => 'KE'
+                'code'  => 'KI',
+                'title' => __('Kiribati', 'fluent-crm')
             ],
             [
-                'title' => __('Kiribati', 'fluent-crm'),
-                'code'  => 'KI'
+                'code'  => 'KW',
+                'title' => __('Kuwait', 'fluent-crm')
             ],
             [
-                'title' => __('Kuwait', 'fluent-crm'),
-                'code'  => 'KW'
+                'code'  => 'KG',
+                'title' => __('Kyrgyzstan', 'fluent-crm')
             ],
             [
-                'title' => __('Kyrgyzstan', 'fluent-crm'),
-                'code'  => 'KG'
+                'code'  => 'LA',
+                'title' => __('Laos', 'fluent-crm')
             ],
             [
-                'title' => __('Laos', 'fluent-crm'),
-                'code'  => 'LA'
+                'code'  => 'LV',
+                'title' => __('Latvia', 'fluent-crm')
             ],
             [
-                'title' => __('Latvia', 'fluent-crm'),
-                'code'  => 'LV'
+                'code'  => 'LB',
+                'title' => __('Lebanon', 'fluent-crm')
             ],
             [
-                'title' => __('Lebanon', 'fluent-crm'),
-                'code'  => 'LB'
+                'code'  => 'LS',
+                'title' => __('Lesotho', 'fluent-crm')
             ],
             [
-                'title' => __('Lesotho', 'fluent-crm'),
-                'code'  => 'LS'
+                'code'  => 'LR',
+                'title' => __('Liberia', 'fluent-crm')
             ],
             [
-                'title' => __('Liberia', 'fluent-crm'),
-                'code'  => 'LR'
+                'code'  => 'LY',
+                'title' => __('Libya', 'fluent-crm')
             ],
             [
-                'title' => __('Libya', 'fluent-crm'),
-                'code'  => 'LY'
+                'code'  => 'LI',
+                'title' => __('Liechtenstein', 'fluent-crm')
             ],
             [
-                'title' => __('Liechtenstein', 'fluent-crm'),
-                'code'  => 'LI'
+                'code'  => 'LT',
+                'title' => __('Lithuania', 'fluent-crm')
             ],
             [
-                'title' => __('Lithuania', 'fluent-crm'),
-                'code'  => 'LT'
+                'code'  => 'LU',
+                'title' => __('Luxembourg', 'fluent-crm')
             ],
             [
-                'title' => __('Luxembourg', 'fluent-crm'),
-                'code'  => 'LU'
+                'code'  => 'MO',
+                'title' => __('Macao', 'fluent-crm')
             ],
             [
-                'title' => __('Macao S.A.R., China', 'fluent-crm'),
-                'code'  => 'MO'
+                'code'  => 'MK',
+                'title' => __('North Macedonia', 'fluent-crm')
             ],
             [
-                'title' => __('Macedonia', 'fluent-crm'),
-                'code'  => 'MK'
+                'code'  => 'MG',
+                'title' => __('Madagascar', 'fluent-crm')
             ],
             [
-                'title' => __('Madagascar', 'fluent-crm'),
-                'code'  => 'MG'
+                'code'  => 'MW',
+                'title' => __('Malawi', 'fluent-crm')
             ],
             [
-                'title' => __('Malawi', 'fluent-crm'),
-                'code'  => 'MW'
+                'code'  => 'MY',
+                'title' => __('Malaysia', 'fluent-crm')
             ],
             [
-                'title' => __('Malaysia', 'fluent-crm'),
-                'code'  => 'MY'
+                'code'  => 'MV',
+                'title' => __('Maldives', 'fluent-crm')
             ],
             [
-                'title' => __('Maldives', 'fluent-crm'),
-                'code'  => 'MV'
+                'code'  => 'ML',
+                'title' => __('Mali', 'fluent-crm')
             ],
             [
-                'title' => __('Mali', 'fluent-crm'),
-                'code'  => 'ML'
+                'code'  => 'MT',
+                'title' => __('Malta', 'fluent-crm')
             ],
             [
-                'title' => __('Malta', 'fluent-crm'),
-                'code'  => 'MT'
+                'code'  => 'MH',
+                'title' => __('Marshall Islands', 'fluent-crm')
             ],
             [
-                'title' => __('Marshall Islands', 'fluent-crm'),
-                'code'  => 'MH'
+                'code'  => 'MQ',
+                'title' => __('Martinique', 'fluent-crm')
             ],
             [
-                'title' => __('Martinique', 'fluent-crm'),
-                'code'  => 'MQ'
+                'code'  => 'MR',
+                'title' => __('Mauritania', 'fluent-crm')
             ],
             [
-                'title' => __('Mauritania', 'fluent-crm'),
-                'code'  => 'MR'
+                'code'  => 'MU',
+                'title' => __('Mauritius', 'fluent-crm')
             ],
             [
-                'title' => __('Mauritius', 'fluent-crm'),
-                'code'  => 'MU'
+                'code'  => 'YT',
+                'title' => __('Mayotte', 'fluent-crm')
             ],
             [
-                'title' => __('Mayotte', 'fluent-crm'),
-                'code'  => 'YT'
+                'code'  => 'MX',
+                'title' => __('Mexico', 'fluent-crm')
             ],
             [
-                'title' => __('Mexico', 'fluent-crm'),
-                'code'  => 'MX'
+                'code'  => 'FM',
+                'title' => __('Micronesia', 'fluent-crm')
             ],
             [
-                'title' => __('Micronesia', 'fluent-crm'),
-                'code'  => 'FM'
+                'code'  => 'MD',
+                'title' => __('Moldova', 'fluent-crm')
             ],
             [
-                'title' => __('Moldova', 'fluent-crm'),
-                'code'  => 'MD'
+                'code'  => 'MC',
+                'title' => __('Monaco', 'fluent-crm')
             ],
             [
-                'title' => __('Monaco', 'fluent-crm'),
-                'code'  => 'MC'
+                'code'  => 'MN',
+                'title' => __('Mongolia', 'fluent-crm')
             ],
             [
-                'title' => __('Mongolia', 'fluent-crm'),
-                'code'  => 'MN'
+                'code'  => 'ME',
+                'title' => __('Montenegro', 'fluent-crm')
             ],
             [
-                'title' => __('Montenegro', 'fluent-crm'),
-                'code'  => 'ME'
+                'code'  => 'MS',
+                'title' => __('Montserrat', 'fluent-crm')
             ],
             [
-                'title' => __('Montserrat', 'fluent-crm'),
-                'code'  => 'MS'
+                'code'  => 'MA',
+                'title' => __('Morocco', 'fluent-crm')
             ],
             [
-                'title' => __('Morocco', 'fluent-crm'),
-                'code'  => 'MA'
+                'code'  => 'MZ',
+                'title' => __('Mozambique', 'fluent-crm')
             ],
             [
-                'title' => __('Mozambique', 'fluent-crm'),
-                'code'  => 'MZ'
+                'code'  => 'MM',
+                'title' => __('Myanmar', 'fluent-crm')
             ],
             [
-                'title' => __('Myanmar', 'fluent-crm'),
-                'code'  => 'MM'
+                'code'  => 'NA',
+                'title' => __('Namibia', 'fluent-crm')
             ],
             [
-                'title' => __('Namibia', 'fluent-crm'),
-                'code'  => 'NA'
+                'code'  => 'NR',
+                'title' => __('Nauru', 'fluent-crm')
             ],
             [
-                'title' => __('Nauru', 'fluent-crm'),
-                'code'  => 'NR'
+                'code'  => 'NP',
+                'title' => __('Nepal', 'fluent-crm')
             ],
             [
-                'title' => __('Nepal', 'fluent-crm'),
-                'code'  => 'NP'
+                'code'  => 'NL',
+                'title' => __('Netherlands', 'fluent-crm')
             ],
             [
-                'title' => __('Netherlands', 'fluent-crm'),
-                'code'  => 'NL'
+                'code'  => 'NC',
+                'title' => __('New Caledonia', 'fluent-crm')
             ],
             [
-                'title' => __('New Caledonia', 'fluent-crm'),
-                'code'  => 'NC'
+                'code'  => 'NZ',
+                'title' => __('New Zealand', 'fluent-crm')
             ],
             [
-                'title' => __('New Zealand', 'fluent-crm'),
-                'code'  => 'NZ'
+                'code'  => 'NI',
+                'title' => __('Nicaragua', 'fluent-crm')
             ],
             [
-                'title' => __('Nicaragua', 'fluent-crm'),
-                'code'  => 'NI'
+                'code'  => 'NE',
+                'title' => __('Niger', 'fluent-crm')
             ],
             [
-                'title' => __('Niger', 'fluent-crm'),
-                'code'  => 'NE'
+                'code'  => 'NG',
+                'title' => __('Nigeria', 'fluent-crm')
             ],
             [
-                'title' => __('Nigeria', 'fluent-crm'),
-                'code'  => 'NG'
+                'code'  => 'NU',
+                'title' => __('Niue', 'fluent-crm')
             ],
             [
-                'title' => __('Niue', 'fluent-crm'),
-                'code'  => 'NU'
+                'code'  => 'NF',
+                'title' => __('Norfolk Island', 'fluent-crm')
             ],
             [
-                'title' => __('Norfolk Island', 'fluent-crm'),
-                'code'  => 'NF'
+                'code'  => 'MP',
+                'title' => __('Northern Mariana Islands', 'fluent-crm')
             ],
             [
-                'title' => __('Northern Mariana Islands', 'fluent-crm'),
-                'code'  => 'MP'
+                'code'  => 'KP',
+                'title' => __('North Korea', 'fluent-crm')
             ],
             [
-                'title' => __('North Korea', 'fluent-crm'),
-                'code'  => 'KP'
+                'code'  => 'NO',
+                'title' => __('Norway', 'fluent-crm')
             ],
             [
-                'title' => __('Norway', 'fluent-crm'),
-                'code'  => 'NO'
+                'code'  => 'OM',
+                'title' => __('Oman', 'fluent-crm')
             ],
             [
-                'title' => __('Oman', 'fluent-crm'),
-                'code'  => 'OM'
+                'code'  => 'PK',
+                'title' => __('Pakistan', 'fluent-crm')
             ],
             [
-                'title' => __('Pakistan', 'fluent-crm'),
-                'code'  => 'PK'
+                'code'  => 'PS',
+                'title' => __('Palestinian Territory', 'fluent-crm')
             ],
             [
-                'title' => __('Palestinian Territory', 'fluent-crm'),
-                'code'  => 'PS'
+                'code'  => 'PA',
+                'title' => __('Panama', 'fluent-crm')
             ],
             [
-                'title' => __('Panama', 'fluent-crm'),
-                'code'  => 'PA'
+                'code'  => 'PG',
+                'title' => __('Papua New Guinea', 'fluent-crm')
             ],
             [
-                'title' => __('Papua New Guinea', 'fluent-crm'),
-                'code'  => 'PG'
+                'code'  => 'PY',
+                'title' => __('Paraguay', 'fluent-crm')
             ],
             [
-                'title' => __('Paraguay', 'fluent-crm'),
-                'code'  => 'PY'
+                'code'  => 'PE',
+                'title' => __('Peru', 'fluent-crm')
             ],
             [
-                'title' => __('Peru', 'fluent-crm'),
-                'code'  => 'PE'
+                'code'  => 'PH',
+                'title' => __('Philippines', 'fluent-crm')
             ],
             [
-                'title' => __('Philippines', 'fluent-crm'),
-                'code'  => 'PH'
+                'code'  => 'PN',
+                'title' => __('Pitcairn', 'fluent-crm')
             ],
             [
-                'title' => __('Pitcairn', 'fluent-crm'),
-                'code'  => 'PN'
+                'code'  => 'PL',
+                'title' => __('Poland', 'fluent-crm')
             ],
             [
-                'title' => __('Poland', 'fluent-crm'),
-                'code'  => 'PL'
+                'code'  => 'PT',
+                'title' => __('Portugal', 'fluent-crm')
             ],
             [
-                'title' => __('Portugal', 'fluent-crm'),
-                'code'  => 'PT'
+                'code'  => 'PR',
+                'title' => __('Puerto Rico', 'fluent-crm')
             ],
             [
-                'title' => __('Puerto Rico', 'fluent-crm'),
-                'code'  => 'PR'
+                'code'  => 'QA',
+                'title' => __('Qatar', 'fluent-crm')
             ],
             [
-                'title' => __('Qatar', 'fluent-crm'),
-                'code'  => 'QA'
+                'code'  => 'RE',
+                'title' => __('Reunion', 'fluent-crm')
             ],
             [
-                'title' => __('Reunion', 'fluent-crm'),
-                'code'  => 'RE'
+                'code'  => 'RO',
+                'title' => __('Romania', 'fluent-crm')
             ],
             [
-                'title' => __('Romania', 'fluent-crm'),
-                'code'  => 'RO'
+                'code'  => 'RU',
+                'title' => __('Russia', 'fluent-crm')
             ],
             [
-                'title' => __('Russia', 'fluent-crm'),
-                'code'  => 'RU'
+                'code'  => 'RW',
+                'title' => __('Rwanda', 'fluent-crm')
             ],
             [
-                'title' => __('Rwanda', 'fluent-crm'),
-                'code'  => 'RW'
+                'code'  => 'BL',
+                'title' => __('Saint Barth&eacute;lemy', 'fluent-crm')
             ],
             [
-                'title' => __('Saint Barth&eacute;lemy', 'fluent-crm'),
-                'code'  => 'BL'
+                'code'  => 'SH',
+                'title' => __('Saint Helena', 'fluent-crm')
             ],
             [
-                'title' => __('Saint Helena', 'fluent-crm'),
-                'code'  => 'SH'
+                'code'  => 'KN',
+                'title' => __('Saint Kitts and Nevis', 'fluent-crm')
             ],
             [
-                'title' => __('Saint Kitts and Nevis', 'fluent-crm'),
-                'code'  => 'KN'
+                'code'  => 'LC',
+                'title' => __('Saint Lucia', 'fluent-crm')
             ],
             [
-                'title' => __('Saint Lucia', 'fluent-crm'),
-                'code'  => 'LC'
+                'code'  => 'MF',
+                'title' => __('Saint Martin (French part)', 'fluent-crm')
             ],
             [
-                'title' => __('Saint Martin (French part)', 'fluent-crm'),
-                'code'  => 'MF'
+                'code'  => 'SX',
+                'title' => __('Saint Martin (Dutch part)', 'fluent-crm')
             ],
             [
-                'title' => __('Saint Martin (Dutch part)', 'fluent-crm'),
-                'code'  => 'SX'
+                'code'  => 'PM',
+                'title' => __('Saint Pierre and Miquelon', 'fluent-crm')
             ],
             [
-                'title' => __('Saint Pierre and Miquelon', 'fluent-crm'),
-                'code'  => 'PM'
+                'code'  => 'VC',
+                'title' => __('Saint Vincent and the Grenadines', 'fluent-crm')
             ],
             [
-                'title' => __('Saint Vincent and the Grenadines', 'fluent-crm'),
-                'code'  => 'VC'
+                'code'  => 'SM',
+                'title' => __('San Marino', 'fluent-crm')
             ],
             [
-                'title' => __('San Marino', 'fluent-crm'),
-                'code'  => 'SM'
+                'code'  => 'ST',
+                'title' => __('S&atilde;o Tom&eacute; and Pr&iacute;ncipe', 'fluent-crm')
             ],
             [
-                'title' => __('S&atilde;o Tom&eacute; and Pr&iacute;ncipe', 'fluent-crm'),
-                'code'  => 'ST'
+                'code'  => 'SA',
+                'title' => __('Saudi Arabia', 'fluent-crm')
             ],
             [
-                'title' => __('Saudi Arabia', 'fluent-crm'),
-                'code'  => 'SA'
+                'code'  => 'SN',
+                'title' => __('Senegal', 'fluent-crm')
             ],
             [
-                'title' => __('Senegal', 'fluent-crm'),
-                'code'  => 'SN'
+                'code'  => 'RS',
+                'title' => __('Serbia', 'fluent-crm')
             ],
             [
-                'title' => __('Serbia', 'fluent-crm'),
-                'code'  => 'RS'
+                'code'  => 'SC',
+                'title' => __('Seychelles', 'fluent-crm')
             ],
             [
-                'title' => __('Seychelles', 'fluent-crm'),
-                'code'  => 'SC'
+                'code'  => 'SL',
+                'title' => __('Sierra Leone', 'fluent-crm')
             ],
             [
-                'title' => __('Sierra Leone', 'fluent-crm'),
-                'code'  => 'SL'
+                'code'  => 'SG',
+                'title' => __('Singapore', 'fluent-crm')
             ],
             [
-                'title' => __('Singapore', 'fluent-crm'),
-                'code'  => 'SG'
+                'code'  => 'SK',
+                'title' => __('Slovakia', 'fluent-crm')
             ],
             [
-                'title' => __('Slovakia', 'fluent-crm'),
-                'code'  => 'SK'
+                'code'  => 'SI',
+                'title' => __('Slovenia', 'fluent-crm')
             ],
             [
-                'title' => __('Slovenia', 'fluent-crm'),
-                'code'  => 'SI'
+                'code'  => 'SB',
+                'title' => __('Solomon Islands', 'fluent-crm')
             ],
             [
-                'title' => __('Solomon Islands', 'fluent-crm'),
-                'code'  => 'SB'
+                'code'  => 'SO',
+                'title' => __('Somalia', 'fluent-crm')
             ],
             [
-                'title' => __('Somalia', 'fluent-crm'),
-                'code'  => 'SO'
+                'code'  => 'ZA',
+                'title' => __('South Africa', 'fluent-crm')
             ],
             [
-                'title' => __('South Africa', 'fluent-crm'),
-                'code'  => 'ZA'
+                'code'  => 'GS',
+                'title' => __('South Georgia/Sandwich Islands', 'fluent-crm')
             ],
             [
-                'title' => __('South Georgia/Sandwich Islands', 'fluent-crm'),
-                'code'  => 'GS'
+                'code'  => 'KR',
+                'title' => __('South Korea', 'fluent-crm')
             ],
             [
-                'title' => __('South Korea', 'fluent-crm'),
-                'code'  => 'KR'
+                'code'  => 'SS',
+                'title' => __('South Sudan', 'fluent-crm')
             ],
             [
-                'title' => __('South Sudan', 'fluent-crm'),
-                'code'  => 'SS'
+                'code'  => 'ES',
+                'title' => __('Spain', 'fluent-crm')
             ],
             [
-                'title' => __('Spain', 'fluent-crm'),
-                'code'  => 'ES'
+                'code'  => 'LK',
+                'title' => __('Sri Lanka', 'fluent-crm')
             ],
             [
-                'title' => __('Sri Lanka', 'fluent-crm'),
-                'code'  => 'LK'
+                'code'  => 'SD',
+                'title' => __('Sudan', 'fluent-crm')
             ],
             [
-                'title' => __('Sudan', 'fluent-crm'),
-                'code'  => 'SD'
+                'code'  => 'SR',
+                'title' => __('Suriname', 'fluent-crm')
             ],
             [
-                'title' => __('Suriname', 'fluent-crm'),
-                'code'  => 'SR'
+                'code'  => 'SJ',
+                'title' => __('Svalbard and Jan Mayen', 'fluent-crm')
             ],
             [
-                'title' => __('Svalbard and Jan Mayen', 'fluent-crm'),
-                'code'  => 'SJ'
+                'code'  => 'SZ',
+                'title' => __('Swaziland', 'fluent-crm')
             ],
             [
-                'title' => __('Swaziland', 'fluent-crm'),
-                'code'  => 'SZ'
+                'code'  => 'SE',
+                'title' => __('Sweden', 'fluent-crm')
             ],
             [
-                'title' => __('Sweden', 'fluent-crm'),
-                'code'  => 'SE'
+                'code'  => 'CH',
+                'title' => __('Switzerland', 'fluent-crm')
             ],
             [
-                'title' => __('Switzerland', 'fluent-crm'),
-                'code'  => 'CH'
+                'code'  => 'SY',
+                'title' => __('Syria', 'fluent-crm')
             ],
             [
-                'title' => __('Syria', 'fluent-crm'),
-                'code'  => 'SY'
+                'code'  => 'TW',
+                'title' => __('Taiwan', 'fluent-crm')
             ],
             [
-                'title' => __('Taiwan', 'fluent-crm'),
-                'code'  => 'TW'
+                'code'  => 'TJ',
+                'title' => __('Tajikistan', 'fluent-crm')
             ],
             [
-                'title' => __('Tajikistan', 'fluent-crm'),
-                'code'  => 'TJ'
+                'code'  => 'TZ',
+                'title' => __('Tanzania', 'fluent-crm')
             ],
             [
-                'title' => __('Tanzania', 'fluent-crm'),
-                'code'  => 'TZ'
+                'code'  => 'TH',
+                'title' => __('Thailand', 'fluent-crm')
             ],
             [
-                'title' => __('Thailand', 'fluent-crm'),
-                'code'  => 'TH'
+                'code'  => 'TL',
+                'title' => __('Timor-Leste', 'fluent-crm')
             ],
             [
-                'title' => __('Timor-Leste', 'fluent-crm'),
-                'code'  => 'TL'
+                'code'  => 'TG',
+                'title' => __('Togo', 'fluent-crm')
             ],
             [
-                'title' => __('Togo', 'fluent-crm'),
-                'code'  => 'TG'
+                'code'  => 'TK',
+                'title' => __('Tokelau', 'fluent-crm')
             ],
             [
-                'title' => __('Tokelau', 'fluent-crm'),
-                'code'  => 'TK'
+                'code'  => 'TO',
+                'title' => __('Tonga', 'fluent-crm')
             ],
             [
-                'title' => __('Tonga', 'fluent-crm'),
-                'code'  => 'TO'
+                'code'  => 'TT',
+                'title' => __('Trinidad and Tobago', 'fluent-crm')
             ],
             [
-                'title' => __('Trinidad and Tobago', 'fluent-crm'),
-                'code'  => 'TT'
+                'code'  => 'TN',
+                'title' => __('Tunisia', 'fluent-crm')
             ],
             [
-                'title' => __('Tunisia', 'fluent-crm'),
-                'code'  => 'TN'
+                'code'  => 'TR',
+                'title' => __('Turkey', 'fluent-crm')
             ],
             [
-                'title' => __('Turkey', 'fluent-crm'),
-                'code'  => 'TR'
+                'code'  => 'TM',
+                'title' => __('Turkmenistan', 'fluent-crm')
             ],
             [
-                'title' => __('Turkmenistan', 'fluent-crm'),
-                'code'  => 'TM'
+                'code'  => 'TC',
+                'title' => __('Turks and Caicos Islands', 'fluent-crm')
             ],
             [
-                'title' => __('Turks and Caicos Islands', 'fluent-crm'),
-                'code'  => 'TC'
+                'code'  => 'TV',
+                'title' => __('Tuvalu', 'fluent-crm')
             ],
             [
-                'title' => __('Tuvalu', 'fluent-crm'),
-                'code'  => 'TV'
+                'code'  => 'UG',
+                'title' => __('Uganda', 'fluent-crm')
             ],
             [
-                'title' => __('Uganda', 'fluent-crm'),
-                'code'  => 'UG'
+                'code'  => 'UA',
+                'title' => __('Ukraine', 'fluent-crm')
             ],
             [
-                'title' => __('Ukraine', 'fluent-crm'),
-                'code'  => 'UA'
+                'code'  => 'AE',
+                'title' => __('United Arab Emirates', 'fluent-crm')
             ],
             [
-                'title' => __('United Arab Emirates', 'fluent-crm'),
-                'code'  => 'AE'
+                'code'  => 'GB',
+                'title' => __('United Kingdom (UK)', 'fluent-crm')
             ],
             [
-                'title' => __('United Kingdom (UK)', 'fluent-crm'),
-                'code'  => 'GB'
+                'code'  => 'US',
+                'title' => __('United States (US)', 'fluent-crm')
             ],
             [
-                'title' => __('United States (US)', 'fluent-crm'),
-                'code'  => 'US'
+                'code'  => 'UM',
+                'title' => __('United States (US) Minor Outlying Islands', 'fluent-crm')
             ],
             [
-                'title' => __('United States (US) Minor Outlying Islands', 'fluent-crm'),
-                'code'  => 'UM'
+                'code'  => 'UY',
+                'title' => __('Uruguay', 'fluent-crm')
             ],
             [
-                'title' => __('United States (US) Virgin Islands', 'fluent-crm'),
-                'code'  => 'VI'
+                'code'  => 'UZ',
+                'title' => __('Uzbekistan', 'fluent-crm')
             ],
             [
-                'title' => __('Uruguay', 'fluent-crm'),
-                'code'  => 'UY'
+                'code'  => 'VU',
+                'title' => __('Vanuatu', 'fluent-crm')
             ],
             [
-                'title' => __('Uzbekistan', 'fluent-crm'),
-                'code'  => 'UZ'
+                'code'  => 'VA',
+                'title' => __('Vatican', 'fluent-crm')
             ],
             [
-                'title' => __('Vanuatu', 'fluent-crm'),
-                'code'  => 'VU'
+                'code'      => 'VE',
+                'title' => __('Venezuela', 'fluent-crm')
             ],
             [
-                'title' => __('Vatican', 'fluent-crm'),
-                'code'  => 'VA'
+                'code'  => 'VN',
+                'title' => __('Vietnam', 'fluent-crm')
             ],
             [
-                'title' => __('Venezuela', 'fluent-crm'),
-                'code'  => 'VE'
+                'code'  => 'VG',
+                'title' => __('Virgin Islands (British)', 'fluent-crm')
             ],
             [
-                'title' => __('Vietnam', 'fluent-crm'),
-                'code'  => 'VN'
+                'code'  => 'VI',
+                'title' => __('Virgin Islands (US)', 'fluent-crm')
             ],
             [
-                'title' => __('Wallis and Futuna', 'fluent-crm'),
-                'code'  => 'WF'
+                'code'  => 'WF',
+                'title' => __('Wallis and Futuna', 'fluent-crm')
             ],
             [
-                'title' => __('Western Sahara', 'fluent-crm'),
-                'code'  => 'EH'
+                'code'  => 'EH',
+                'title' => __('Western Sahara', 'fluent-crm')
             ],
             [
-                'title' => __('Samoa', 'fluent-crm'),
-                'code'  => 'WS'
+                'code'  => 'WS',
+                'title' => __('Samoa', 'fluent-crm')
             ],
             [
-                'title' => __('Yemen', 'fluent-crm'),
-                'code'  => 'YE'
+                'code'  => 'YE',
+                'title' => __('Yemen', 'fluent-crm')
             ],
             [
-                'title' => __('Zambia', 'fluent-crm'),
-                'code'  => 'ZM'
+                'code'  => 'ZM',
+                'title' => __('Zambia', 'fluent-crm')
             ],
             [
-                'title' => __('Zimbabwe', 'fluent-crm'),
-                'code'  => 'ZW'
-            ]
+                'code'  => 'ZW',
+                'title' => __('Zimbabwe', 'fluent-crm')
+            ],
         ];
     }
 

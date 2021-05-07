@@ -2,6 +2,8 @@
 
 namespace FluentCrm\Includes\Core;
 
+use FluentCrm\App\Services\PermissionManager;
+
 abstract class Policy
 {
     /**
@@ -12,4 +14,10 @@ abstract class Policy
     {
         return true;
     }
+
+    public function currentUserCan($permission)
+    {
+        return PermissionManager::currentUserCan($permission);
+    }
+
 }

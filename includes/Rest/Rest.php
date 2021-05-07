@@ -92,12 +92,12 @@ class Rest
         if ($options && count($options) > 1) {
             $options = $options[1];
 
-            if (array_key_exists('prefix', $options)) {
+             if (isset($options['prefix'])) {
                 $prefix = $options['prefix'];
                 $path = $prefix.'/'.$path;
             }
 
-            if (array_key_exists('policy', $options)) {
+            if (isset($options['policy'])) {
                 $policy = $options['policy'];
             }
         }

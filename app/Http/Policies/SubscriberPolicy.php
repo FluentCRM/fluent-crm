@@ -14,12 +14,10 @@ class SubscriberPolicy extends Policy
      */
     public function verifyRequest(Request $request)
     {
-        $permission = apply_filters('fluentcrm_permission', 'manage_options', 'contacts', 'all');
-
-        if (!$permission) {
-            return false;
+        if($request->method() == 'GET') {
+            return $this->currentUserCan('fcrm_read_contacts');
         }
 
-        return current_user_can($permission);
+        return $this->currentUserCan('fcrm_manage_contacts');
     }
 }
