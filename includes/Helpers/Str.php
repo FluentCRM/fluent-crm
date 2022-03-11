@@ -2,6 +2,9 @@
 
 namespace FluentCrm\Includes\Helpers;
 
+/**
+ * @deprecated No longer used by internal code and not recommended. Please use FluentCrm\Framework\Support\Str instead
+ */
 class Str
 {
     /**
@@ -13,12 +16,12 @@ class Str
      */
     public static function startsWith($haystack, $needles)
     {
-        if(is_array($haystack)) {
+        if (is_array($haystack)) {
             $haystack = implode(' ', $haystack);
         }
 
-        foreach ((array) $needles as $needle) {
-            if ($needle != '' && substr($haystack, 0, strlen($needle)) === (string) $needle) {
+        foreach ((array)$needles as $needle) {
+            if ($needle != '' && substr($haystack, 0, strlen($needle)) === (string)$needle) {
                 return true;
             }
         }
@@ -35,11 +38,11 @@ class Str
      */
     public static function endsWith($haystack, $needles)
     {
-        if(is_array($haystack)) {
+        if (is_array($haystack)) {
             $haystack = implode(' ', $haystack);
         }
-        foreach ((array) $needles as $needle) {
-            if (substr($haystack, - strlen($needle)) === (string) $needle) {
+        foreach ((array)$needles as $needle) {
+            if (substr($haystack, -strlen($needle)) === (string)$needle) {
                 return true;
             }
         }
@@ -56,17 +59,25 @@ class Str
      */
     public static function contains($haystack, $needles)
     {
-        if(is_array($haystack)) {
+        if (is_array($haystack)) {
             $haystack = implode(' ', $haystack);
         }
 
-        foreach ((array) $needles as $needle) {
-            if ($needle != '' && fluentform_mb_strpos($haystack, $needle) !== false) {
+        foreach ((array)$needles as $needle) {
+            if ($needle != '' && self::crm_mb_strpos($haystack, $needle) !== false) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    public static function crm_mb_strpos($haystack, $needle)
+    {
+        if (function_exists('mb_strpos')) {
+            return mb_strpos($haystack, $needle);
+        }
+        return strpos($haystack, $needle);
     }
 
     /**

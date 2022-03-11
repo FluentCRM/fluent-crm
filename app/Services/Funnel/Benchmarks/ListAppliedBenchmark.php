@@ -4,7 +4,7 @@ namespace FluentCrm\App\Services\Funnel\Benchmarks;
 
 use FluentCrm\App\Services\Funnel\BaseBenchMark;
 use FluentCrm\App\Services\Funnel\FunnelProcessor;
-use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Framework\Support\Arr;
 
 class ListAppliedBenchmark extends BaseBenchMark
 {
@@ -22,7 +22,7 @@ class ListAppliedBenchmark extends BaseBenchMark
         return [
             'title'       => __('List Applied', 'fluent-crm'),
             'description' => __('This will run when selected lists have been applied to a contact', 'fluent-crm'),
-            'icon'        => fluentCrmMix('images/funnel_icons/list_applied.svg'),
+            'icon'        => 'fc-icon-list_applied_2',//fluentCrmMix('images/funnel_icons/list_applied.svg'),
             'settings'    => [
                 'lists'       => [],
                 'select_type' => 'any',
@@ -114,7 +114,7 @@ class ListAppliedBenchmark extends BaseBenchMark
 
         $marchType = Arr::get($settings, 'select_type');
 
-        $subscriberLists = $subscriber->lists->pluck('id');
+        $subscriberLists = $subscriber->lists->pluck('id')->toArray();
         $intersection = array_intersect($listIds, $subscriberLists);
 
         if ($marchType === 'any') {

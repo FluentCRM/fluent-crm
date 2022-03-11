@@ -4,6 +4,16 @@ namespace FluentCrm\App\Hooks\Handlers;
 
 use FluentCrm\App\Models\Subscriber;
 
+/**
+ *  ContactActivityLogger Class
+ *
+ * Logs Contact's activity based on different WordPress Events.
+ *
+ * @package FluentCrm\App\Hooks
+ *
+ * @version 1.0.0
+ */
+
 class ContactActivityLogger
 {
     public function register()

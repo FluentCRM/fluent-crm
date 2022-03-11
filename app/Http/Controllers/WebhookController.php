@@ -2,19 +2,50 @@
 
 namespace FluentCrm\App\Http\Controllers;
 
-use FluentCrm\Includes\Request\Request;
+use FluentCrm\Framework\Request\Request;
 use FluentCrm\App\Models\Webhook;
 use FluentCrm\App\Models\Lists;
 use FluentCrm\App\Models\Tag;
 
+/**
+ *  WebhookController - REST API Handler Class
+ *
+ *  REST API Handler
+ *
+ * @package FluentCrm\App\Http
+ *
+ * @version 1.0.0
+ */
 class WebhookController extends Controller
 {
-    public function index(Webhook $webhook)
+    public function index(Request $request, Webhook $webhook)
     {
         $fields = $webhook->getFields();
-        
+        $search = $request->get('search', '');
+
+        $webhooks = $webhook->latest()->get()->toArray();
+
+        if (!empty($search)) {
+            $search = strtolower($search);
+            $webhooks = array_map(function ($row) use ($search) {
+                $name = strtolower($row['value']['name']);
+                if ($row['value'] && str_contains($name, $search)) {
+                    return $row;
+                }
+                return null;
+            }, $webhooks);
+        }
+
+        $rows = [];
+        foreach ($webhooks as $row) {
+            if ($row) {
+                $rows[] = $row;
+            }
+        }
+
+
         return [
-            'webhooks' => $webhook->latest()->get(),
+            'webhooks' => $rows,
             'fields' => $fields['fields'],
             'custom_fields' => $fields['custom_fields'],
             'schema' => $webhook->getSchema(),
@@ -31,10 +62,10 @@ class WebhookController extends Controller
                 ['name' => 'required', 'status' => 'required']
             )
         );
-
         return [
             'id' => $webhook->id,
-            'webhooks' => $webhook->latest()->get()
+            'webhooks' => $webhook->latest()->get(),
+            'message' => __('Successfully created the WebHook', 'fluent-crm')
         ];
     }
 
@@ -43,17 +74,18 @@ class WebhookController extends Controller
         $webhook->find($id)->saveChanges($request->all());
 
         return [
-            'webhooks' => $webhook->latest()->get()
+            'webhooks' => $webhook->latest()->get(),
+            'message' => __('Successfully updated the webhook', 'fluent-crm')
         ];
     }
-
 
     public function delete(Webhook $webhook, $id)
     {
        $webhook->where('id', $id)->delete();
 
        return [
-            'webhooks' => $webhook->latest()->get()
+            'webhooks' => $webhook->latest()->get(),
+           'message'   => __('Successfully deleted the webhook', 'fluent-crm')
        ];
     }
 }

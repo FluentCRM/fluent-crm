@@ -2,11 +2,22 @@
 
 namespace FluentCrm\App\Models;
 
+/**
+ *  Funnel Model - DB Model for Automation Funnels
+ *
+ *  Database Model
+ *
+ * @package FluentCrm\App\Models
+ *
+ * @version 1.0.0
+ */
 class Funnel extends Model
 {
     private static $type = 'funnels';
 
     protected $table = 'fc_funnels';
+
+    protected $guarded = ['id'];
 
     /**
      * The attributes that are mass assignable.
@@ -31,7 +42,7 @@ class Funnel extends Model
         });
 
         static::addGlobalScope('type', function ($builder) {
-            $builder->where('type', '=', self::$type);
+            $builder->where('fc_funnels.type', '=', self::$type);
         });
     }
 

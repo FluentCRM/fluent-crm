@@ -12,7 +12,7 @@ $mainFont = $config['content_font_family'];
 
 $alignLeft = 'left';
 $alignRight = 'right';
-if(is_rtl()) {
+if(fluentcrm_is_rtl()) {
     $alignLeft = 'right';
     $alignRight = 'left';
 }
@@ -111,7 +111,6 @@ if(is_rtl()) {
         padding: 0;
     }
 
-
     .wp-block-table table {
         width: 100%;
         border: 1px solid #868686;
@@ -155,9 +154,9 @@ if(is_rtl()) {
     .fc_btn a {
         font-size: 16px;
         text-decoration: none;
-        border-radius: 5px;
+        border-radius: 0px;
         padding: 12px 18px;
-        display: inline-block;
+        display: block;
         border: 0px solid white;
     }
 
@@ -168,46 +167,6 @@ if(is_rtl()) {
     .fc_d_btn_color a {
         color: white;
     }
-
-
-    /* Buttons*/
-    /*a.wp-block-button__link {*/
-    /*    border: none;*/
-    /*    border-radius: 28px;*/
-    /*    box-shadow: none;*/
-    /*    cursor: pointer;*/
-    /*    display: inline-block;*/
-    /*    font-size: 18px;*/
-    /*    padding: 12px 24px;*/
-    /*    text-align: center;*/
-    /*    text-decoration: none;*/
-    /*    overflow-wrap: break-word;*/
-    /*    box-sizing: border-box;*/
-    /*}*/
-
-    /*.wp-block-button__width-100 a {*/
-    /*    width: 100%;*/
-    /*}*/
-
-    /*.fc_d_btn_bg a.wp-block-button__link {*/
-    /*    background-color: #32373c;*/
-    /*}*/
-    /*.fc_d_btn_color a.wp-block-button__link {*/
-    /*    color: #fff;*/
-    /*}*/
-    /*.fc_d_btn_bg .is-style-outline a.wp-block-button__link {*/
-    /*    background-color: #fff;*/
-    /*}*/
-
-    /*.fc_d_btn_color .is-style-outline a.wp-block-button__link {*/
-    /*    color: #32373c;*/
-    /*    border: 2px solid #32373c;*/
-    /*}*/
-
-    /*.is-style-outline a.wp-block-button__link {*/
-    /*    border: 2px solid;*/
-    /*}*/
-    /*/Block Editor*/
 
     p {
         margin: 10px 0;
@@ -397,8 +356,18 @@ if(is_rtl()) {
         text-align: <?php echo $alignRight; ?> !important;
     }
 
+    .fce_buttons_row.tb_btn_right {
+        margin-<?php echo $alignLeft; ?>: auto;
+        width: auto !important;
+    }
+
     .tb_btn_right .wp-block-button {
         text-align: <?php echo $alignRight; ?>;
+    }
+
+    .tb_btn_center {
+        margin-left: auto;
+        margin-right: auto;
     }
 
     .tb_btn_center .wp-block-button {
@@ -418,11 +387,30 @@ if(is_rtl()) {
         margin: 0 0 0 auto;
     }
 
-    <?php if(is_rtl()) : ?>
+    <?php if(fluentcrm_is_rtl()) : ?>
         p,ul,li {
             text-align: right;
         }
     <?php endif; ?>
+
+    table.wp-block-button__width-100, table.wp-block-button__width-75, table.wp-block-button__width-50 {
+        width: 100% !important;
+    }
+    .wp-block-button__width-100 table {
+        width: 100%;
+    }
+
+    .wp-block-button__width-75 table {
+        width: 75%;
+    }
+
+    .wp-block-button__width-50 table {
+        width: 50%;
+    }
+
+    .fc_btn_count_2.wp-block-button__width-50 table {
+        width: 100%;
+    }
 
 </style>
 
@@ -582,7 +570,7 @@ if(is_rtl()) {
     }
 </style>
 
-<?php if(is_rtl()): ?>
+<?php if(fluentcrm_is_rtl()): ?>
 <style>
     html[dir=rtl]
 </style>

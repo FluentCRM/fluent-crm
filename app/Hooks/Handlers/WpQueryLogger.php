@@ -2,6 +2,13 @@
 
 namespace FluentCrm\App\Hooks\Handlers;
 
+/**
+ *  UrlMetrics Class - For Internal Debugging usage only
+ *
+ * @package FluentCrm\App\Hooks
+ *
+ * @version 1.0.0
+ */
 class WpQueryLogger
 {
     static $logInFile = true;
@@ -27,17 +34,17 @@ class WpQueryLogger
             if ($self) return;
 
             return [
-                'message' => 'Please enable query logging by calling enableQueryLog() brfore queries ran.',
+                'message'           => __('Please enable query logging by calling enableQueryLog() before queries ran.', 'fluent-crm'),
                 'Total Queries Ran' => null,
-                'Query Logs' => null
+                'Query Logs'        => null
             ];
         }
 
         if (!current_user_can('administrator')) {
             return [
-                'message' => 'Oops! You are not able to see query logs.',
+                'message'           => __('Oops! You are not able to see query logs.', 'fluent-crm'),
                 'Total Queries Ran' => null,
-                'Query Logs' => null
+                'Query Logs'        => null
             ];
         }
 
@@ -46,11 +53,11 @@ class WpQueryLogger
         }
 
         $result = [];
-        $queries = (array) $GLOBALS['wpdb']->queries;
+        $queries = (array)$GLOBALS['wpdb']->queries;
 
         foreach ($queries as $key => $query) {
             $query = array_slice($query, 0, 3);
-            
+
             if ($withStack) {
                 $stackArray = [];
                 $stack = explode(', ', $query[2]);
@@ -70,10 +77,10 @@ class WpQueryLogger
                 ], array_slice($query, 0, 2));
             }
         }
-        
+
         return [
             'Total Queries Ran' => count($queries),
-            'Query Logs' => array_filter($result)
+            'Query Logs'        => array_filter($result)
         ];
     }
 
@@ -82,12 +89,12 @@ class WpQueryLogger
         if (!static::$logInFile) return;
 
         $result = static::getQueryLog();
-        
+
         if (!$result) return;
 
-        error_log('['. fluentCrmTimestamp() .']: ' . json_encode(
-            $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
-        ).PHP_EOL, 3, FluentCrm()->path . 'query.log');
+        error_log('[' . fluentCrmTimestamp() . ']: ' . json_encode(
+                $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+            ) . PHP_EOL, 3, FluentCrm()->path . 'query.log');
     }
 
     public static function enableQueryLog($inFile = false)
@@ -100,6 +107,6 @@ class WpQueryLogger
 
     public static function init()
     {
-        FluentCrm()->addAction('shutdown', [get_class(), 'logQueries'], 100);
+        add_action('shutdown', [get_class(), 'logQueries'], 100);
     }
 }

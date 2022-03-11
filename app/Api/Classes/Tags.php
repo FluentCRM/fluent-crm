@@ -1,5 +1,13 @@
 <?php
-
+/**
+ * Contact Tags Class - PHP APi Wrapper
+ *
+ * Contacts Tags API Wrapper Class that can be used as fluentCrmApi('tags') to get the class instance
+ *
+ * @package FluentCrm\App\Api\Classes
+ *
+ * @version 1.0.0
+ */
 namespace FluentCrm\App\Api\Classes;
 
 use FluentCrm\App\Models\Tag;

@@ -4,14 +4,23 @@ namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Services\Helper;
-use FluentCrm\Includes\Helpers\Arr;
-use FluentCrm\Includes\Request\Request;
+use FluentCrm\Framework\Support\Arr;
+use FluentCrm\Framework\Request\Request;
 
+/**
+ *  UsersController - REST API Handler Class
+ *
+ *  REST API Handler
+ *
+ * @package FluentCrm\App\Http
+ *
+ * @version 1.0.0
+ */
 class UsersController extends Controller
 {
     /**
      * Get all the users.
-     * @param \FluentCrm\Includes\Request\Request $request
+     * @param \FluentCrm\Framework\Request\Request $request
      * @return \WP_REST_Response
      */
     public function index(Request $request)
@@ -19,12 +28,6 @@ class UsersController extends Controller
         $roles = $request->get('roles', []);
         $limit = $request->limit ?: 5;
         $fields = $request->fields ?: ['ID', 'display_name', 'user_email'];
-
-        $users = get_users([
-            'role__in' => $roles,
-            'fields'   => $fields,
-            'number'   => $limit
-        ]);
 
         $userQuery = new \WP_User_Query([
             'role__in' => $roles,
@@ -45,11 +48,11 @@ class UsersController extends Controller
     public function import(Request $request)
     {
         $inputs = $request->only([
-            'map', 'tags', 'lists', 'roles', 'update', 'new_status', 'double_optin_email'
+            'map', 'tags', 'lists', 'roles', 'update', 'new_status', 'double_optin_email', 'import_silently'
         ]);
 
         $limit = apply_filters('fluentcrm_process_subscribers_per_request', 100);
-        $page = intval($request->get('page', 1));
+        $page = absint($request->get('page', 1));
 
         $userQuery = new \WP_User_Query([
             'role__in' => $inputs['roles'],
@@ -57,13 +60,22 @@ class UsersController extends Controller
             'offset'   => ($page - 1) * $limit
         ]);
 
+        if (Arr::get($inputs, 'import_silently') == 'yes') {
+            if(!defined('FLUENTCRM_DISABLE_TAG_LIST_EVENTS')) {
+                define('FLUENTCRM_DISABLE_TAG_LIST_EVENTS', true);
+            }
+        }
+
         $total = $userQuery->get_total();
         $users = $userQuery->get_results();
-        $this->processUsers($users, $inputs);
+        if($users) {
+            $this->processUsers($users, $inputs);
+        }
+
         $hasRecords = !!count($users);
 
         return $this->sendSuccess([
-            'message'      => 'Processing',
+            'message'      => __('Processing', 'fluent-crm'),
             'page_total'   => ceil($total / $limit),
             'record_total' => $total,
             'has_more'     => $hasRecords,

@@ -18,9 +18,10 @@ class DetachListAction extends BaseAction
     public function getBlock()
     {
         return [
+            'category' => __('CRM', 'fluent-crm'),
             'title'       => __('Remove From List', 'fluent-crm'),
             'description' => __('Remove this contact from the selected lists', 'fluent-crm'),
-            'icon' => fluentCrmMix('images/funnel_icons/list_remove.svg'),
+            'icon' => 'fc-icon-removed_list',//fluentCrmMix('images/funnel_icons/list_remove.svg'),
             'settings'    => [
                 'lists' => []
             ]
@@ -56,6 +57,6 @@ class DetachListAction extends BaseAction
         $renewedSubscriber = Subscriber::where('id', $subscriber->id)->first();
         $renewedSubscriber->detachLists($lists);
 
-        FunnelHelper::changefunnelSubSequenceStatus($funnelSubscriberId, $sequence->id);
+        //FunnelHelper::changefunnelSubSequenceStatus($funnelSubscriberId, $sequence->id);
     }
 }

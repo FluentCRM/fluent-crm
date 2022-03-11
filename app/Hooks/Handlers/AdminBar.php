@@ -5,7 +5,17 @@ namespace FluentCrm\App\Hooks\Handlers;
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Services\PermissionManager;
 use FluentCrm\App\Services\Stats;
-use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Framework\Support\Arr;
+
+/**
+ * Admin Bar Class
+ *
+ * Used for Quick Access to CRM
+ *
+ * @package FluentCrm\App\Hooks
+ *
+ * @version 1.0.0
+ */
 
 class AdminBar
 {
@@ -13,7 +23,7 @@ class AdminBar
     {
         $contactPermission = PermissionManager::currentUserCan('fcrm_read_contacts');
 
-        if ( !is_admin() || !$contactPermission ) {
+        if ( !is_admin() || !$contactPermission || apply_filters('fluentcrm_disable_global_search', false) ) {
             return;
         }
 
@@ -45,7 +55,6 @@ class AdminBar
                     ->orWhere('user_id', $user->ID)
                     ->first();
                 if ($crmProfile) {
-                    $urlBase = apply_filters('fluentcrm_menu_url_base', admin_url('admin.php?page=fluentcrm-admin#/'));
                     $crmProfileUrl = $urlBase . 'subscribers/' . $crmProfile->id;
                     $editingUserVars = [
                         'user_id'         => $userId,
@@ -86,8 +95,8 @@ class AdminBar
     {
         $app = FluentCrm();
 
-        $ns = $app['rest.namespace'];
-        $v = $app['rest.version'];
+        $ns = $app->config->get('app.rest_namespace');
+        $v = $app->config->get('app.rest_version');
 
         return [
             'base_url'  => esc_url_raw(rest_url()),

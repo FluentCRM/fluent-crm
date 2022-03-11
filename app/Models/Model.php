@@ -2,7 +2,7 @@
 
 namespace FluentCrm\App\Models;
 
-use WPManageNinja\WPOrm\Model as BaseModel;
+use FluentCrm\Framework\Database\Orm\Model as BaseModel;
 
 class Model extends BaseModel
 {
@@ -19,5 +19,10 @@ class Model extends BaseModel
     public function scopeNewest($query, $field = 'created_at')
     {
         return $query->orderBy($field, 'asc');
+    }
+
+    public function getPerPage()
+    {
+        return (isset($_REQUEST['per_page'])) ? intval($_REQUEST['per_page']) : 15;
     }
 }

@@ -2,6 +2,16 @@
 
 namespace FluentCrm\App\Hooks\Handlers;
 
+/**
+ *  FormSubmissions Class
+ *
+ * Fluent Forms Integration Class
+ *
+ * @package FluentCrm\App\Hooks
+ *
+ * @version 1.0.0
+ */
+
 class FormSubmissions
 {
     public function pushDefaultFormProviders($providers)
@@ -24,7 +34,7 @@ class FormSubmissions
         $page = intval($app->request->get('page', 1));
         $per_page = intval($app->request->get('per_page', 10));
 
-        $query = wpFluent()->table('fluentform_submissions')
+        $query = fluentCrmDb()->table('fluentform_submissions')
                     ->select([
                         'fluentform_submissions.id',
                         'fluentform_submissions.form_id',

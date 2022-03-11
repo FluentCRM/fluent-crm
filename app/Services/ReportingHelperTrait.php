@@ -45,14 +45,14 @@ trait ReportingHelperTrait
     protected function prepareSelect($frequency, $dateField = 'created_at')
     {
         $select = [
-            wpFluent()->raw('COUNT(id) AS count'),
-            wpFluent()->raw('DATE('.$dateField.') AS date')
+            fluentCrmDb()->raw('COUNT(id) AS count'),
+            fluentCrmDb()->raw('DATE(' . $dateField . ') AS date')
         ];
 
         if ($frequency == static::$weekly) {
-            $select[] = wpFluent()->raw('WEEK(created_at) week');
+            $select[] = fluentCrmDb()->raw('WEEK(created_at) week');
         } else if ($frequency == static::$monthly) {
-            $select[] = wpFluent()->raw('MONTH(created_at) month');
+            $select[] = fluentCrmDb()->raw('MONTH(created_at) month');
         }
 
         return $select;
@@ -101,7 +101,7 @@ trait ReportingHelperTrait
 
         foreach ($items as $item) {
             $date = $this->{$formatter}($item->date);
-            $range[$date] = (int) $item->count;
+            $range[$date] = (int)$item->count;
         }
 
         return $range;

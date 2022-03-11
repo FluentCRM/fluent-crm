@@ -56,7 +56,7 @@ class PermissionManager
                 ]
             ],
             'fcrm_manage_settings'        => [
-                'title'   => 'Settings Manage',
+                'title'   => __('Settings Manage', 'fluent-crm'),
                 'depends' => []
             ]
         ];

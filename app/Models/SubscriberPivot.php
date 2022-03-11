@@ -2,12 +2,22 @@
 
 namespace FluentCrm\App\Models;
 
+
 /**
- * @method static \WpFluent\QueryBuilder\QueryBuilderHandler filter(array $constraints)
+ *  SubscriberPivot Model - DB Model for Contact's relationships
+ *
+ *  Database Model
+ *
+ * @package FluentCrm\App\Models
+ *
+ * @version 1.0.0
  */
+
 class SubscriberPivot extends Model
 {
     protected $table = 'fc_subscriber_pivot';
+
+    protected $guarded = ['id'];
 
     public function scopeFilter($query, $constraints)
     {

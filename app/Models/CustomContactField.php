@@ -2,8 +2,17 @@
 
 namespace FluentCrm\App\Models;
 
-use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Framework\Support\Arr;
 
+/**
+ *  CustomContactField Model - DB Model for Custom Contact Fields
+ *
+ *  Database Model
+ *
+ * @package FluentCrm\App\Models
+ *
+ * @version 1.0.0
+ */
 class CustomContactField
 {
     protected $globalMetaName = 'contact_custom_fields';
@@ -24,42 +33,47 @@ class CustomContactField
         return apply_filters('fluentcrm_global_field_types', [
             'text'          => [
                 'type'       => 'text',
-                'label'      => 'Single Line Text',
+                'label'      => __('Single Line Text', 'fluent-crm'),
+                'value_type' => 'string'
+            ],
+            'textarea'      => [
+                'type'       => 'textarea',
+                'label'      => __('Multi Line Text', 'fluent-crm'),
                 'value_type' => 'string'
             ],
             'number'        => [
                 'type'       => 'number',
-                'label'      => 'Numeric Field',
+                'label'      => __('Numeric Field', 'fluent-crm'),
                 'value_type' => 'numeric'
             ],
             'single-select' => [
                 'type'       => 'select-one',
-                'label'      => 'Select choice',
+                'label'      => __('Select choice', 'fluent-crm'),
                 'value_type' => 'string'
             ],
             'multi-select'  => [
                 'type'       => 'select-multi',
-                'label'      => 'Multiple Select choice',
+                'label'      => __('Multiple Select choice', 'fluent-crm'),
                 'value_type' => 'array'
             ],
             'radio'         => [
                 'type'       => 'radio',
-                'label'      => 'Radio Choice',
+                'label'      => __('Radio Choice', 'fluent-crm'),
                 'value_type' => 'string'
             ],
             'checkbox'      => [
                 'type'       => 'checkbox',
-                'label'      => 'Checkboxes',
+                'label'      => __('Checkboxes', 'fluent-crm'),
                 'value_type' => 'array'
             ],
             'date'          => [
                 'type'       => 'date',
-                'label'      => 'Date',
+                'label'      => __('Date', 'fluent-crm'),
                 'value_type' => 'date'
             ],
             'date_time'     => [
                 'type'       => 'date_time',
-                'label'      => 'Date and Time',
+                'label'      => __('Date and Time', 'fluent-crm'),
                 'value_type' => 'datetime'
             ]
         ]);
@@ -84,7 +98,7 @@ class CustomContactField
                 $field['slug'] = $this->generateSlug($field, $slugs);
             }
 
-            if(in_array($field['slug'], $keys)) {
+            if (in_array($field['slug'], $keys)) {
                 continue;
             }
 
@@ -131,10 +145,10 @@ class CustomContactField
 
     public function formatCustomFieldValues($values, $fields = [])
     {
-        if(!$values) {
+        if (!$values) {
             return $values;
         }
-        if(!$fields) {
+        if (!$fields) {
             $rawFields = fluentcrm_get_option($this->globalMetaName, []);
             foreach ($rawFields as $field) {
                 $fields[$field['slug']] = $field;
@@ -142,13 +156,16 @@ class CustomContactField
         }
 
         foreach ($values as $valueKey => $value) {
-            if(!is_array($value) && Arr::get($fields, $valueKey.'.type') == 'checkbox') {
+
+            $isArrayType = Arr::get($fields, $valueKey . '.type') == 'checkbox' || Arr::get($fields, $valueKey . '.type') == 'select-multi';
+
+            if (!is_array($value) && $isArrayType) {
                 $itemValues = explode(',', $value);
                 $trimmedvalues = [];
                 foreach ($itemValues as $itemValue) {
                     $trimmedvalues[] = trim($itemValue);
                 }
-                if($itemValue) {
+                if ($itemValue) {
                     $values[$valueKey] = $trimmedvalues;
                 }
             }

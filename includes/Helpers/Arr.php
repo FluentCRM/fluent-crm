@@ -5,6 +5,9 @@ namespace FluentCrm\Includes\Helpers;
 use Closure;
 use ArrayAccess;
 
+/**
+ * @deprecated No longer used by internal code and not recommended. Please use FluentCrm\Framework\Support\Arr instead
+ */
 class Arr
 {
     /**

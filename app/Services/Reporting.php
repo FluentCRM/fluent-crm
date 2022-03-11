@@ -2,7 +2,6 @@
 
 namespace FluentCrm\App\Services;
 
-use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\FunnelMetric;
 use FluentCrm\App\Models\FunnelSequence;
 use FluentCrm\App\Models\FunnelSubscriber;
@@ -21,9 +20,9 @@ class Reporting
 
         list($groupBy, $orderBy) = $this->getGroupAndOrder($frequency);
 
-        $items = wpFluent()->table('fc_subscribers')
+        $items = fluentCrmDb()->table('fc_subscribers')
             ->select($this->prepareSelect($frequency))
-            ->whereBetween('created_at', $from->format('Y-m-d'), $to->format('Y-m-d'))
+            ->whereBetween('created_at', [$from->format('Y-m-d'), $to->format('Y-m-d')])
             ->groupBy($groupBy)
             ->orderBy($orderBy, 'ASC')
             ->where('status', 'subscribed')
@@ -42,9 +41,9 @@ class Reporting
 
         list($groupBy, $orderBy) = $this->getGroupAndOrder($frequency);
 
-        $items = wpFluent()->table('fc_campaign_url_metrics')
+        $items = fluentCrmDb()->table('fc_campaign_url_metrics')
             ->select($this->prepareSelect($frequency))
-            ->whereBetween('created_at', $from->format('Y-m-d'), $to->format('Y-m-d'))
+            ->whereBetween('created_at', [$from->format('Y-m-d'), $to->format('Y-m-d')])
             ->groupBy($groupBy)
             ->where('type', 'open')
             ->orderBy($orderBy, 'ASC')
@@ -63,9 +62,9 @@ class Reporting
 
         list($groupBy, $orderBy) = $this->getGroupAndOrder($frequency);
 
-        $items = wpFluent()->table('fc_campaign_url_metrics')
+        $items = fluentCrmDb()->table('fc_campaign_url_metrics')
             ->select($this->prepareSelect($frequency))
-            ->whereBetween('created_at', $from->format('Y-m-d'), $to->format('Y-m-d'))
+            ->whereBetween('created_at', [$from->format('Y-m-d'), $to->format('Y-m-d')])
             ->groupBy($groupBy)
             ->where('type', 'click')
             ->orderBy($orderBy, 'ASC')
@@ -84,9 +83,9 @@ class Reporting
 
         list($groupBy, $orderBy) = $this->getGroupAndOrder($frequency);
 
-        $items = wpFluent()->table('fc_campaign_emails')
+        $items = fluentCrmDb()->table('fc_campaign_emails')
             ->select($this->prepareSelect($frequency, 'scheduled_at'))
-            ->whereBetween('scheduled_at', $from->format('Y-m-d'), $to->format('Y-m-d'))
+            ->whereBetween('scheduled_at', [$from->format('Y-m-d'), $to->format('Y-m-d')])
             ->groupBy($groupBy)
             ->orderBy($orderBy, 'ASC')
             ->where('status', $status)
@@ -107,23 +106,23 @@ class Reporting
             return [];
         }
 
-        $sequenceIds = $sequences->pluck('id');
+        $sequenceIds = $sequences->pluck('id')->toArray();
 
         $totalSubscriberCount = FunnelSubscriber::where('funnel_id', $funnelId)
-            ->groupBy('subscriber_id')
-            ->count();
+            ->distinct()
+            ->count('subscriber_id');
 
         $items = FunnelMetric::select([
             'sequence_id',
             'benchmark_currency',
-            wpFluent()->raw('COUNT(sequence_id) AS count'),
+            fluentCrmDb()->raw('COUNT(sequence_id) AS count'),
         ])
             ->groupBy('sequence_id')
             ->whereIn('sequence_id', $sequenceIds)
             ->get()->keyBy('sequence_id');
 
         $totalRevenue = FunnelMetric::select([
-            wpFluent()->raw('SUM(benchmark_value) AS benchmark_total'),
+            fluentCrmDb()->raw('SUM(benchmark_value) AS benchmark_total'),
         ])->whereIn('sequence_id', $sequenceIds)->first();
 
         if ($totalRevenue && $totalRevenue->benchmark_total) {
@@ -139,6 +138,7 @@ class Reporting
                 'sequence_id' => 0,
                 'type' => 'root',
                 'percent' => 100,
+                'percent_text' => 100,
                 'previous_step_count' => $totalSubscriberCount,
                 'drop_count' => 0,
                 'drop_percent' => 0
@@ -154,12 +154,14 @@ class Reporting
 
             $count = ($items[$sequence->id]->count) ? $items[$sequence->id]->count : 0;
             $dropCount = $prevCount - $count;
+            $percent = ($totalSubscriberCount) ? ceil(($count / $totalSubscriberCount) * 100) : 0;
             $formattedReports[] = [
                 'label' => $sequence->title,
                 'count' => intval($count),
                 'sequence_id' => $sequence->id,
                 'type' => $sequence->type,
-                'percent' => ($totalSubscriberCount) ? ceil(($count / $totalSubscriberCount) * 100) : 0,
+                'percent' =>  $percent > 100 ? 100 : $percent,
+                'percent_text' =>  $percent,
                 'previous_step_count' => $prevCount,
                 'drop_count' => $dropCount,
                 'drop_percent' => ($dropCount && $count && $prevCount) ? floor((1 - ($count / $prevCount)) * 100) : 0

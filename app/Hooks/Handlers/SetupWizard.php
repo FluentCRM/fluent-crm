@@ -10,10 +10,14 @@ namespace FluentCrm\App\Hooks\Handlers;
 
 use FluentCrm\App\Services\PermissionManager;
 use FluentCrm\App\Services\TransStrings;
-use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Framework\Support\Arr;
 
 /**
- * The class
+ *  SetupWizard Class
+ *
+ * @package FluentCrm\App\Hooks
+ *
+ * @version 1.0.0
  */
 class SetupWizard
 {
@@ -23,9 +27,12 @@ class SetupWizard
     public function __construct()
     {
         if (apply_filters('fluentcrm_setup_wizard', true) && current_user_can('manage_options')) {
-            fluentcrm_update_option('fluentcrm_setup_wizard_ran', 'yes');
-            //  add_action('wp_loaded', array($this, 'setup_wizard'), 9999);
+            if(fluentcrm_get_option('fluentcrm_setup_wizard_ran') == 'yes') {
+                wp_redirect(admin_url('admin.php?page=fluentcrm-admin&setup_complete=' . time()));
+                exit();
+            }
 
+            fluentcrm_update_option('fluentcrm_setup_wizard_ran', 'yes');
             $this->setup_wizard();
         }
     }
@@ -97,8 +104,8 @@ class SetupWizard
 
     protected function getRestInfo($app)
     {
-        $ns = $app['rest.namespace'];
-        $v = $app['rest.version'];
+        $ns = $app->config->get('app.rest_namespace');
+        $v = $app->config->get('app.rest_version');
 
         return [
             'base_url'  => esc_url_raw(rest_url()),

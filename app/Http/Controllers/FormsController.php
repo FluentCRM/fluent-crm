@@ -5,15 +5,25 @@ namespace FluentCrm\App\Http\Controllers;
 use FluentCrm\App\Models\Funnel;
 use FluentCrm\App\Models\Lists;
 use FluentCrm\App\Models\Tag;
-use FluentCrm\Includes\Helpers\Arr;
-use FluentCrm\Includes\Request\Request;
+use FluentCrm\Framework\Support\Arr;
+use FluentCrm\Framework\Request\Request;
+
+/**
+ *  FormsController - REST API Handler Class
+ *
+ *  REST API Handler
+ *
+ * @package FluentCrm\App\Http
+ *
+ * @version 1.0.0
+ */
 
 class FormsController extends Controller
 {
     /**
      * Get all of the lists
      *
-     * @param \FluentCrm\Includes\Request\Request $request
+     * @param \FluentCrm\Framework\Request\Request $request
      * @return \WP_REST_Response|array
      * @throws \WpFluent\Exception
      */
@@ -30,11 +40,13 @@ class FormsController extends Controller
         }
 
         // Now let's find the forms which are connected with Fluent Forms
-        $connectFeedForms = wpFluent()->table('fluentform_form_meta')
-            ->where('meta_key', 'fluentcrm_feeds')
-            ->select(['form_id', 'id', 'value'])
-            ->groupBy('form_id')
-            ->get();
+        $connectFeedForms = fluentCrmDb()->table('fluentform_form_meta')
+                                         ->where('meta_key', 'fluentcrm_feeds')
+                                         ->select(['form_id', 'id', 'value'])
+                                         ->groupBy('form_id')
+                                         ->get();
+
+
         $formIds = [];
         $connectedFormIds = [];
         foreach ($connectFeedForms as $form) {
@@ -69,13 +81,18 @@ class FormsController extends Controller
         if ($formIds) {
             $crmBaseUrl = apply_filters('fluentcrm_menu_url_base', admin_url('admin.php?page=fluentcrm-admin#/'));
 
-            $allForms = wpFluent()->table('fluentform_forms')
-                ->whereIn('id', $formIds)
-                ->orderBy('id', 'DESC')
-                ->limit($limit)
-                ->offset($offset)
-                ->get();
+            $search = sanitize_text_field($request->get('search', ''));
 
+            $allFormsQuery = fluentCrmDb()->table('fluentform_forms')
+                ->whereIn('id', $formIds);
+
+            if($search) {
+                $allFormsQuery->where('title', 'LIKE', '%'.$search.'%');
+            }
+            $allForms = $allFormsQuery->orderBy('id', 'DESC')
+                                      ->limit($limit)
+                                      ->offset($offset)
+                                      ->get();
 
             foreach ($allForms as $form) {
                 $funnelUrl = '';
@@ -150,9 +167,10 @@ class FormsController extends Controller
             'form_fields' => $template['form_fields']
         ];
 
-        $formId = wpFluent()->table('fluentform_forms')->insert($formData);
+        $formId = fluentCrmDb()->table('fluentform_forms')->insert($formData);
+        $formId = fluentCrmDb()->lastInsertId('');
         if ($template['custom_css']) {
-            wpFluent()->table('fluentform_form_meta')
+            fluentCrmDb()->table('fluentform_form_meta')
                 ->insert([
                     'form_id'  => $formId,
                     'meta_key' => '_custom_form_css',
@@ -167,7 +185,7 @@ class FormsController extends Controller
         } else {
             $defaultSettings['confirmation']['messageToShow'] = __('You are successfully subscribed to our email list', 'fluent-crm');
         }
-        wpFluent()->table('fluentform_form_meta')
+        fluentCrmDb()->table('fluentform_form_meta')
             ->insert(array(
                 'form_id'  => $formId,
                 'meta_key' => 'formSettings',
@@ -205,7 +223,7 @@ class FormsController extends Controller
             'form_id'  => $formId,
             'value'    => \json_encode($feedDefaults)
         ];
-        $createdFeedId = wpFluent()->table('fluentform_form_meta')
+        $createdFeedId = fluentCrmDb()->table('fluentform_form_meta')
             ->insert($feedData);
 
         do_action('fluentform_inserted_new_form', $formId, $formData);
@@ -230,7 +248,7 @@ class FormsController extends Controller
         return apply_filters('fluentcrm_ff_form_templates', [
             'inline_subscribe'    => [
                 'label'       => __('Inline Opt-in Form', 'fluent-crm'),
-                'image'       => fluentCrm()['url.assets'] . 'images/forms/form_1.svg',
+                'image'       => fluentCrm('url.assets') . 'images/forms/form_1.svg',
                 'id'          => 'inline_subscribe',
                 'form_fields' => '{"fields":[{"index":1,"element":"input_email","attributes":{"type":"email","name":"email","value":"","id":"","class":"extra_spaced","placeholder":"Email Address"},"settings":{"container_class":"","label":"","label_placement":"","help_message":"","admin_field_label":"Email Address","validation_rules":{"required":{"value":true,"message":"This field is required"},"email":{"value":true,"message":"This field must contain a valid email"}},"conditional_logics":{"type":"any","status":false,"conditions":[{"field":"","value":"","operator":""}]},"is_unique":"no","unique_validation_message":"Email address need to be unique."},"editor_options":{"title":"Email Address","icon_class":"ff-edit-email","template":"inputText"},"uniqElKey":"el_1601142291509"}],"submitButton":{"uniqElKey":"el_1524065200616","element":"button","attributes":{"type":"submit","class":""},"settings":{"align":"left","button_style":"default","container_class":"top_merged","help_message":"","background_color":"#409EFF","button_size":"md","color":"#ffffff","button_ui":{"type":"default","text":"Subscribe","img_url":""},"normal_styles":{"backgroundColor":"#409EFF","borderColor":"#409EFF","color":"#ffffff","borderRadius":"","minWidth":""},"hover_styles":{"backgroundColor":"#ffffff","borderColor":"#409EFF","color":"#409EFF","borderRadius":"","minWidth":""},"current_state":"normal_styles"},"editor_options":{"title":"Submit Button"}}}',
                 'custom_css'  => $this->getFormCss('inline_subscribe'),
@@ -240,7 +258,7 @@ class FormsController extends Controller
             ],
             'simple_optin'        => [
                 'label'       => __('Simple Opt-in Form', 'fluent-crm'),
-                'image'       => fluentCrm()['url.assets'] . 'images/forms/form_2.svg',
+                'image'       => fluentCrm('url.assets') . 'images/forms/form_2.svg',
                 'id'          => 'simple_optin',
                 'form_fields' => '{"fields":[{"index":1,"element":"input_email","attributes":{"type":"email","name":"email","value":"","id":"","class":"","placeholder":"Your Email Address"},"settings":{"container_class":"","label":"","label_placement":"","help_message":"","admin_field_label":"Email Address","validation_rules":{"required":{"value":true,"message":"This field is required"},"email":{"value":true,"message":"This field must contain a valid email"}},"conditional_logics":[],"is_unique":"no","unique_validation_message":"Email address need to be unique."},"editor_options":{"title":"Email Address","icon_class":"ff-edit-email","template":"inputText"},"uniqElKey":"el_16011431576720.7540920979222681"}],"submitButton":{"uniqElKey":"el_1524065200616","element":"button","attributes":{"type":"submit","class":""},"settings":{"align":"left","button_style":"default","container_class":"","help_message":"","background_color":"#409EFF","button_size":"md","color":"#ffffff","button_ui":{"type":"default","text":"Subscribe To Newsletter","img_url":""},"normal_styles":{"backgroundColor":"#409EFF","borderColor":"#409EFF","color":"#ffffff","borderRadius":"","minWidth":""},"hover_styles":{"backgroundColor":"#ffffff","borderColor":"#409EFF","color":"#409EFF","borderRadius":"","minWidth":""},"current_state":"normal_styles"},"editor_options":{"title":"Submit Button"}}}',
                 'custom_css'  => '',
@@ -250,7 +268,7 @@ class FormsController extends Controller
             ],
             'with_name_subscribe' => [
                 'label'       => __('Subscription Form', 'fluent-crm'),
-                'image'       => fluentCrm()['url.assets'] . 'images/forms/form_3.svg',
+                'image'       => fluentCrm('url.assets') . 'images/forms/form_3.svg',
                 'id'          => 'with_name_subscribe',
                 'form_fields' => '{"fields":[{"index":0,"element":"input_name","attributes":{"name":"names","data-type":"name-element"},"settings":{"container_class":"","admin_field_label":"Name","conditional_logics":{"type":"any","status":false,"conditions":[{"field":"","value":"","operator":""}]},"label_placement":""},"fields":{"first_name":{"element":"input_text","attributes":{"type":"text","name":"first_name","value":"","id":"","class":"","placeholder":"First Name"},"settings":{"container_class":"","label":"First Name","help_message":"","visible":true,"validation_rules":{"required":{"value":false,"message":"This field is required"}},"conditional_logics":[]},"editor_options":{"template":"inputText"}},"middle_name":{"element":"input_text","attributes":{"type":"text","name":"middle_name","value":"","id":"","class":"","placeholder":"","required":false},"settings":{"container_class":"","label":"Middle Name","help_message":"","error_message":"","visible":false,"validation_rules":{"required":{"value":false,"message":"This field is required"}},"conditional_logics":[]},"editor_options":{"template":"inputText"}},"last_name":{"element":"input_text","attributes":{"type":"text","name":"last_name","value":"","id":"","class":"","placeholder":"Last Name","required":false},"settings":{"container_class":"","label":"Last Name","help_message":"","error_message":"","visible":true,"validation_rules":{"required":{"value":false,"message":"This field is required"}},"conditional_logics":[]},"editor_options":{"template":"inputText"}}},"editor_options":{"title":"Name Fields","element":"name-fields","icon_class":"ff-edit-name","template":"nameFields"},"uniqElKey":"el_1570866006692"},{"index":1,"element":"input_email","attributes":{"type":"email","name":"email","value":"","id":"","class":"","placeholder":"Email Address"},"settings":{"container_class":"","label":"Email","label_placement":"","help_message":"","admin_field_label":"","validation_rules":{"required":{"value":true,"message":"This field is required"},"email":{"value":true,"message":"This field must contain a valid email"}},"conditional_logics":{"type":"any","status":false,"conditions":[{"field":"","value":"","operator":""}]},"is_unique":"no","unique_validation_message":"Email address need to be unique."},"editor_options":{"title":"Email Address","icon_class":"ff-edit-email","template":"inputText"},"uniqElKey":"el_1570866012914"}],"submitButton":{"uniqElKey":"el_1524065200616","element":"button","attributes":{"type":"submit","class":""},"settings":{"align":"left","button_style":"default","container_class":"","help_message":"","background_color":"#409EFF","button_size":"md","color":"#ffffff","button_ui":{"type":"default","text":"Subscribe","img_url":""},"normal_styles":{"backgroundColor":"#409EFF","borderColor":"#409EFF","color":"#ffffff","borderRadius":"","minWidth":""},"hover_styles":{"backgroundColor":"#ffffff","borderColor":"#409EFF","color":"#409EFF","borderRadius":"","minWidth":""},"current_state":"normal_styles"},"editor_options":{"title":"Submit Button"}}}',
                 'custom_css'  => '',

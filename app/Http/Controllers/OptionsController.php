@@ -2,12 +2,22 @@
 
 namespace FluentCrm\App\Http\Controllers;
 
+use FluentCrm\App\Models\Funnel;
 use FluentCrm\App\Models\Tag;
 use FluentCrm\App\Models\Lists;
 use FluentCrm\App\Services\Helper;
 use FluentCrm\App\Models\Campaign;
-use FluentCrm\App\Models\Subscriber;
+use FluentCrm\Framework\Request\Request;
 
+/**
+ *  OptionsController - REST API Handler Class
+ *
+ *  REST API Handler
+ *
+ * @package FluentCrm\App\Http
+ *
+ * @version 1.0.0
+ */
 class OptionsController extends Controller
 {
     /**
@@ -45,7 +55,7 @@ class OptionsController extends Controller
      */
     public function countries()
     {
-        $countries = $this->app->applyFilters('fluentcrm-countries', []);
+        $countries = apply_filters('fluentcrm_countries', []);
         $formattedCountries = [];
         foreach ($countries as $country) {
             $country['id'] = $country['code'];
@@ -64,7 +74,7 @@ class OptionsController extends Controller
      */
     public function lists()
     {
-        $lists = Lists::select(['id', 'slug', 'title'])->get();
+        $lists = Lists::select(['id', 'slug', 'title'])->orderBy('title', 'ASC')->get();
 
         $withCount = (array)$this->request->get('with_count', []);
 
@@ -86,7 +96,7 @@ class OptionsController extends Controller
      */
     public function tags()
     {
-        $tags = Tag::select(['id', 'slug', 'title'])->get();
+        $tags = Tag::select(['id', 'slug', 'title'])->orderBy('title', 'ASC')->get();
         foreach ($tags as $tag) {
             $tag->value = strval($tag->id);
             $tag->label = $tag->title;
@@ -127,6 +137,25 @@ class OptionsController extends Controller
     }
 
     /**
+     * Include all the Automation Funnels.
+     *
+     * @return array
+     */
+    public function automation_funnels()
+    {
+        $funnels = Funnel::select('id', 'title', 'status')
+            ->orderBy('id', 'DESC')->get();
+
+        foreach ($funnels as $funnel) {
+            $funnel->title .= ' ('.$funnel->status.')';
+        }
+
+        return [
+            'automation_funnels' => $funnels
+        ];
+    }
+
+    /**
      * Include subscriber statuses.
      *
      * @return array
@@ -137,18 +166,18 @@ class OptionsController extends Controller
         $formattedStatues = [];
 
         $transMaps = [
-            'subscribed' => __('Subscribed', 'fluent-crm'),
-            'pending' => __('Pending', 'fluent-crm'),
+            'subscribed'   => __('Subscribed', 'fluent-crm'),
+            'pending'      => __('Pending', 'fluent-crm'),
             'unsubscribed' => __('Unsubscribed', 'fluent-crm'),
-            'bounced' => __('Bounced', 'fluent-crm'),
-            'complained' => __('Complained', 'fluent-crm')
+            'bounced'      => __('Bounced', 'fluent-crm'),
+            'complained'   => __('Complained', 'fluent-crm')
         ];
 
         foreach ($statuses as $status) {
             $formattedStatues[] = [
                 'id'    => $status,
                 'slug'  => $status,
-                'title' => isset($transMaps[$status]) ? $transMaps[$status] :  ucfirst($status)
+                'title' => isset($transMaps[$status]) ? $transMaps[$status] : ucfirst($status)
             ];
         }
 
@@ -172,11 +201,11 @@ class OptionsController extends Controller
         $statuses = array_diff($statuses, $unEditableStatuses);
 
         $transMaps = [
-            'subscribed' => __('Subscribed', 'fluent-crm'),
-            'pending' => __('Pending', 'fluent-crm'),
+            'subscribed'   => __('Subscribed', 'fluent-crm'),
+            'pending'      => __('Pending', 'fluent-crm'),
             'unsubscribed' => __('Unsubscribed', 'fluent-crm'),
-            'bounced' => __('Bounced', 'fluent-crm'),
-            'complained' => __('Complained', 'fluent-crm')
+            'bounced'      => __('Bounced', 'fluent-crm'),
+            'complained'   => __('Complained', 'fluent-crm')
         ];
 
 
@@ -184,7 +213,7 @@ class OptionsController extends Controller
             $formattedStatues[] = [
                 'id'    => $status,
                 'slug'  => $status,
-                'title' => isset($transMaps[$status]) ? $transMaps[$status] :  ucfirst($status)
+                'title' => isset($transMaps[$status]) ? $transMaps[$status] : ucfirst($status)
             ];
         }
 
@@ -260,5 +289,164 @@ class OptionsController extends Controller
         return [
             'custom_fields' => fluentcrm_get_option('contact_custom_fields', [])
         ];
+    }
+
+    public function getAjaxOptions(Request $request)
+    {
+        $optionKey = $request->get('option_key');
+        $search = $request->get('search');
+        $includedIds = $request->get('values');
+
+        $options = [];
+
+        if ($optionKey == 'woo_categories') {
+            // woocommerce categories
+            if (defined('WC_PLUGIN_FILE')) {
+                $cat_args = array(
+                    'orderby'    => 'name',
+                    'order'      => 'ASC',
+                    'hide_empty' => false,
+                    'search'     => $search,
+                    'number'     => 50
+                );
+                $product_categories = get_terms('product_cat', $cat_args);
+
+                $pushedIds = [];
+                foreach ($product_categories as $category) {
+                    $options[] = [
+                        'id'    => $category->term_id,
+                        'title' => $category->name
+                    ];
+                    $pushedIds[] = $category->term_id;
+                }
+
+                if (empty($includedIds)) {
+                    $includedIds = $pushedIds;
+                }
+                $includedIds = array_diff($includedIds, $pushedIds);
+
+                if ($includedIds) {
+                    $cat_args = array(
+                        'orderby'    => 'name',
+                        'order'      => 'ASC',
+                        'hide_empty' => false,
+                        'include'    => $includedIds
+                    );
+                    $product_categories = get_terms('product_cat', $cat_args);
+                    foreach ($product_categories as $category) {
+                        $options[] = [
+                            'id'    => $category->term_id,
+                            'title' => $category->name
+                        ];
+                    }
+                }
+            }
+        } else if ($optionKey == 'woo_products' || $optionKey == 'product_selector_woo' || $optionKey == 'product_selector_woo_order') {
+            if (defined('WC_PLUGIN_FILE')) {
+                $products = wc_get_products([
+                    'limit'   => 50,
+                    'orderby' => 'date',
+                    'order'   => 'DESC',
+                    's'       => $search
+                ]);
+                $pushedIds = [];
+
+                foreach ($products as $product) {
+                    $productId = $product->get_id();
+                    $options[] = [
+                        'id'    => $productId,
+                        'title' => $product->get_name()
+                    ];
+                    $pushedIds[] = $productId;
+                }
+
+                if (empty($includedIds)) {
+                    $includedIds = $pushedIds;
+                } else {
+                    $includedIds = (array)$includedIds;
+                }
+
+                $includedIds = array_diff($includedIds, $pushedIds);
+
+                if ($includedIds) {
+                    $products = wc_get_products([
+                        'orderby' => 'date',
+                        'order'   => 'DESC',
+                        'include' => $includedIds
+                    ]);
+                    foreach ($products as $product) {
+                        $productId = $product->get_id();
+                        $options[] = [
+                            'id'    => $productId,
+                            'title' => $product->get_name()
+                        ];
+                    }
+                }
+            }
+        } else if ($optionKey == 'edd_products' || $optionKey == 'product_selector_edd') {
+            if (class_exists('Easy_Digital_Downloads') && defined('FLUENTCAMPAIGN')) {
+                $options = \FluentCampaign\App\Services\Integrations\Edd\Helper::getProducts();
+            }
+        } else {
+            $options = apply_filters('fluentcrm_ajax_options_' . $optionKey, [], $search, $includedIds);
+        }
+
+        return [
+            'options' => $options
+        ];
+    }
+
+    public function getTaxonomyTerms(Request $request)
+    {
+        $taxonomy = $request->get('taxonomy');
+        $search = $request->get('search');
+        $includeIds = (array)$request->get('values', []);
+
+        $args = [
+            'taxonomy'   => $taxonomy,
+            'hide_empty' => false,
+            'number'     => 20
+        ];
+
+        if ($search) {
+            $args['search'] = $search;
+        }
+
+        $terms = get_terms($args);
+
+        $formattedTerms = [];
+        if (!is_wp_error($terms)) {
+            foreach ($terms as $term) {
+                $formattedTerms[$term->term_id] = [
+                    'id'    => strval($term->term_id),
+                    'title' => $term->name
+                ];
+            }
+        }
+
+        if ($includeIds && $formattedTerms) {
+            $includeIds = array_diff(array_keys($formattedTerms), $includeIds);
+            if ($includeIds) {
+                $includedTerms = get_terms([
+                    'taxonomy'   => $taxonomy,
+                    'hide_empty' => false,
+                    'include'    => $includeIds
+                ]);
+
+                if (!is_wp_error($includedTerms)) {
+                    foreach ($includedTerms as $includedTerm) {
+                        $formattedTerms[$includedTerm->term_id] = [
+                            'id'    => strval($includedTerm->term_id),
+                            'title' => $includedTerm->name
+                        ];
+                    }
+                }
+            }
+        }
+
+        return [
+            'options' => array_values($formattedTerms)
+        ];
+
     }
 }

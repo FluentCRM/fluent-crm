@@ -22,8 +22,9 @@ abstract class BaseAction
 
     public function pushBlock($blocks, $funnel)
     {
-        $block = $this->getBlock();
+        $this->funnel = $funnel;
 
+        $block = $this->getBlock();
         if($block) {
             $block['type'] = 'action';
             $blocks[$this->actionName] = $block;
@@ -34,6 +35,8 @@ abstract class BaseAction
 
     public function pushBlockFields($fields, $funnel)
     {
+        $this->funnel = $funnel;
+
         $fields[$this->actionName] = $this->getBlockFields();
         return $fields;
     }

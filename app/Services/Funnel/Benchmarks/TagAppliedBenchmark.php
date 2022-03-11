@@ -4,8 +4,7 @@ namespace FluentCrm\App\Services\Funnel\Benchmarks;
 
 use FluentCrm\App\Services\Funnel\BaseBenchMark;
 use FluentCrm\App\Services\Funnel\FunnelProcessor;
-use FluentCrm\App\Models\Tag;
-use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Framework\Support\Arr;
 
 class TagAppliedBenchmark extends BaseBenchMark
 {
@@ -23,7 +22,7 @@ class TagAppliedBenchmark extends BaseBenchMark
         return [
             'title'       => __('Tag Applied', 'fluent-crm'),
             'description' => __('This will run when selected Tags have been applied to a contact', 'fluent-crm'),
-            'icon' => fluentCrmMix('images/funnel_icons/tag-applied.svg'),
+            'icon' => 'fc-icon-tag_applied',//fluentCrmMix('images/funnel_icons/tag-applied.svg'),
             'settings'    => [
                 'tags'        => [],
                 'select_type' => 'any',
@@ -102,7 +101,7 @@ class TagAppliedBenchmark extends BaseBenchMark
 
         $marchType = Arr::get($settings, 'select_type');
 
-        $subscriberTags = $subscriber->tags->pluck('id');
+        $subscriberTags = $subscriber->tags->pluck('id')->toArray();
         $intersection = array_intersect($tagIds, $subscriberTags);
 
         if ($marchType === 'any') {

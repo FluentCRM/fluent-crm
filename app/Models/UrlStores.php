@@ -2,9 +2,21 @@
 
 namespace FluentCrm\App\Models;
 
+/**
+ *  UrlStores Model - DB Model for Short Urls
+ *
+ *  Database Model
+ *
+ * @package FluentCrm\App\Models
+ *
+ * @version 1.0.0
+ */
+
 class UrlStores extends Model
 {
     protected $table = 'fc_url_stores';
+
+    protected $guarded = ['id'];
 
     public static function getUrlSlug($longUrl)
     {

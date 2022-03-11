@@ -2,7 +2,7 @@
 
 namespace FluentCrm\App\Services\ExternalIntegrations\FluentForm;
 
-use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Framework\Support\Arr;
 use FluentForm\App\Helpers\Helper;
 
 class FluentFormInit

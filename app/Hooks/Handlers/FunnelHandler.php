@@ -21,9 +21,17 @@ use FluentCrm\App\Services\Funnel\SequencePoints;
 use FluentCrm\App\Services\Funnel\Triggers\FluentFormSubmissionTrigger;
 use FluentCrm\App\Services\Funnel\Triggers\UserRegistrationTrigger;
 use FluentCrm\App\Services\PermissionManager;
-use FluentCrm\Includes\Helpers\Arr;
-use FluentCrm\Includes\Request\Request;
+use FluentCrm\Framework\Support\Arr;
 
+/**
+ *  FunnelHandler Class - Automation Funnel Handler
+ *
+ * Automation Funnel Handler Class
+ *
+ * @package FluentCrm\App\Hooks
+ *
+ * @version 1.0.0
+ */
 class FunnelHandler
 {
     private $settingsKey = 'fluentcrm_funnel_settings';
@@ -34,7 +42,7 @@ class FunnelHandler
         $this->initBenchMarkBlocks();
         $this->initTriggers();
 
-        if(!defined('FLUENTCAMPAIGN_DIR_FILE')) {
+        if (!defined('FLUENTCAMPAIGN_DIR_FILE')) {
             new \FluentCrm\App\Services\Funnel\ProFunnelItems();
         }
 
@@ -42,11 +50,20 @@ class FunnelHandler
 
         $triggers = array_unique($triggers);
 
-        foreach ($triggers as $triggerName) {
-            $argNum = apply_filters('fluentcrm_funnel_arg_num_' . $triggerName, 1);
-            add_action($triggerName, function () use ($triggerName, $argNum) {
-                $this->mapTriggers($triggerName, func_get_args(), $argNum);
-            }, 10, $argNum);
+        if ($triggers) {
+            foreach ($triggers as $triggerName) {
+                $argNum = apply_filters('fluentcrm_funnel_arg_num_' . $triggerName, 1);
+                add_action($triggerName, function () use ($triggerName, $argNum) {
+                    $this->mapTriggers($triggerName, func_get_args(), $argNum);
+                }, 10, $argNum);
+            }
+
+            if (in_array('edd_update_payment_status', $triggers)) {
+                add_action('edd_complete_purchase', function ($paymentId) {
+                    $this->mapTriggers('edd_update_payment_status', [$paymentId, 'publish', 'pending'], 3);
+                });
+            }
+
         }
 
         add_action('fluentcrm_process_scheduled_tasks_init', function () {
@@ -58,34 +75,39 @@ class FunnelHandler
     {
         $triggerNameBase = $triggerName;
 
-        if($triggerName == 'woocommerce_order_status_completed') {
-            $triggerNameBase = 'woocommerce_order_status_processing';
-        }
-
         $funnels = Funnel::where('status', 'published')
             ->where('trigger_name', $triggerNameBase)
             ->get();
 
         foreach ($funnels as $funnel) {
             ob_start();
-            do_action('fluentcrm_funnel_start_' . $triggerName, $funnel, $originalArgs);
+            /**
+             * Automation Funnel Start Trigger from specific action
+             * @param Funnel $funnel
+             * @param array $originalArgs Original Arguments from the trigger
+             */
+            do_action("fluentcrm_funnel_start_{$triggerName}", $funnel, $originalArgs);
             $maybeErrors = ob_get_clean();
         }
 
         $benchMarks = FunnelSequence::where('type', 'benchmark')
             ->where('action_name', $triggerNameBase)
             ->whereHas('funnel', function ($q) {
-                $q->where('status', 'published');
+                return $q->where('status', 'published');
             })
-            ->orderBy('id', 'asc')
+            ->orderBy('id', 'ASC')
             ->get();
 
         foreach ($benchMarks as $benchMark) {
             ob_start();
-            do_action('fluentcrm_funnel_benchmark_start_' . $triggerName, $benchMark, $originalArgs);
+            /**
+             * Automation Funnel's Benchmark Start Trigger from specific action trigger
+             * @param Funnel $funnel
+             * @param array $originalArgs Original Arguments from the trigger
+             */
+            do_action("fluentcrm_funnel_benchmark_start_{$triggerName}", $benchMark, $originalArgs);
             $maybeErrors = ob_get_clean();
         }
-
     }
 
     public function resetFunnelIndexes()
@@ -104,17 +126,13 @@ class FunnelHandler
             ->where('status', 'published')
             ->where('type', 'benchmark')
             ->whereHas('funnel', function ($q) {
-                $q->where('status', 'published');
+                return $q->where('status', 'published');
             })
             ->groupBy('action_name')
             ->get();
 
         foreach ($sequenceMetrics as $sequenceMetric) {
             $funnelArrays[] = $sequenceMetric->action_name;
-        }
-
-        if(in_array('woocommerce_order_status_processing', $funnelArrays)) {
-            $funnelArrays[] = 'woocommerce_order_status_completed';
         }
 
         update_option($this->settingsKey, array_unique($funnelArrays), 'yes');
@@ -150,7 +168,7 @@ class FunnelHandler
             ->with(['funnel'])
             ->where('subscriber_id', $subscriber->id)
             ->whereHas('funnel', function ($query) {
-                $query->where('status', 'published');
+                return $query->where('status', 'published');
             })
             ->get();
 
@@ -159,7 +177,7 @@ class FunnelHandler
         foreach ($funnelSubscribers as $funnelSubscriber) {
             $funnel = $funnelSubscriber->funnel;
 
-            if(!$funnel || $funnel->status != 'published') {
+            if (!$funnel || $funnel->status != 'published') {
                 continue;
             }
 
@@ -170,9 +188,9 @@ class FunnelHandler
 
     public function saveSequences()
     {
-        $hasPermission  = PermissionManager::currentUserCan('fcrm_write_funnels');
+        $hasPermission = PermissionManager::currentUserCan('fcrm_write_funnels');
 
-        if(!$hasPermission) {
+        if (!$hasPermission) {
             wp_send_json([
                 'message' => __('Sorry, You do not have permission to do this action', 'fluent-crm')
             ], 423);
@@ -194,7 +212,7 @@ class FunnelHandler
     public function exportFunnel()
     {
         $permission = 'manage_options';
-        if( !current_user_can($permission) ) {
+        if (!current_user_can($permission)) {
             die('You do not have permission');
         }
 
@@ -207,7 +225,7 @@ class FunnelHandler
         $funnel->site_hash = md5(site_url());
         $funnel->export_date = date('Y-m-d H:i:s');
 
-        header('Content-disposition: attachment; filename='.sanitize_title($funnel->title, 'funnel', 'display').'-'.$funnelId.'.json');
+        header('Content-disposition: attachment; filename=' . sanitize_title($funnel->title, 'funnel', 'display') . '-' . $funnelId . '.json');
         header('Content-type: application/json');
         echo json_encode($funnel);
         exit();

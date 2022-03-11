@@ -190,7 +190,8 @@ class AutoSubscribe
     public function getUserSyncSettings()
     {
         $defaults = [
-            'status'         => 'no'
+            'status'         => 'no',
+            'delete_contact_on_user_delete' => 'no'
         ];
 
         $settings = fluentcrm_get_option('user_syncing_settings', []);
@@ -214,6 +215,13 @@ class AutoSubscribe
                     'true_label'     => 'yes',
                     'false_label'    => 'no',
                     'checkbox_label' => __('Enable Sync between WP User Data and Fluent CRM Contact Data', 'fluent-crm')
+                ],
+                'delete_contact_on_user_delete' => [
+                    'type'           => 'inline-checkbox',
+                    'label'          => '',
+                    'true_label'     => 'yes',
+                    'false_label'    => 'no',
+                    'checkbox_label' => __('Delete FluentCRM contact on WP User delete', 'fluent-crm')
                 ]
             ]
         ];

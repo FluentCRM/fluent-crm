@@ -3,22 +3,32 @@
 namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\App;
-use FluentValidator\ValidationException;
+use FluentCrm\Framework\Validator\ValidationException;
+use FluentCrm\Framework\Validator\Validator;
 
+/**
+ *  abstract REST API Controller Class
+ *
+ *  REST API Handler
+ *
+ * @package FluentCrm\App\Http
+ *
+ * @version 1.0.0
+ */
 abstract class Controller
 {
     /**
-     * @var \FluentCrm\App\Plugin
+     * @var \FluentCrm\App\App
      */
     protected $app = null;
 
     /**
-     * @var \FluentCrm\Includes\Request\Request
+     * @var \FluentCrm\Framework\Request\Request
      */
     protected $request = null;
 
     /**
-     * @var \FluentCrm\Includes\Response\Response
+     * @var \FluentCrm\Framework\Response\Response
      */
     protected $response = null;
 
@@ -31,7 +41,8 @@ abstract class Controller
 
     public function validate($data, $rules, $messages = [])
     {
-        $validator = fluentcrmFluentValidator($data, $rules, $messages);
+        $validator = new Validator($data, $rules, $messages);
+
 
         if ($validator->validate()->fails()) {
             throw new ValidationException(

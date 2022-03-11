@@ -4,6 +4,13 @@ namespace FluentCrm\App\Hooks\Handlers;
 
 use FluentCrm\App\Models\CampaignUrlMetric;
 
+/**
+ *  UrlMetrics Class
+ *
+ * @package FluentCrm\App\Hooks
+ *
+ * @version 1.0.0
+ */
 class UrlMetrics
 {
     protected $urlMappers = [];

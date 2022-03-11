@@ -2,10 +2,20 @@
 
 namespace FluentCrm\App\Models;
 
+use FluentCrm\App\Services\ContactsQuery;
 use FluentCrm\App\Services\Helper;
-use FluentCrm\Includes\Helpers\Arr;
-use FluentCrm\Includes\Parser\Parser;
+use FluentCrm\Framework\Support\Arr;
+use FluentCrm\App\Services\Libs\Parser\Parser;
 
+/**
+ *  Campaign Model - DB Model for Campaigns
+ *
+ *  Database Model
+ *
+ * @package FluentCrm\App\Models
+ *
+ * @version 1.0.0
+ */
 class Campaign extends Model
 {
     protected $table = 'fc_campaigns';
@@ -49,6 +59,7 @@ class Campaign extends Model
                     'id'   => '',
                     'slug' => ''
                 ],
+                'advanced_filters'    => [[]],
                 'template_config'     => Helper::getTemplateConfig($defaultTemplate)
             ];
         });
@@ -130,9 +141,9 @@ class Campaign extends Model
         return $query->where('status', 0);
     }
 
+
     /**
-     * One2One: Campaign belongs to one template
-     * @return Model
+     * @return \FluentCrm\Framework\Database\Orm\Relations\BelongsTo
      */
     public function template()
     {
@@ -140,9 +151,9 @@ class Campaign extends Model
     }
 
     /**
-     * TODO: emails should be filtered by status (draft, queue e.t.c.)
      * One2Many: Campaign has many emails
-     * @return Model Collection
+     *
+     * @return \FluentCrm\Framework\Database\Orm\Relations\hasMany
      */
     public function emails()
     {
@@ -154,7 +165,7 @@ class Campaign extends Model
     /**
      * TODO: emails should be filtered by status (draft, queue e.t.c.)
      * One2Many: Campaign has many emails
-     * @return Model Collection
+     * @return \FluentCrm\Framework\Database\Orm\Relations\hasMany
      */
     public function campaign_emails()
     {
@@ -165,7 +176,7 @@ class Campaign extends Model
 
     /**
      * One2Many: Campaign has many subjects
-     * @return Model Collection
+     * @return \FluentCrm\Framework\Database\Orm\Relations\hasMany
      */
     public function subjects()
     {
@@ -226,7 +237,13 @@ class Campaign extends Model
             if ($limit && !$alreadySliced) {
                 $subscriberIds = array_slice($subscriberIds, $offset, $limit);
             }
-        } else {
+
+            return [
+                'subscriber_ids' => $subscriberIds,
+                'total_count'    => $totalItems
+            ];
+
+        } else if ($filterType == 'dynamic_segment') {
             $segmentSettings = Arr::get($settings, 'dynamic_segment', []);
             $segmentSettings['offset'] = $offset;
             $segmentSettings['limit'] = $limit;
@@ -237,54 +254,90 @@ class Campaign extends Model
             if ($limit) {
                 $subscriberIds = array_slice($subscriberIds, 0, $limit);
             }
+
+            return [
+                'subscriber_ids' => $subscriberIds,
+                'total_count'    => $totalItems
+            ];
+
+        } else if ($filterType == 'advanced_filters') {
+            $query = new ContactsQuery([
+                'with'               => [],
+                'filter_type'        => 'advanced',
+                'contact_status'     => 'subscribed',
+                'limit'              => $limit,
+                'offset'             => $offset,
+                'filters_groups_raw' => $settings['advanced_filters']
+            ]);
+
+            $count = $query->getModel()->count();
+            $subscriberIds = $query->get()->pluck('id')->toArray();
+
+
+            return [
+                'subscriber_ids' => $subscriberIds,
+                'total_count'    => $count
+            ];
         }
 
-
         return [
-            'subscriber_ids' => $subscriberIds,
-            'total_count'    => $totalItems
+            'subscriber_ids' => [],
+            'total_count'    => 0
         ];
     }
 
-    public function getSubscriberIdsCountBySegmentSettings($settings)
+    public function getSubscriberIdsCountBySegmentSettings($settings, $status = 'subscribed')
     {
         $filterType = Arr::get($settings, 'sending_filter', 'list_tag');
 
         if ($filterType == 'list_tag') {
             $excludeSubscriberIds = [];
             if ($excludeItems = Arr::get($settings, 'excludedSubscribers')) {
-                $excludeSubscriberIds = $this->getSubscribeIdsByList($excludeItems, 'subscribed');
+                $excludeSubscriberIds = $this->getSubscribeIdsByList($excludeItems, $status);
             }
 
             if (!$excludeSubscriberIds) {
-                $model = $this->getSubscribeIdsByListModel($settings['subscribers'], 'subscribed');
+                $model = $this->getSubscribeIdsByListModel($settings['subscribers'], $status);
                 return $model->count();
             } else {
-                $subscriberIds = $this->getSubscribeIdsByList($settings['subscribers'], 'subscribed');
+                $subscriberIds = $this->getSubscribeIdsByList($settings['subscribers'], $status);
                 return count(array_diff($subscriberIds, $excludeSubscriberIds));
             }
-        } else {
+        } else if ($filterType == 'dynamic_segment') {
             $segmentSettings = Arr::get($settings, 'dynamic_segment', []);
             $segmentSettings['offset'] = 0;
-            $segmentSettings['limit'] = false;
+            $segmentSettings['limit'] = 1;
+            $segmentSettings['status'] = $status;
             $subscribersPaginate = apply_filters('fluentcrm_segment_paginate_contact_ids', [], $segmentSettings);
             return $subscribersPaginate['total_count'];
+        } else if ($filterType == 'advanced_filters') {
+            $query = new ContactsQuery([
+                'with'               => [],
+                'filter_type'        => 'advanced',
+                'contact_status'     => $status,
+                'filters_groups_raw' => $settings['advanced_filters'],
+            ]);
+
+            return $query->getModel()->count();
+        } else {
+            return 0;
         }
     }
 
+
     /**
-     * @param \WpFluent\QueryBuilder\QueryBuilderHandler $query
-     * @param array $ids
-     * @param string $type lists or tags
-     * @return \WpFluent\QueryBuilder\QueryBuilderHandler
+     * @param $query
+     * @param $ids
+     * @param $table
+     * @param $objectType
+     * @return mixed
      */
     private function getSubQueryForLisTorTagFilter($query, $ids, $table, $objectType)
     {
         $prefix = 'fc_';
 
-        $subQuery = $query->getQuery()
-            ->table($prefix . $table)
-            ->innerJoin(
+        return $query->from($prefix . $table)
+            ->join(
                 $prefix . 'subscriber_pivot',
                 $prefix . 'subscriber_pivot.object_id',
                 '=',
@@ -294,8 +347,6 @@ class Campaign extends Model
             ->whereIn($prefix . $table . '.id', $ids)
             ->groupBy($prefix . 'subscriber_pivot.subscriber_id')
             ->select($prefix . 'subscriber_pivot.subscriber_id');
-
-        return $subQuery;
     }
 
     /**
@@ -333,7 +384,8 @@ class Campaign extends Model
         return $model->count();
     }
 
-    public function getSubscribeIdsByListModel($items, $status = 'subscribed', $limit = false, $offset = 0) {
+    public function getSubscribeIdsByListModel($items, $status = 'subscribed', $limit = false, $offset = 0)
+    {
 
         $query = Subscriber::where('status', $status);
 
@@ -368,7 +420,7 @@ class Campaign extends Model
             }
         }
 
-        if(!$willSkip && !$hasListFilter && $tagIds) {
+        if (!$willSkip && !$hasListFilter && $tagIds) {
             $query->filterByTags($tagIds);
         } else if (!$willSkip && $queryGroups) {
             $type = 'where';
@@ -376,11 +428,13 @@ class Campaign extends Model
                 $query->{$type}(function ($q) use ($queryGroup, $query) {
                     foreach ($queryGroup as $type => $id) {
                         if ($type == 'tag_id') {
-                            $subQuery = $this->getSubQueryForLisTorTagFilter($query, [$id], 'tags', 'FluentCrm\App\Models\Tag');
-                            $q->whereIn('id', $q->subQuery($subQuery));
+                            $q->whereIn('id', function ($query) use ($id) {
+                                return $this->getSubQueryForLisTorTagFilter($query, [$id], 'tags', 'FluentCrm\App\Models\Tag');
+                            });
                         } else if ($type == 'list_id') {
-                            $subQuery = $this->getSubQueryForLisTorTagFilter($query, [$id], 'lists', 'FluentCrm\App\Models\Lists');
-                            $q->whereIn('id', $q->subQuery($subQuery));
+                            $q->whereIn('id', function ($query) use ($id) {
+                                return $this->getSubQueryForLisTorTagFilter($query, [$id], 'lists', 'FluentCrm\App\Models\Lists');
+                            });
                         }
                     }
                 });
@@ -403,14 +457,20 @@ class Campaign extends Model
      * @param array $emailArgs extra campaign_email args
      * @return array
      */
-    public function subscribe($subscriberIds, $emailArgs = [])
+    public function subscribe($subscriberIds, $emailArgs = [], $isModel = false)
     {
         $campaignEmails = [];
         $updateIds = [];
 
         $mailHeaders = Helper::getMailHeadersFromSettings(Arr::get($this->settings, 'mailer_settings'));
 
-        foreach (Subscriber::whereIn('id', $subscriberIds)->get() as $subscriber) {
+        if ($isModel) {
+            $subscribers = $subscriberIds;
+        } else {
+            $subscribers = Subscriber::whereIn('id', $subscriberIds)->get();
+        }
+
+        foreach ($subscribers as $subscriber) {
             if ($subscriber->status != 'subscribed') {
                 continue; // We don't want to send emails to non-subscribed members
             }
@@ -434,13 +494,13 @@ class Campaign extends Model
                 $email['email_subject_id'] = $subjectItem->id;
             }
 
-            $email['email_subject'] = apply_filters('fluentcrm-parse_campaign_email_text', $emailSubject, $subscriber);;
+            $email['email_subject'] = apply_filters('fluentcrm_parse_campaign_email_text', $emailSubject, $subscriber);;
+
+            $email['email_body'] = $this->email_body;
 
             if ($emailArgs) {
                 $email = wp_parse_args($emailArgs, $email);
             }
-
-            $email['email_body'] = $this->email_body;
 
             $inserted = CampaignEmail::create($email);
 
@@ -493,7 +553,7 @@ class Campaign extends Model
             return null;
         }
 
-        $priorities = $subjects->pluck('key');
+        $priorities = $subjects->pluck('key')->toArray();
         $count = count($priorities);
         $num = mt_rand(0, array_sum($priorities));
 
@@ -504,19 +564,19 @@ class Campaign extends Model
             $i++;
         }
 
-        return $subjects[$i] ? $subjects[$i] : null;
+        return isset($subjects[$i]) ? $subjects[$i] : null;
     }
 
     public function getParsedText($text, $subscriber)
     {
-        return Parser::parse($text, $subscriber->toArray());
+        return Parser::parse($text, $subscriber);
     }
 
     public function filterDuplicateSubscribers($subscriberIds, $subscribers)
     {
         $existingIds = CampaignEmail::where('campaign_id', $this->id)
-            ->whereIn('subscriber_id', $subscribers->pluck('id'))
-            ->get()->pluck('subscriber_id');
+            ->whereIn('subscriber_id', $subscribers->pluck('id')->toArray())
+            ->get()->pluck('subscriber_id')->toArray();
 
         return $subscribers->filter(function ($subscriber) use ($existingIds) {
             return !in_array($subscriber->id, $existingIds);
@@ -564,8 +624,8 @@ class Campaign extends Model
 
         $unSubscribed = CampaignUrlMetric::where('campaign_id', $this->id)
             ->where('type', 'unsubscribe')
-            ->groupBy('subscriber_id')
-            ->count();
+            ->distinct()
+            ->count('subscriber_id');
 
         $revenue = fluentcrm_get_campaign_meta($this->id, '_campaign_revenue');
 
@@ -577,13 +637,14 @@ class Campaign extends Model
             'unsubscribers' => $unSubscribed
         ];
 
-        if($revenue && $revenue->value) {
-            $data = (array) $revenue->value;
+        if ($revenue && $revenue->value) {
+            $data = (array)$revenue->value;
             foreach ($data as $currency => $cents) {
-                if($cents) {
+                if ($cents) {
                     $stats['revenue'] = [
-                        'label' => 'Revenue ('.$currency.')',
-                        'total' => number_format($cents / 100, 2)
+                        'label'    => __('Revenue', 'fluent-crm') . ' (' . $currency . ')',
+                        'total'    => number_format($cents / 100, 2),
+                        'currency' => $currency
                     ];
                 }
             }
@@ -595,9 +656,44 @@ class Campaign extends Model
 
     public function getEmailCount()
     {
-        return wpFluent()->table('fc_campaign_emails')
+        return fluentCrmDb()->table('fc_campaign_emails')
             ->where('campaign_id', $this->id)
             ->count();
     }
 
+
+    public function maybeDeleteDuplicates()
+    {
+        $duplicates = fluentCrmDb()->table('fc_campaign_emails')
+            ->where('campaign_id', $this->id)
+            ->select(['id', 'subscriber_id', fluentCrmDb()->raw('COUNT(subscriber_id) as count')])
+            ->groupBy('subscriber_id')
+            ->havingRaw('COUNT(subscriber_id) > ?', [1])
+            ->get();
+
+        if (!$duplicates) {
+            return $this;
+        }
+
+        $subscriberIds = [];
+        $exceptIds = [];
+        foreach ($duplicates as $duplicate) {
+            $subscriberIds[] = $duplicate->subscriber_id;
+            $exceptIds[] = $duplicate->id;
+        }
+
+        fluentCrmDb()->table('fc_campaign_emails')
+            ->where('campaign_id', $this->id)
+            ->whereIn('subscriber_id', $subscriberIds)
+            ->whereNotIn('id', $exceptIds)
+            ->delete();
+
+        $emailCount = $this->getEmailCount();
+        if ($emailCount != $this->recipients_count) {
+            $this->recipients_count = $emailCount;
+            $this->save();
+        }
+
+        return $this;
+    }
 }

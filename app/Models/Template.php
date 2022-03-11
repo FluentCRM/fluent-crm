@@ -2,7 +2,17 @@
 
 namespace FluentCrm\App\Models;
 
-use FluentCrm\Includes\Parser\Parser;
+use FluentCrm\App\Services\Libs\Parser\Parser;
+
+/**
+ *  Template Model - DB Model for Email templates
+ *
+ *  Database Model
+ *
+ * @package FluentCrm\App\Models
+ *
+ * @version 1.0.0
+ */
 
 class Template extends Model
 {
@@ -11,7 +21,7 @@ class Template extends Model
     const UPDATED_AT = 'post_modified';
 
     protected $table = 'posts';
-    
+
     protected $primaryKey = 'ID';
 
     public function scopeEmailTemplates($query, $types = ['publish'])
@@ -36,9 +46,7 @@ class Template extends Model
     public function render($content = null)
     {
         $content = $content ?: $this->post_content;
-        
-        return Parser::parse(
-            FluentCrm()->applyCustomFilters('gutenberg_content', $content), []
-        );
+
+        return Parser::parse($content, []);
     }
 }

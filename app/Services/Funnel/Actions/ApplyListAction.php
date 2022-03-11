@@ -18,9 +18,10 @@ class ApplyListAction extends BaseAction
     public function getBlock()
     {
         return [
+            'category' => __('CRM', 'fluent-crm'),
             'title'       => __('Apply List', 'fluent-crm'),
             'description' => __('Add this contact to the selected lists', 'fluent-crm'),
-            'icon' => fluentCrmMix('images/funnel_icons/apply_list.svg'),
+            'icon' => 'fc-icon-apply_list',//fluentCrmMix('images/funnel_icons/apply_list.svg'),
             'settings'    => [
                 'lists' => []
             ]
@@ -55,7 +56,5 @@ class ApplyListAction extends BaseAction
 
         $renewedSubscriber = Subscriber::where('id', $subscriber->id)->first();
         $renewedSubscriber->attachLists($lists);
-
-        FunnelHelper::changeFunnelSubSequenceStatus($funnelSubscriberId, $sequence->id);
     }
 }

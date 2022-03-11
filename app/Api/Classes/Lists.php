@@ -1,8 +1,18 @@
 <?php
-
 namespace FluentCrm\App\Api\Classes;
 
 use FluentCrm\App\Models\Lists as CrmLists;
+
+/**
+ * Contacts List Class - PHP APi Wrapper
+ *
+ * Contacts API Wrapper Class that can be used as <code>FluentCrmApi('lists')</code> to get the class instance.
+ * This will contain all the methods of \FluentCrm\App\Models\Lists model.
+ *
+ * @package FluentCrm\App\Api\Classes
+ *
+ * @version 1.0.0
+ */
 
 class Lists
 {
@@ -26,6 +36,14 @@ class Lists
         return $this->instance;
     }
 
+    /**
+     * Add Lists as Bulk
+     *
+     * Use As: <code>FluentCrmApi('lists')->addBulk($lists)</code>
+     *
+     * @param array $lists Array of Lists with title, slug etc
+     * @return array of List Objects
+     */
     public function importBulk($lists)
     {
         $newLists = [];

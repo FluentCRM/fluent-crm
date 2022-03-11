@@ -2,14 +2,21 @@
 
 namespace FluentCrm\App\Http\Policies;
 
-use FluentCrm\Includes\Core\Policy;
-use FluentCrm\Includes\Request\Request;
+use FluentCrm\Framework\Request\Request;
 
-class ReportPolicy extends Policy
+/**
+ *  ReportPolicy - REST API Permission Policy
+ *
+ * @package FluentCrm\App\Http
+ *
+ * @version 1.0.0
+ */
+
+class ReportPolicy extends BasePolicy
 {
     /**
      * Check user permission for any method
-     * @param  \FluentCrm\Includes\Request\Request $request
+     * @param  \FluentCrm\Framework\Request\Request $request
      * @return Boolean
      */
     public function verifyRequest(Request $request)
