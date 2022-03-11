@@ -4,8 +4,7 @@ namespace FluentCrm\App\Services\Funnel\Benchmarks;
 
 use FluentCrm\App\Services\Funnel\BaseBenchMark;
 use FluentCrm\App\Services\Funnel\FunnelProcessor;
-use FluentCrm\App\Models\Lists;
-use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Framework\Support\Arr;
 
 class RemoveFromListBenchmark extends BaseBenchMark
 {
@@ -23,7 +22,7 @@ class RemoveFromListBenchmark extends BaseBenchMark
         return [
             'title'       => __('List Removed', 'fluent-crm'),
             'description' => __('This will run when selected lists have been removed from a contact', 'fluent-crm'),
-            'icon' => fluentCrmMix('images/funnel_icons/list_removed.svg'),
+            'icon' => 'fc-icon-list_removed',//fluentCrmMix('images/funnel_icons/list_removed.svg'),
             'settings'    => [
                 'lists'       => [],
                 'select_type' => 'any',
@@ -116,7 +115,7 @@ class RemoveFromListBenchmark extends BaseBenchMark
         $marchType = Arr::get($settings, 'select_type');
 
         if ($marchType == 'all') {
-            $attachedListIds = $subscriber->lists->pluck('id');
+            $attachedListIds = $subscriber->lists->pluck('id')->toArray();
             return !array_diff($settings['lists'], $attachedListIds) == $settings['lists'];
         }
 

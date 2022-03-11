@@ -6,7 +6,10 @@ use FluentCrm\App\Models\CustomContactField;
 use FluentCrm\App\Models\Lists;
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\Tag;
-use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Framework\Support\Arr;
+use FluentForm\App\Modules\Form\FormFieldsParser;
+use FluentForm\App\Services\FormBuilder\ShortCodeParser;
+use FluentForm\App\Services\Integrations\GlobalNotificationManager;
 use FluentForm\App\Services\Integrations\IntegrationManager;
 use FluentForm\Framework\Foundation\Application;
 use FluentForm\Framework\Helpers\ArrayHelper;
@@ -21,7 +24,7 @@ class Bootstrap extends IntegrationManager
     {
         parent::__construct(
             $app,
-            'FluentCRM',
+            __('FluentCRM', 'fluent-crm'),
             'fluentcrm',
             '_fluentform_fluentcrm_settings',
             'fluentcrm_feeds',
@@ -35,6 +38,9 @@ class Bootstrap extends IntegrationManager
         $this->registerAdminHooks();
 
         add_filter('fluentform_notifying_async_fluentcrm', '__return_false');
+
+        $this->registerPaymentEvents();
+
     }
 
     public function pushIntegration($integrations, $formId)
@@ -71,17 +77,23 @@ class Bootstrap extends IntegrationManager
             'tag_routers'            => [],
             'skip_if_exists'         => false,
             'double_opt_in'          => false,
+            'force_subscribe'        => false,
             'conditionals'           => [
                 'conditions' => [],
                 'status'     => false,
                 'type'       => 'all'
             ],
+            'run_events_only'        => [],
+            'remove_tags'            => [],
             'enabled'                => true
         ];
     }
 
     public function getSettingsFields($settings, $formId)
     {
+        $form = fluentFormApi('forms')->find($formId);
+        $paymentFields = FormFieldsParser::getPaymentFields($form, ['element']);
+
         $fieldOptions = [];
 
         foreach (Subscriber::mappables() as $key => $column) {
@@ -96,109 +108,156 @@ class Bootstrap extends IntegrationManager
         unset($fieldOptions['first_name']);
         unset($fieldOptions['last_name']);
 
-        return [
-            'fields'              => [
-                [
-                    'key'         => 'name',
-                    'label'       => __('Feed Name', 'fluent-crm'),
-                    'required'    => true,
-                    'placeholder' => __('Your Feed Name', 'fluent-crm'),
-                    'component'   => 'text'
-                ],
-                [
-                    'key'         => 'list_id',
-                    'label'       => __('FluentCRM List', 'fluent-crm'),
-                    'placeholder' => __('Select FluentCRM List', 'fluent-crm'),
-                    'tips'        => __('Select the FluentCRM List you would like to add your contacts to.', 'fluent-crm'),
-                    'component'   => 'select',
-                    'required'    => true,
-                    'options'     => $this->getLists(),
-                ],
-                [
-                    'key'                => 'CustomFields',
-                    'require_list'       => false,
-                    'label'              => __('Primary Fields', 'fluent-crm'),
-                    'tips'               => __('Associate your FluentCRM merge tags to the appropriate Fluent Form fields by selecting the appropriate form field from the list.', 'fluent-crm'),
-                    'component'          => 'map_fields',
-                    'field_label_remote' => __('FluentCRM Field', 'fluent-crm'),
-                    'field_label_local'  => __('Form Field', 'fluent-crm'),
-                    'primary_fileds'     => [
-                        [
-                            'key'           => 'email',
-                            'label'         => __('Email Address', 'fluent-crm'),
-                            'required'      => true,
-                            'input_options' => 'emails'
-                        ],
-                        [
-                            'key'   => 'first_name',
-                            'label' => __('First Name', 'fluent-crm')
-                        ],
-                        [
-                            'key'   => 'last_name',
-                            'label' => __('Last Name', 'fluent-crm')
-                        ],
-                        [
-                            'key'       => 'full_name',
-                            'label'     => __('Full Name', 'fluent-crm'),
-                            'help_text' => __('If First Name & Last Name is not available full name will be used to get first name and last name', 'fluent-crm')
-                        ]
-                    ]
-                ],
-                [
-                    'key'                => 'other_fields',
-                    'require_list'       => false,
-                    'label'              => __('Other Fields', 'fluent-crm'),
-                    'tips'               => 'Select which Fluent Form fields pair with their<br /> respective FlunentCRM fields.',
-                    'component'          => 'dropdown_many_fields',
-                    'field_label_remote' => __('FluentCRM Field', 'fluent-crm'),
-                    'field_label_local'  => __('Form Field', 'fluent-crm'),
-                    'options'            => $fieldOptions
-                ],
-                [
-                    'key'          => 'tag_ids',
-                    'require_list' => false,
-                    'label'        => __('Contact Tags', 'fluent-crm'),
-                    'placeholder' => __('Select Tags', 'fluent-crm'),
-                    'component'    => 'selection_routing',
-                    'simple_component' => 'select',
-                    'routing_input_type' => 'select',
-                    'routing_key'  => 'tag_ids_selection_type',
-                    'settings_key' => 'tag_routers',
-                    'is_multiple'  => true,
-                    'labels'       => [
-                        'choice_label'      => __('Enable Dynamic Tag Selection', 'fluent-crm'),
-                        'input_label'       => '',
-                        'input_placeholder' => __('Set Tag', 'fluent-crm')
+        $fields = [
+            [
+                'key'         => 'name',
+                'label'       => __('Feed Name', 'fluent-crm'),
+                'required'    => true,
+                'placeholder' => __('Your Feed Name', 'fluent-crm'),
+                'component'   => 'text'
+            ],
+            [
+                'key'         => 'list_id',
+                'label'       => __('FluentCRM List', 'fluent-crm'),
+                'placeholder' => __('Select FluentCRM List', 'fluent-crm'),
+                'tips'        => __('Select the FluentCRM List you would like to add your contacts to.', 'fluent-crm'),
+                'component'   => 'select',
+                'required'    => true,
+                'options'     => $this->getLists(),
+            ],
+            [
+                'key'                => 'CustomFields',
+                'require_list'       => false,
+                'label'              => __('Primary Fields', 'fluent-crm'),
+                'tips'               => __('Associate your FluentCRM merge tags to the appropriate Fluent Form fields by selecting the appropriate form field from the list.', 'fluent-crm'),
+                'component'          => 'map_fields',
+                'field_label_remote' => __('FluentCRM Field', 'fluent-crm'),
+                'field_label_local'  => __('Form Field', 'fluent-crm'),
+                'primary_fileds'     => [
+                    [
+                        'key'           => 'email',
+                        'label'         => __('Email Address', 'fluent-crm'),
+                        'required'      => true,
+                        'input_options' => 'emails'
                     ],
-                    'options'      => $this->getTags()
-                ],
-                [
-                    'key'            => 'skip_if_exists',
-                    'require_list'   => false,
-                    'checkbox_label' => __('Skip if contact already exist in FluentCRM', 'fluent-crm'),
-                    'component'      => 'checkbox-single'
-                ],
-                [
-                    'key'            => 'double_opt_in',
-                    'require_list'   => false,
-                    'checkbox_label' => __('Enable Double Option for new contacts', 'fluent-crm'),
-                    'component'      => 'checkbox-single'
-                ],
-                [
-                    'require_list' => false,
-                    'key'          => 'conditionals',
-                    'label'        => __('Conditional Logics', 'fluent-crm'),
-                    'tips'         => __('Allow FluentCRM integration conditionally based on your submission values', 'fluent-crm'),
-                    'component'    => 'conditional_block'
-                ],
-                [
-                    'require_list'   => false,
-                    'key'            => 'enabled',
-                    'label'          => 'Status',
-                    'component'      => 'checkbox-single',
-                    'checkbox_label' => __('Enable This feed', 'fluent-crm')
+                    [
+                        'key'   => 'first_name',
+                        'label' => __('First Name', 'fluent-crm')
+                    ],
+                    [
+                        'key'   => 'last_name',
+                        'label' => __('Last Name', 'fluent-crm')
+                    ],
+                    [
+                        'key'       => 'full_name',
+                        'label'     => __('Full Name', 'fluent-crm'),
+                        'help_text' => __('If First Name & Last Name is not available full name will be used to get first name and last name', 'fluent-crm')
+                    ]
                 ]
             ],
+            [
+                'key'                => 'other_fields',
+                'require_list'       => false,
+                'label'              => __('Other Fields', 'fluent-crm'),
+                'tips'               => __('Select which Fluent Form fields pair with their<br /> respective FlunentCRM fields.', 'fluent-crm'),
+                'component'          => 'dropdown_many_fields',
+                'field_label_remote' => __('FluentCRM Field', 'fluent-crm'),
+                'field_label_local'  => __('Form Field', 'fluent-crm'),
+                'options'            => $fieldOptions
+            ],
+            [
+                'key'                => 'tag_ids',
+                'require_list'       => false,
+                'label'              => __('Contact Tags', 'fluent-crm'),
+                'placeholder'        => __('Select Tags', 'fluent-crm'),
+                'component'          => 'selection_routing',
+                'simple_component'   => 'select',
+                'routing_input_type' => 'select',
+                'routing_key'        => 'tag_ids_selection_type',
+                'settings_key'       => 'tag_routers',
+                'is_multiple'        => true,
+                'labels'             => [
+                    'choice_label'      => __('Enable Dynamic Tag Selection', 'fluent-crm'),
+                    'input_label'       => '',
+                    'input_placeholder' => __('Set Tag', 'fluent-crm')
+                ],
+                'options'            => $this->getTags()
+            ],
+            [
+                'key'            => 'skip_if_exists',
+                'require_list'   => false,
+                'checkbox_label' => __('Skip if contact already exist in FluentCRM', 'fluent-crm'),
+                'component'      => 'checkbox-single'
+            ],
+            [
+                'key'            => 'double_opt_in',
+                'require_list'   => false,
+                'checkbox_label' => __('Enable Double Option for new contacts', 'fluent-crm'),
+                'component'      => 'checkbox-single'
+            ],
+            [
+                'key'            => 'force_subscribe',
+                'require_list'   => false,
+                'checkbox_label' => __('Enable Force Subscribe if contact is not in subscribed status (Existing contact only)', 'fluent-crm'),
+                'component'      => 'checkbox-single',
+                'inline_tip'     => __('If you enable this then contact will forcefully subscribed no matter in which status that contact had', 'fluent-crm')
+            ],
+            [
+                'require_list' => false,
+                'key'          => 'conditionals',
+                'label'        => __('Conditional Logics', 'fluent-crm'),
+                'tips'         => __('Allow FluentCRM integration conditionally based on your submission values', 'fluent-crm'),
+                'component'    => 'conditional_block'
+            ]
+        ];
+
+        if ($paymentFields) {
+            $hasSubscriptionFields = !!FormFieldsParser::getInputsByElementTypes($form, ['subscription_payment_component']);
+
+            $options = [
+                'fluentform_payment_refunded' => 'On Payment Refund'
+            ];
+
+            if ($hasSubscriptionFields) {
+                $options = [
+                    'fluentform_subscription_payment_active'   => __('On Subscription Active', 'fluent-crm'),
+                    'fluentform_subscription_payment_canceled' => __('On Subscription Cancel', 'fluent-crm'),
+                    'fluentform_payment_refunded'              => __('On Payment Refund', 'fluent-crm')
+                ];
+            }
+
+            $fields[] = [
+                'require_list' => false,
+                'key'          => 'run_events_only',
+                'label'        => __('Run only on events', 'fluent-crm'),
+                'component'    => 'checkbox-multiple-text',
+                'options'      => $options,
+                'tips'         => __('If you check any of the events then this feed will only run to the selected events', 'fluent-crm')
+            ];
+        }
+
+        $fields[] = [
+            'require_list' => false,
+            'key'          => 'remove_tags',
+            'label'        => __('Remove Contact Tags', 'fluent-crm'),
+            'placeholder'  => __('Select Tags (remove from contact)', 'fluent-crm'),
+            'tips'         => __('(Optional) The selected tags will be removed from the contact (if exist)', 'fluent-crm'),
+            'component'    => 'select',
+            'is_multiple'  => true,
+            'required'     => false,
+            'options'      => $this->getTags(),
+        ];
+
+        $fields[] = [
+            'require_list'   => false,
+            'key'            => 'enabled',
+            'label'          => __('Status', 'fluent-crm'),
+            'component'      => 'checkbox-single',
+            'checkbox_label' => __('Enable This feed', 'fluent-crm')
+        ];
+
+        return [
+            'fields'              => $fields,
             'button_require_list' => false,
             'integration_title'   => $this->title
         ];
@@ -211,7 +270,7 @@ class Bootstrap extends IntegrationManager
 
     protected function getLists()
     {
-        $lists = Lists::get();
+        $lists = Lists::orderBy('title', 'ASC')->get();
         $formattedLists = [];
         foreach ($lists as $list) {
             $formattedLists[$list->id] = $list->title;
@@ -221,7 +280,7 @@ class Bootstrap extends IntegrationManager
 
     protected function getTags()
     {
-        $tags = Tag::get();
+        $tags = Tag::orderBy('title', 'ASC')->get();
         $formattedTags = [];
         foreach ($tags as $tag) {
             $formattedTags[strval($tag->id)] = $tag->title;
@@ -233,6 +292,21 @@ class Bootstrap extends IntegrationManager
      * Form Submission Hooks Here
      */
     public function notify($feed, $formData, $entry, $form)
+    {
+        // check if only on payment event
+        if (Arr::get($feed, 'settings.run_events_only')) {
+            // We have running events selected. So we may not run this feed.
+            $paymentFields = FormFieldsParser::getPaymentFields($form, ['element']);
+            if ($paymentFields) {
+                return false;
+            }
+        }
+
+        return $this->runFeed($feed, $formData, $entry, $form);
+    }
+
+
+    private function runFeed($feed, $formData, $entry, $form)
     {
         $data = $feed['processedValues'];
         $contact = Arr::only($data, ['first_name', 'last_name', 'email']);
@@ -261,7 +335,7 @@ class Bootstrap extends IntegrationManager
         }
 
         if ($entry->ip) {
-            $contact['ip'] = 'Fluent Forms';
+            $contact['ip'] = $entry->ip;
         }
 
         if (!is_email($contact['email'])) {
@@ -305,7 +379,7 @@ class Bootstrap extends IntegrationManager
         }
 
         if (!$subscriber) {
-            if(empty($contact['source'])) {
+            if (empty($contact['source'])) {
                 $contact['source'] = 'FluentForms';
             }
 
@@ -321,6 +395,17 @@ class Bootstrap extends IntegrationManager
 
             $subscriber = FluentCrmApi('contacts')->createOrUpdate($contact, false, false);
 
+            if (!$subscriber) {
+                return false;
+            }
+
+            if ($entry->status == 'confirmed' && $subscriber->status != 'subscribed') {
+                $oldStatus = $subscriber->status;
+                $subscriber->status = 'subscribed';
+                $subscriber->save();
+                do_action('fluentcrm_subscriber_status_to_subscribed', $subscriber, $oldStatus);
+            }
+
             if ($subscriber->status == 'pending') {
                 $subscriber->sendDoubleOptinEmail();
             }
@@ -333,7 +418,10 @@ class Bootstrap extends IntegrationManager
                 $entry->id
             );
 
+            do_action('fluentcrm_contact_added_by_fluentform', $subscriber, $entry, $form, $feed);
+
         } else {
+
             if ($listId = Arr::get($data, 'list_id')) {
                 $contact['lists'] = [$listId];
             }
@@ -342,14 +430,31 @@ class Bootstrap extends IntegrationManager
 
             $forceSubscribed = !$hasDouBleOptIn && ($subscriber->status != 'subscribed');
 
+            if (!$forceSubscribed) {
+                $forceSubscribed = Arr::isTrue($data, 'force_subscribe');
+            }
+
             if ($forceSubscribed) {
                 $contact['status'] = 'subscribed';
             }
 
             $subscriber = FluentCrmApi('contacts')->createOrUpdate($contact, $forceSubscribed, false);
 
+            if ($entry->status == 'confirmed' && $subscriber->status != 'subscribed') {
+                $oldStatus = $subscriber->status;
+                $subscriber->status = 'subscribed';
+                $subscriber->save();
+                do_action('fluentcrm_subscriber_status_to_subscribed', $subscriber, $oldStatus);
+            }
+
             if ($hasDouBleOptIn && ($subscriber->status == 'pending' || $subscriber->status == 'unsubscribed')) {
                 $subscriber->sendDoubleOptinEmail();
+            }
+
+            do_action('fluentcrm_contact_updated_by_fluentform', $subscriber, $entry, $form, $feed);
+
+            if ($removeTags = Arr::get($feed, 'settings.remove_tags', [])) {
+                $subscriber->detachTags($removeTags);
             }
 
             $this->addLog(
@@ -360,8 +465,9 @@ class Bootstrap extends IntegrationManager
                 $entry->id
             );
         }
+
     }
-    
+
     public function isConfigured()
     {
         return true;
@@ -391,12 +497,12 @@ class Bootstrap extends IntegrationManager
     protected function getSelectedTagIds($data, $inputData, $simpleKey = 'tag_ids', $routingId = 'tag_ids_selection_type', $routersKey = 'tag_routers')
     {
         $routing = ArrayHelper::get($data, $routingId, 'simple');
-        if(!$routing || $routing == 'simple') {
+        if (!$routing || $routing == 'simple') {
             return ArrayHelper::get($data, $simpleKey, []);
         }
 
         $routers = ArrayHelper::get($data, $routersKey);
-        if(empty($routers)) {
+        if (empty($routers)) {
             return [];
         }
 
@@ -411,13 +517,13 @@ class Bootstrap extends IntegrationManager
         $validInputs = [];
         foreach ($routings as $routing) {
             $inputValue = ArrayHelper::get($routing, 'input_value');
-            if(!$inputValue) {
+            if (!$inputValue) {
                 continue;
             }
             $condition = [
                 'conditionals' => [
                     'status'     => true,
-                    'is_test' => true,
+                    'is_test'    => true,
                     'type'       => 'any',
                     'conditions' => [
                         $routing
@@ -431,5 +537,74 @@ class Bootstrap extends IntegrationManager
         }
 
         return $validInputs;
+    }
+
+    private function registerPaymentEvents()
+    {
+        add_action('fluentform_subscription_payment_active', function ($subscription, $submission) {
+            $this->handlePaymentEvent($submission, 'fluentform_subscription_payment_active');
+        }, 10, 2);
+        add_action('fluentform_subscription_payment_canceled', function ($subscription, $submission) {
+            $this->handlePaymentEvent($submission, 'fluentform_subscription_payment_canceled');
+        }, 10, 2);
+
+        add_action('fluentform_payment_refunded', function ($refund, $transaction, $submission) {
+            $this->handlePaymentEvent($submission, 'fluentform_payment_refunded');
+        }, 10, 3);
+    }
+
+    private function handlePaymentEvent($submission, $event)
+    {
+        // Get Fluent Forms Feeds
+        $feeds = fluentCrmDb()->table('fluentform_form_meta')
+            ->where('form_id', $submission->form_id)
+            ->where('meta_key', 'fluentcrm_feeds')
+            ->orderBy('id', 'ASC')
+            ->get();
+
+        if (!$feeds) {
+            return false;
+        }
+        if (!is_array($submission->response)) {
+            $formData = json_decode($submission->response, true);
+        } else {
+            $formData = $submission->response;
+        }
+
+        $form = fluentFormApi('forms')->find($submission->form_id);
+
+        $notificationManager = new GlobalNotificationManager(wpFluentForm());
+
+        foreach ($feeds as $feed) {
+            $parsedValue = json_decode($feed->value, true);
+            if ($parsedValue && ArrayHelper::isTrue($parsedValue, 'enabled')) {
+
+                $runEvents = ArrayHelper::get($parsedValue, 'run_events_only', []);
+
+                // check if this is our event or not
+                if (!$runEvents || !in_array($event, $runEvents)) {
+                    continue;
+                }
+
+                // Now check if conditions matched or not
+                $isConditionMatched = $notificationManager->checkCondition($parsedValue, $formData, $submission->id);
+                if ($isConditionMatched) {
+                    $item = [
+                        'id'       => $feed->id,
+                        'meta_key' => $feed->meta_key,
+                        'settings' => $parsedValue
+                    ];
+
+                    $processedValues = $item['settings'];
+                    unset($processedValues['conditionals']);
+
+                    $item['processedValues'] = ShortCodeParser::parse($processedValues, $submission->id, $formData, $form, false, $feed->meta_key);
+
+                    $this->runFeed($item, $formData, $submission, $form);
+
+                }
+            }
+        }
+
     }
 }

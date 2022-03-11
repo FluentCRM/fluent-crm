@@ -9,26 +9,36 @@ use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\Template;
 use FluentCrm\App\Services\BlockParser;
 use FluentCrm\App\Services\Helper;
-use FluentCrm\Includes\Helpers\Arr;
-use FluentCrm\Includes\Mailer\Handler;
-use FluentCrm\Includes\Mailer\Mailer;
-use FluentCrm\Includes\Request\Request;
+use FluentCrm\App\Services\Libs\Mailer\Mailer;
+use FluentCrm\Framework\Support\Arr;
+use FluentCrm\Framework\Request\Request;
 
+/**
+ *  CampaignController - REST API Handler Class
+ *
+ *  REST API Handler
+ *
+ * @package FluentCrm\App\Http
+ *
+ * @version 1.0.0
+ */
 class CampaignController extends Controller
 {
     public function campaigns(Request $request)
     {
         $search = $request->get('searchBy');
         $status = $request->get('statuses');
-        $order = $request->get('order') ?: 'desc';
-        $orderBy = $request->get('orderBy') ?: 'id';
+        $order = $request->get('sort_type') ?: 'DESC';
+        $orderBy = $request->get('sort_by') ?: 'id';
         $with = $request->get('with', []);
 
         $campaigns = Campaign::when($status, function ($query) use ($status) {
-            $query->whereIn('status', $status);
+            return $query->whereIn('status', $status);
         })->when($search, function ($query) use ($search) {
-            $query->where('title', 'LIKE', "%$search%");
-        })->orderBy($orderBy, ($order == 'ascending' ? 'asc' : 'desc'))->paginate();
+            return $query->where('title', 'LIKE', "%$search%");
+        })
+            ->orderBy($orderBy, ($order == 'ASC') ? 'ASC' : 'DESC')
+            ->paginate();
 
         if (in_array('stats', $with)) {
             foreach ($campaigns as $campaign) {
@@ -37,7 +47,9 @@ class CampaignController extends Controller
             }
         }
 
-        return $this->sendSuccess(compact('campaigns'));
+        return [
+            'campaigns' => $campaigns
+        ];
     }
 
     public function create(Request $request)
@@ -67,15 +79,13 @@ class CampaignController extends Controller
             $campaign = Campaign::find($id);
         }
 
-        $this->app->doCustomAction('campaign_status_active', $campaign);
+
+        do_action('fluentcrm_campaign_status_active', $campaign);
 
         $templates = Template::emailTemplates()
             ->select(['ID', 'post_title'])
-            ->orderBy([
-                'post_status', 'ID'
-            ], 'desc')
+            ->orderBy('ID', 'desc')
             ->get();
-
 
         $campaign->server_time = current_time('mysql');
 
@@ -142,7 +152,7 @@ class CampaignController extends Controller
 
         $campaign = Campaign::find($id);
 
-        $this->app->doCustomAction('campaign_status_active', $campaign);
+        do_action('fluentcrm_campaign_status_active', $campaign);
 
         $campaign->fill($updateData)->save();
 
@@ -155,6 +165,15 @@ class CampaignController extends Controller
         }
 
         if (isset($data['next_step'])) {
+            $nextStep = $data['next_step'];
+            if ($nextStep == 1 && $request->get('check_compliance')) {
+                $footerDisabled = Arr::get($campaign->settings, 'template_config.disable_footer') == 'yes';
+                if ($footerDisabled && !Helper::hasComplianceText($campaign->email_body)) {
+                    return $this->sendError([
+                        'message' => '##crm.manage_subscription_url## or ##crm.unsubscribe_url## string is required for compliance. Please include unsubscription or manage subscription link'
+                    ]);
+                }
+            }
             fluentcrm_update_campaign_meta($id, '_next_config_step', $data['next_step']);
         }
 
@@ -168,7 +187,7 @@ class CampaignController extends Controller
         $step = $request->get('next_step');
         fluentcrm_update_campaign_meta($id, '_next_config_step', $step);
         return [
-            'message' => 'step saved'
+            'message' => __('step saved', 'fluent-crm')
         ];
     }
 
@@ -201,38 +220,58 @@ class CampaignController extends Controller
         $startTime = microtime(true);
         $campaign = Campaign::find($campaignId);
 
-        $this->app->doCustomAction('campaign_status_active', $campaign);
+        do_action('fluentcrm_campaign_status_active', $campaign);
 
-        $page = intval($this->request->get('page', 1));
-        $limit = intval(apply_filters('fluentcrm_process_subscribers_per_request', 300));
+        $page = (int)$this->request->get('page', 1);
+        $limit = (int)apply_filters('fluentcrm_process_subscribers_per_request', 90);
+
         $subscribersSettings = [
             'subscribers'         => $request->get('subscribers'),
             'excludedSubscribers' => $request->get('excludedSubscribers'),
             'sending_filter'      => $request->get('sending_filter', 'list_tag'),
-            'dynamic_segment'     => $request->get('dynamic_segment')
+            'dynamic_segment'     => $request->get('dynamic_segment'),
+            'advanced_filters'    => $request->getJson('advanced_filters', [])
         ];
 
+        $offset = 0;
+        $runTime = 40;
+
         if ($page == 1) {
+            $runTime = 15;
             $campaign->campaign_emails()->delete();
-            $campaign->settings = array_merge(
-                $campaign->settings, $subscribersSettings
-            );
+            $campaign->settings = wp_parse_args($subscribersSettings, $campaign->settings);
             $campaign->save();
+            fluentcrm_update_campaign_meta($campaign->id, '_recipient_processed', 0);
+        } else {
+            $offset = (int)fluentcrm_get_campaign_meta($campaign->id, '_recipient_processed', true);
         }
 
-        $offset = ($page - 1) * $limit;
-
         $subscribeStatus = $campaign->subscribeBySegment($subscribersSettings, $limit, $offset);
+        fluentcrm_update_campaign_meta($campaign->id, '_recipient_processed', $campaign->recipients_count);
+
+        $willRun = true;
+
+        while ($willRun && ((microtime(true) - $startTime) < $runTime) && !fluentCrmIsMemoryExceeded()) {
+            $campaign = Campaign::find($campaignId);
+            $willRun = !!$subscribeStatus['result'];
+
+            if ($willRun) {
+                $subscribeStatus = $campaign->subscribeBySegment($subscribersSettings, $limit, $campaign->recipients_count);
+                fluentcrm_update_campaign_meta($campaign->id, '_recipient_processed', $campaign->recipients_count);
+            }
+        }
 
         $hasMore = !!$subscribeStatus['result'];
 
         if (!$hasMore) {
             $campaign = Campaign::find($campaignId);
+            fluentcrm_update_campaign_meta($campaign->id, '_recipient_processed', 0);
             if (!$campaign->recipients_count) {
                 return $this->sendError([
                     'message' => __('Sorry, No subscribers found based on your filters', 'fluent-crm')
                 ]);
             }
+            $campaign->maybeDeleteDuplicates();
         }
 
         if ($subscribeStatus['total_items']) {
@@ -242,7 +281,10 @@ class CampaignController extends Controller
                 'total_items'    => $subscribeStatus['total_items'],
                 'page_total'     => ceil($subscribeStatus['total_items'] / $limit),
                 'next_page'      => $page + 1,
-                'execution_time' => microtime(true) - $startTime
+                'execution_time' => microtime(true) - $startTime,
+                'memory'         => fluentCrmIsMemoryExceeded(),
+                'memory_limit'   => fluentCrmGetMemoryLimit(),
+                'memory_usage'   => memory_get_usage(true)
             ]);
         }
 
@@ -261,12 +303,25 @@ class CampaignController extends Controller
     public function getContactEstimation(Request $request)
     {
         $start_time = microtime(true);
+
+        $filterType = $request->get('sending_filter', 'list_tag');
+
         $subscribersSettings = [
-            'subscribers'         => $request->get('subscribers'),
-            'excludedSubscribers' => $request->get('excludedSubscribers'),
-            'sending_filter'      => $request->get('sending_filter', 'list_tag'),
-            'dynamic_segment'     => $request->get('dynamic_segment')
+            'sending_filter' => $filterType
         ];
+
+        if ($filterType == 'list_tag') {
+            $subscribersSettings['subscribers'] = $request->get('subscribers', []);
+            $subscribersSettings['excludedSubscribers'] = $request->get('excludedSubscribers', []);
+        } else if ($filterType == 'dynamic_segment') {
+            $subscribersSettings['dynamic_segment'] = $request->get('dynamic_segment', []);
+        } else if ($filterType == 'advanced_filters') {
+            $subscribersSettings['advanced_filters'] = $request->getJson('advanced_filters', []);
+        } else {
+            return [
+                'count' => 0
+            ];
+        }
 
         $count = (new Campaign())->getSubscriberIdsCountBySegmentSettings($subscribersSettings);
 
@@ -304,7 +359,7 @@ class CampaignController extends Controller
         $scheduleAt = $request->get('scheduled_at');
 
         $campaign = Campaign::find($campaignId);
-        $this->app->doCustomAction('campaign_status_active', $campaign);
+        do_action('fluentcrm_campaign_status_active', $campaign);
 
         if ($scheduleAt) {
             CampaignEmail::where('campaign_id', $campaignId)
@@ -348,7 +403,7 @@ class CampaignController extends Controller
                 'blocking'  => false,
                 'body'      => [
                     'campaign_id' => $campaignId,
-                    'time' => time(),
+                    'time'        => time(),
                     'action'      => 'fluentcrm-post-campaigns-send-now'
                 ]
             ]);
@@ -368,13 +423,14 @@ class CampaignController extends Controller
         $isTest = $this->request->get('test_campaign') == 'yes';
 
         add_action('wp_mail_failed', function ($wpError) {
-            $this->sendError([
+            return $this->sendError([
                 'message' => $wpError->get_error_message()
             ]);
         }, 10, 1);
 
         if ($isTest) {
             $campaign = (object)$this->request->get('campaign');
+
             if (empty($campaign->settings)) {
                 $campaign->settings = [
                     'template_config' => []
@@ -406,29 +462,34 @@ class CampaignController extends Controller
             $subscriber = Subscriber::where('status', 'subscribed')->first();
         }
 
-
-        $emailBody = (new BlockParser($subscriber))->parse($emailBody);
+        $designTemplate = $campaign->design_template;
+        if ($designTemplate == 'raw_html' || $designTemplate == 'raw_classic') {
+            $emailBody = $campaign->email_body;
+        } else {
+            $emailBody = (new BlockParser($subscriber))->parse($emailBody);
+        }
 
         $emailFooter = Arr::get(Helper::getGlobalEmailSettings(), 'email_footer', '');
 
         $emailSubject = $campaignEmail->email_subject;
-        if ($subscriber) {
-            $emailBody = apply_filters('fluentcrm-parse_campaign_email_text', $emailBody, $subscriber);
-            $emailFooter = apply_filters('fluentcrm-parse_campaign_email_text', $emailFooter, $subscriber);
-            $emailSubject = apply_filters('fluentcrm-parse_campaign_email_text', $emailSubject, $subscriber);
-        }
 
+
+        if ($subscriber) {
+            $emailBody = apply_filters('fluentcrm_parse_campaign_email_text', $emailBody, $subscriber);
+            $emailFooter = apply_filters('fluentcrm_parse_campaign_email_text', $emailFooter, $subscriber);
+            $emailSubject = apply_filters('fluentcrm_parse_campaign_email_text', $emailSubject, $subscriber);
+        }
 
         $templateData = [
             'preHeader'   => $campaign->email_pre_header,
             'email_body'  => $emailBody,
             'footer_text' => $emailFooter,
-            'config'      => wp_parse_args($campaign->settings['template_config'], Helper::getTemplateConfig($campaign->design_template))
+            'config'      => wp_parse_args(Arr::get($campaign->settings, 'template_config', []), Helper::getTemplateConfig($campaign->design_template))
         ];
 
 
-        $emailBody = $this->app->applyCustomFilters(
-            'email-design-template-' . $campaign->design_template,
+        $emailBody = apply_filters(
+            'fluentcrm_email-design-template-' . $campaign->design_template,
             $emailBody,
             $templateData,
             $campaign,
@@ -444,11 +505,69 @@ class CampaignController extends Controller
             'headers' => Helper::getMailHeadersFromSettings(Arr::get($campaign->settings, 'mailer_settings', []))
         ];
 
+
+        Helper::maybeDisableEmojiOnEmail();
         $result = Mailer::send($data);
 
         return [
-            'message' => 'Test email successfully sent to ' . $email . ', The dynamic tags may not replaced in test email',
+            'message' => __('Test email successfully sent to ', 'fluent-crm') . $email . __(', The dynamic tags may not replaced in test email', 'fluent-crm'),
             'result'  => $result
+        ];
+    }
+
+    public function getEmailPreviewBody()
+    {
+        $campaign = $this->request->get('campaign');
+
+        if (isset($campaign['post_content'])) {
+            $campaign['email_body'] = $campaign['post_content'];
+        }
+
+        if (isset($campaign['post_excerpt'])) {
+            $campaign['email_pre_header'] = $campaign['post_excerpt'];
+        }
+
+        $campaign = (object)$campaign;
+
+        $emailBody = $campaign->email_body;
+
+
+        $subscriber = fluentcrm_get_current_contact();
+        if (!$subscriber) {
+            $subscriber = Subscriber::where('status', 'subscribed')->first();
+        }
+
+        $designTemplate = $campaign->design_template;
+
+        if ($designTemplate == 'raw_html' || $designTemplate == 'raw_classic') {
+            $emailBody = $campaign->email_body;
+        } else {
+            $emailBody = (new BlockParser($subscriber))->parse($emailBody);
+        }
+
+        $emailFooter = Arr::get(Helper::getGlobalEmailSettings(), 'email_footer', '');
+
+        if ($subscriber) {
+            $emailBody = apply_filters('fluentcrm_parse_campaign_email_text', $emailBody, $subscriber);
+        }
+
+        $templateData = [
+            'preHeader'   => $campaign->email_pre_header,
+            'email_body'  => $emailBody,
+            'footer_text' => $emailFooter,
+            'config'      => wp_parse_args(Arr::get($campaign->settings, 'template_config', []), Helper::getTemplateConfig($campaign->design_template))
+        ];
+
+        $emailBody = apply_filters(
+            'fluentcrm_email-design-template-' . $campaign->design_template,
+            $emailBody,
+            $templateData,
+            $campaign,
+            false
+        );
+
+        return [
+            'preview_html' => $emailBody
         ];
     }
 
@@ -460,7 +579,7 @@ class CampaignController extends Controller
 
         $campaign = Campaign::findOrFail($campaignId);
 
-        $this->app->doCustomAction('campaign_status_active', $campaign);
+        do_action('fluentcrm_campaign_status_active', $campaign);
 
         $campaign->unsubscribe($subscriberIds);
 
@@ -470,7 +589,7 @@ class CampaignController extends Controller
     public function delete(Request $request, $campaignId)
     {
         $campaign = Campaign::find($campaignId);
-        $this->app->doCustomAction('campaign_status_working', $campaign);
+        do_action('fluentcrm_campaign_status_working', $campaign);
 
         $campaign->delete();
         CampaignEmail::where('campaign_id', $campaignId)->delete();
@@ -486,7 +605,7 @@ class CampaignController extends Controller
         $campaignId = $this->request->get('campaign_id');
         $campaign = Campaign::find($campaignId);
 
-        $this->app->doCustomAction('campaign_status_active', $campaign);
+        do_action('fluentcrm_campaign_status_active', $campaign);
 
         return $this->send([
             'id' => Template::create([
@@ -498,6 +617,10 @@ class CampaignController extends Controller
 
     public function previewEmail(Request $request, $emailId)
     {
+        if (!defined('FLUENTCRM_PREVIEWING_EMAIL')) {
+            define('FLUENTCRM_PREVIEWING_EMAIL', true);
+        }
+
         $email = CampaignEmail::findOrFail($emailId);
 
         $emailData = $email->previewData();
@@ -532,7 +655,7 @@ class CampaignController extends Controller
                     'body'      => [
                         'campaign_id' => $campaignId,
                         'retry'       => 1,
-                        'time' => time(),
+                        'time'        => time(),
                         'action'      => 'fluentcrm-post-campaigns-send-now'
                     ]
                 ]);
@@ -581,7 +704,7 @@ class CampaignController extends Controller
             }
         }
 
-        $stat = CampaignEmail::select('status', wpFluent()->raw('count(*) as total'))
+        $stat = CampaignEmail::select('status', fluentCrmDb()->raw('count(*) as total'))
             ->where('campaign_id', $campaignId)
             ->groupBy('status')
             ->get();
@@ -677,7 +800,7 @@ class CampaignController extends Controller
     {
         $oldCampaign = Campaign::findOrFail($id);
         $newCampaign = [
-            'title'            => '[Duplicate] ' . $oldCampaign->title,
+            'title'            => __('[Duplicate] ', 'fluent-crm') . $oldCampaign->title,
             'slug'             => $oldCampaign->slug . '-' . time(),
             'email_body'       => $oldCampaign->email_body,
             'status'           => 'draft',
@@ -702,5 +825,29 @@ class CampaignController extends Controller
             'message'  => __('Campaign has been successfully duplicated', 'fluent-crm')
         ];
 
+    }
+
+    public function unSchedule(Request $request, $id)
+    {
+        $campaign = Campaign::findOrFail($id);
+
+        if ($campaign->status != 'scheduled') {
+            return $this->sendError([
+                'message' => __('You can only un-schedule a campaign if it is on "scheduled" state, Please reload this page', 'fluent-crm')
+            ]);
+        }
+
+        $campaign->status = 'draft';
+        $campaign->save();
+
+        CampaignEmail::where('campaign_id', $campaign->id)
+            ->where('status', 'scheduled')
+            ->update([
+                'status' => 'draft'
+            ]);
+
+        return [
+            'message' => __('Campaign has been successfully un-scheduled', 'fluent-crm')
+        ];
     }
 }

@@ -2,6 +2,16 @@
 
 namespace FluentCrm\App\Hooks\Handlers;
 
+/**
+ *  CampaignGuard Class
+ *
+ * Used to handle concurrent requests for the same campaign.
+ *
+ * @package FluentCrm\App\Hooks
+ *
+ * @version 1.0.0
+ */
+
 class CampaignGuard
 {
     const FORBIDDEN_CODE = 403;
@@ -15,7 +25,7 @@ class CampaignGuard
         $status = $campaign->status;
 
         if (!in_array($status, ['draft', 'pending', 'incomplete', 'purged', 'scheduled'])) {
-            $message = "The campaign has been locked and not modifiable due to it's current status";
+            $message = __('The campaign has been locked and not modifiable due to it\'s current status', 'fluent-crm');
             $message .= ": <strong>{$status}</strong>.";
             $this->send($message);
         }
@@ -32,7 +42,7 @@ class CampaignGuard
         $status = $campaign->status;
 
         if ($status == 'working') {
-            $message = "The campaign has been locked and not deletable due to it's current status";
+            $message = __("The campaign has been locked and not deletable due to it's current status", "fluent-crm");
             $message .= ": <strong>{$status}</strong>.";
             $this->send($message);
         }

@@ -4,8 +4,7 @@ namespace FluentCrm\App\Services\Funnel\Benchmarks;
 
 use FluentCrm\App\Services\Funnel\BaseBenchMark;
 use FluentCrm\App\Services\Funnel\FunnelProcessor;
-use FluentCrm\App\Models\Tag;
-use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Framework\Support\Arr;
 
 class RemoveFromTagBenchmark extends BaseBenchMark
 {
@@ -23,7 +22,7 @@ class RemoveFromTagBenchmark extends BaseBenchMark
         return [
             'title'       => __('Tag Removed', 'fluent-crm'),
             'description' => __('This will run when selected Tags have been removed from a contact', 'fluent-crm'),
-            'icon' => fluentCrmMix('images/funnel_icons/tag_removed.svg'),
+            'icon' => 'fc-icon-tag_removed',//fluentCrmMix('images/funnel_icons/tag_removed.svg'),
             'settings'    => [
                 'tags'        => [],
                 'select_type' => 'any',
@@ -102,7 +101,7 @@ class RemoveFromTagBenchmark extends BaseBenchMark
         $marchType = Arr::get($settings, 'select_type');
 
         if ($marchType == 'all') {
-            $attachedTagIds = $subscriber->tags->pluck('id');
+            $attachedTagIds = $subscriber->tags->pluck('id')->toArray();
             return !array_diff($settings['tags'], $attachedTagIds) == $settings['tags'];
         }
 

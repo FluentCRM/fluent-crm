@@ -2,7 +2,17 @@
 
 namespace FluentCrm\App\Models;
 
-use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Framework\Support\Arr;
+
+/**
+ *  Webhook Model - DB Model for Webhooks
+ *
+ *  Database Model
+ *
+ * @package FluentCrm\App\Models
+ *
+ * @version 1.0.0
+ */
 
 class Webhook extends Meta
 {
@@ -26,7 +36,7 @@ class Webhook extends Meta
             'fields' => [],
             'custom_fields' => []
         ];
-        
+
         foreach (Subscriber::mappables() as $key => $column) {
             $contactFields['fields'][] = ['key' => $key, 'field' => $column];
         }
@@ -71,7 +81,7 @@ class Webhook extends Meta
                 'id' => '', 'url' => ''
             ])
         );
-        
+
         $this->save();
 
         return $this;

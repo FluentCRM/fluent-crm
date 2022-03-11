@@ -2,10 +2,18 @@
 
 namespace FluentCrm\Includes\Helpers;
 
+use FluentCrm\App\Services\Libs\ConditionAssessor;
+
+/**
+ * @deprecated No longer used by internal code and not recommended. Please use FluentCrm\App\Services\Libs\ConditionAssessor instead
+ */
+
 class ConditionAssesor
 {
     public static function matchAllGroups($groups, $inputs, $matchType = 'match_any')
     {
+        _doing_it_wrong(__FUNCTION__, 'Use FluentCrm\App\Services\Libs\ConditionAssessor::matchAllGroups() instead', '2.5.0');
+
         $hasConditionMet = true;
         foreach ($groups as $group) {
             $hasConditionMet = self::evaluate($group, $inputs);
@@ -22,6 +30,8 @@ class ConditionAssesor
 
     public static function evaluate($conditionGroup, $inputs)
     {
+        _doing_it_wrong(__FUNCTION__, 'Use FluentCrm\App\Services\Libs\ConditionAssessor::evaluate() instead', '2.5.0');
+
         $hasConditionMet = true;
         $conditionals =  Arr::get($conditionGroup, 'conditions');
 
@@ -44,6 +54,8 @@ class ConditionAssesor
 
     public static function assess($conditional, $inputs)
     {
+        _doing_it_wrong(__FUNCTION__, 'Use FluentCrm\App\Services\Libs\ConditionAssessor::assess() instead', '2.5.0');
+
         if ($conditional['data_key']) {
             $sourceValue = Arr::get($inputs, $conditional['data_key']);
             $dataValue = $conditional['data_value'];
@@ -105,6 +117,18 @@ class ConditionAssesor
                     }
                     $sourceValue = strval($sourceValue);
                     return strlen($sourceValue) > $dataValue;
+                    break;
+                case 'match_all':
+                    $sourceValue = (array) $sourceValue;
+                    $dataValue = (array) $dataValue;
+                    sort($sourceValue);
+                    sort($dataValue);
+                    return $sourceValue == $dataValue;
+                    break;
+                case 'match_none_of':
+                    $sourceValue = (array) $sourceValue;
+                    $dataValue = (array) $dataValue;
+                    return !(array_intersect($sourceValue, $dataValue));
                     break;
             }
         }

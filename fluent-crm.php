@@ -1,10 +1,11 @@
-<?php
+<?php defined('ABSPATH') or die;
+
 /*
 Plugin Name:  FluentCRM - Marketing Automation For WordPress
 Plugin URI:   https://fluentcrm.com
 Description:  CRM and Email Newsletter Plugin for WordPress
-Version:      2.0.3
-Author:       Fluent CRM
+Version:      2.5.8
+Author:       Newsletter Team by Fluent CRM
 Author URI:   https://fluentcrm.com
 License:      GPLv2 or later
 License URI:  https://www.gnu.org/licenses/gpl-2.0.html
@@ -12,28 +13,28 @@ Text Domain:  fluent-crm
 Domain Path:  /language
 */
 
-require_once("fluentcrm_boot.php");
+define('FLUENTCRM', 'fluentcrm');
+define('FLUENTCRM_UPLOAD_DIR', '/fluentcrm');
+define('FLUENTCRM_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('FLUENTCRM_PLUGIN_PATH', plugin_dir_path(__FILE__));
+define('FLUENTCRM_PLUGIN_VERSION', '2.5.8');
+define('FLUENTCRM_FRAMEWORK_VERSION', '2');
+require __DIR__ . '/vendor/autoload.php';
 
-add_action('plugins_loaded', function () {
-    do_action('fluentcrm_loaded', new \FluentCrm\Includes\Core\Application);
-});
+call_user_func(function ($bootstrap) {
+    $bootstrap(__FILE__);
+}, require(__DIR__ . '/boot/app.php'));
 
-register_activation_hook(
-    __FILE__, array('FluentCrm\Includes\Activator', 'handle')
-);
+add_filter('plugin_row_meta', 'fluentcrm_plugin_row_meta', 10, 2);
 
-register_deactivation_hook(
-    __FILE__, array('FluentCrm\Includes\Deactivator', 'handle')
-);
-
-// Handle Newtwork new Site Activation
-add_action('wpmu_new_blog', function ($blogId) {
-    switch_to_blog($blogId);
-    \FluentCrm\Includes\Activator::handle(false);
-    restore_current_blog();
-});
-
-/*
- * Thanks for checking the source code
- * Please check at PHP API Here: https://github.com/FluentCRM/fluent-crm/wiki/PHP-API
-*/
+function fluentcrm_plugin_row_meta($links, $file)
+{
+    if ('fluent-crm/fluent-crm.php' == $file) {
+        $row_meta = array(
+            'docs'    => '<a href="https://fluentcrm.com/docs/" style="color: #23c507;font-weight: 600;" aria-label="' . esc_attr(esc_html__('View FluentCRM Documentation', 'fluent-crm')) . '" target="_blank">' . esc_html__('Docs & FAQs', 'fluent-crm') . '</a>',
+            'support' => '<a href="https://wpmanageninja.com/support-tickets/#/" style="color: #583fad;font-weight: 600;" aria-label="' . esc_attr(esc_html__('Get Support', 'fluent-crm')) . '" target="_blank">' . esc_html__('Support', 'fluent-crm') . '</a>'
+        );
+        return array_merge($links, $row_meta);
+    }
+    return (array)$links;
+}

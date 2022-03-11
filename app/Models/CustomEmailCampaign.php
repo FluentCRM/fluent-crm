@@ -4,6 +4,16 @@ namespace FluentCrm\App\Models;
 
 use FluentCrm\App\Services\Helper;
 
+/**
+ *  CustomEmailCampaign Model - DB Model for Custom Emails
+ *
+ *  Database Model
+ *
+ * @package FluentCrm\App\Models
+ *
+ * @version 1.0.0
+ */
+
 class CustomEmailCampaign extends Campaign
 {
     protected static $type = 'custom_email_campaign';
@@ -13,7 +23,7 @@ class CustomEmailCampaign extends Campaign
         $defaultTemplate = Helper::getDefaultEmailTemplate();
         return [
             'id'               => '',
-            'title'            => 'Custom Email',
+            'title'            => __('Custom Email', 'fluent-crm'),
             'status'           => 'published',
             'template_id'      => '',
             'email_subject'    => '',

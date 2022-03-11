@@ -4,9 +4,18 @@ namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\Models\CampaignEmail;
 use FluentCrm\App\Services\Reporting;
-use FluentCrm\Includes\Request\Request;
+use FluentCrm\Framework\Request\Request;
 use FluentCrm\App\Models\CampaignUrlMetric;
 
+/**
+ *  ReportingController - REST API Handler Class
+ *
+ *  REST API Handler
+ *
+ * @package FluentCrm\App\Http
+ *
+ * @version 1.0.0
+ */
 class ReportingController extends Controller
 {
     public function getContactGrowth(Request $request, Reporting $reporting)
@@ -60,6 +69,13 @@ class ReportingController extends Controller
 
         return [
             'message' => __('Selected emails has been deleted', 'fluent-crm')
+        ];
+    }
+
+    public function getAdvancedReportProviders()
+    {
+        return [
+            'providers' => apply_filters('fluentcrm_advanced_report_providers', [])
         ];
     }
 }

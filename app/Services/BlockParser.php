@@ -2,8 +2,8 @@
 
 namespace FluentCrm\App\Services;
 
-
-use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\App\Services\BlockRender\WooProduct;
+use FluentCrm\Framework\Support\Arr;
 
 class BlockParser
 {
@@ -67,10 +67,14 @@ class BlockParser
             }
             $block['innerContent'][0] = $this->getButtonsOpening($block);
             $block['innerContent'][$lastContentIndex] = $this->getButtonsClosing($block);
-        } else if($blockName == 'core/image') {
+        } else if ($blockName == 'core/image') {
             $block['innerContent'][0] = $this->getImageBlockHtml($block);
-        } else if($blockName =='core/latest-posts') {
+        } else if ($blockName == 'core/latest-posts') {
             $block['blockName'] = 'fluent-crm/latest-posts';
+            $block['fc_total_blocks'] = 1;
+        } else if ($blockName == 'fluentcrm/woo-product') {
+            $block['innerContent'][0] = '';
+            $block['innerContent'][2] = '';
             $block['fc_total_blocks'] = 1;
         }
 
@@ -93,8 +97,10 @@ class BlockParser
             $content = $this->getColumnOpening($data) . $content . $this->getColumnClosing($data);
         } else if ($blockName == 'core/button') {
             $content = $this->getButtonWrapper($content, $data);
-        } else if($blockName == 'fluent-crm/latest-posts') {
+        } else if ($blockName == 'fluent-crm/latest-posts') {
             $content = $this->renderLatestPosts($data);
+        } else if ($blockName == 'fluentcrm/woo-product') {
+            $content = WooProduct::renderProduct($content, $data);
         }
 
         return $content;
@@ -134,7 +140,12 @@ class BlockParser
 
     private function getRowOpening($block)
     {
-        return '<table class="fce_row" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;"><tbody><tr>';
+        $background = Arr::get($block, 'attrs.style.color.background');
+        $style = 'margin-bottom: 10px;';
+        if ($background) {
+            $style .= 'background-color:' . $background . ';';
+        }
+        return '<table class="fce_row" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;' . $style . '"><tbody><tr>';
     }
 
     private function getRowClosing($block)
@@ -160,33 +171,49 @@ class BlockParser
 
     private function getButtonsOpening($block)
     {
-        $align = Arr::get($block, 'attrs.contentJustification', 'left');
+        $align = Arr::get($block, 'attrs.layout.justifyContent', 'left');
         $tableCssClass = 'fce_row fce_buttons_row';
 
         $width = 'auto';
-        if($align == 'right') {
+        if ($align == 'right') {
             $width = '100%';
-        } else if(Arr::get($block, 'innerBlocks.0.attrs.width') == 100) {
+        } else if (Arr::get($block, 'innerBlocks.0.attrs.width') == 100) {
             $width = '100%';
         }
 
         $tableCssClass .= ' tb_btn_' . $align;
 
-        return '<table valign="middle" align="' . $align . '" class="' . $tableCssClass . '" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%; width: ' . $width . '; float:none;"><tbody><tr>';
+        if ($definedWidth = Arr::get($block, 'innerBlocks.0.attrs.width')) {
+            $tableCssClass .= ' wp-block-button__width-' . $definedWidth;
+        }
+
+        $btnCount = count(Arr::get($block, 'innerBlocks'));
+
+        if ($btnCount > 1) {
+            $tableCssClass .= ' fc_btn_multiple fc_btn_count_' . $btnCount;
+        }
+
+        $extraStyle = '';
+        if ($spacings = Arr::get($block, 'attrs.style.spacing.margin', [])) {
+            $extraStyle .= 'margin-top:' . $spacings['top'] . ';';
+            $extraStyle .= 'margin-bottom:' . $spacings['bottom'] . ';';
+        }
+
+        return '<table valign="middle" align="' . $align . '" class="' . $tableCssClass . '" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%; width: ' . $width . '; float:none;' . $extraStyle . '"><tbody><tr>';
     }
 
     private function getButtonWrapper($content, $data)
     {
         $defaultClass = Arr::get($data, 'attrs.className', '');
         $backgroundColor = Arr::get($data, 'attrs.style.color.background');
-        if(!$backgroundColor) {
+        if (!$backgroundColor) {
             $bgClass = Arr::get($data, 'attrs.backgroundColor');
             $backgroundColor = Helper::getColorSchemeValue($bgClass);
         }
 
         $hasTextColor = Arr::get($data, 'attrs.style.color.text') || Arr::get($data, 'attrs.textColor');
 
-        $btn_wrapper_class = $defaultClass.' ';
+        $btn_wrapper_class = $defaultClass . ' ';
         if (!$backgroundColor && $defaultClass != 'is-style-outline') {
             $btn_wrapper_class .= 'fc_d_btn_bg ';
             $backgroundColor = '#32373c';
@@ -197,27 +224,34 @@ class BlockParser
         }
 
         $additionalStyle = '';
-        if($defaultClass == 'is-style-outline') {
-            if(!$backgroundColor) {
+        if ($defaultClass == 'is-style-outline') {
+            if (!$backgroundColor) {
                 $backgroundColor = 'white';
             }
             $textColor = Arr::get($data, 'attrs.style.color.text');
-            if(!$textColor) {
+            if (!$textColor) {
                 $textColorName = Arr::get($data, 'attrs.textColor');
                 $textColor = Helper::getColorSchemeValue($textColorName);
             }
-            $additionalStyle = 'border: 1px solid '.$textColor;
+
+            if (!$textColor) {
+                $textColor = '#000000';
+            }
+
+            $additionalStyle = 'border: 1px solid ' . $textColor;
         }
 
-        $borderRadius = Arr::get($data, 'attrs.borderRadius', 5);
+        $borderRadius = Arr::get($data, 'attrs.style.border.radius', '0px');
 
-        $content = preg_replace("/<\/?div[^>]*\>/i", "", $content);
+        $content = trim(preg_replace("/<\/?div[^>]*\>/i", "", $content));
 
-        $td = '<td class="fc_btn '.trim($btn_wrapper_class).'" align="center" style="border-radius: '.$borderRadius.'px; '.$additionalStyle.'" bgcolor="'.$backgroundColor.'">';
+        $td = '<td class="fc_btn ' . trim($btn_wrapper_class) . '" align="center" style="border-radius: ' . $borderRadius . '; ' . $additionalStyle . '" bgcolor="' . $backgroundColor . '">';
 
-        $align = Arr::get($data, 'parent_attrs.contentJustification', 'center');
+        $align = Arr::get($data, 'parent_attrs.parent_attrs.layout.justifyContent', 'center');
 
-        return '<td style="padding-right: 10px;" align="'.$align.'" valign="middle" class="fce_column"><table border="0" cellspacing="0" cellpadding="0"><tr>'.$td . $content . '</td></tr></table></td>';
+        $alignment = $align=='center' ? 'text-align: -webkit-center' : ' ';
+
+        return '<td style="padding-right: 10px;'.$alignment.'" align="' . $align . '" valign="middle" class="fce_column"><table border="0" cellspacing="0" cellpadding="0"><tr>' . $td . $content . '</td></tr></table></td>';
     }
 
     private function getButtonsClosing($block)
@@ -262,15 +296,15 @@ class BlockParser
     {
         $classNames = implode(' ', array_filter([
             Arr::get($block, 'attrs.className'),
-            'wp-block-image size-'.Arr::get($block, 'attrs.sizeSlug'),
-            'align'.Arr::get($block, 'attrs.align', 'left')
+            'wp-block-image size-' . Arr::get($block, 'attrs.sizeSlug'),
+            'align' . Arr::get($block, 'attrs.align', 'left')
         ]));
 
 
         $content = $block['innerContent'][0];
         $html = strip_tags($content, '<a><figcaption><img>');
         $html = str_replace(['<figcaption', 'figcaption/>'], ['<p', '/p>'], $html);
-        $html = '<div class="'.$classNames.'">'.$html.'</div>';
+        $html = '<div class="' . $classNames . '">' . $html . '</div>';
         return $html;
     }
 

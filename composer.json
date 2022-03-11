@@ -1,0 +1,56 @@
+{
+    "name": "wpfluent/wpfluent",
+    "type": "project",
+    "description": "The WPGlue Framework for WordPress.",
+    "keywords": [
+        "WordPress",
+        "framework",
+        "WPFluent"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Sheikh Heera",
+            "email": "heera.sheikh77@gmail.com"
+        }
+    ],
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/wpfluent/framework"
+        }
+    ],
+    "require": {
+        "wpfluent/framework": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "FluentCrm\\App\\": "app/",
+            "FluentCrm\\Includes\\": "includes/",
+            "FluentCrm\\Framework\\": "vendor/wpfluent/framework/src/WPFluent"
+        },
+        "classmap": [
+            "database/"
+        ],
+        "files": [
+            "boot/globals.php"
+        ]
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0.x-dev"
+        },
+        "wpfluent": {
+            "namespace": {
+                "current": "FluentCrm"
+            }
+        }
+    },
+    "scripts": {
+        "post-update-cmd": [
+            "FluentCrm\\App\\ComposerScript::postUpdate"
+        ]
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

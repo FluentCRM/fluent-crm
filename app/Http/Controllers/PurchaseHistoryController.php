@@ -5,6 +5,15 @@ namespace FluentCrm\App\Http\Controllers;
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Services\Helper;
 
+/**
+ *  PurchaseHistoryController - REST API Handler Class
+ *
+ *  REST API Handler
+ *
+ * @package FluentCrm\App\Http
+ *
+ * @version 1.0.0
+ */
 class PurchaseHistoryController extends Controller
 {
     public function historyProviders()
@@ -20,7 +29,7 @@ class PurchaseHistoryController extends Controller
         $subscriberId = intval($this->request->get('id'));
         $subscriber = Subscriber::where('id', $subscriberId)->first();
 
-        $data = $this->app->applyCustomFilters('get_purchase_history_'.$provider, [
+        $data = apply_filters('fluentcrm_get_purchase_history_'.$provider, [
             'orders' => [],
             'total' => 0
         ], $subscriber);

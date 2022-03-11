@@ -6,12 +6,26 @@ use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Services\AutoSubscribe;
 use FluentCrm\App\Services\Funnel\FunnelHelper;
 use FluentCrm\App\Services\Helper;
-use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Framework\Support\Arr;
 
+/**
+ *  AutoSubscribeHandler Class
+ *
+ * Used to handle the auto-subscribe functionality for different WordPress Events.
+ *
+ * @package FluentCrm\App\Hooks
+ *
+ * @version 1.0.0
+ */
 class AutoSubscribeHandler
 {
     public function userRegistrationHandler($userId)
     {
+
+        if (is_multisite() && is_network_admin()) {
+            return false;
+        }
+
         $settings = (new AutoSubscribe())->getRegistrationSettings();
 
         if (Arr::get($settings, 'status') != 'yes') {
@@ -82,12 +96,17 @@ class AutoSubscribeHandler
 
     public function handleCommentPost($commentId, $isApproved, $commentData)
     {
-        $isChecked = Arr::get($_REQUEST, 'wp-comment-fc-consent') == 'yes';
-        if (!$isChecked) {
-            return false;
-        }
         // is this a spam comment?
         if ($isApproved === 'spam') {
+            return false;
+        }
+
+        if (defined('WC_PLUGIN_FILE') && Arr::get($commentData, 'comment_type') == 'review') {
+            do_action('fluentcrm_woo_review_comment_post', $commentId, $isApproved, $commentData);
+        }
+
+        $isChecked = Arr::get($_REQUEST, 'wp-comment-fc-consent') == 'yes';
+        if (!$isChecked) {
             return false;
         }
 
@@ -130,6 +149,11 @@ class AutoSubscribeHandler
 
     public function syncUserUpdate($userId, $oldData)
     {
+
+        if (is_multisite() && is_network_admin()) {
+            return false;
+        }
+
         if (!Helper::isUserSyncEnabled()) {
             return false;
         }
@@ -145,7 +169,7 @@ class AutoSubscribeHandler
             $newSubscriber = Subscriber::where('email', $user->user_email)->first();
 
             if ($newSubscriber) {
-                wpFluent()->table('fc_subscribers')
+                fluentCrmDb()->table('fc_subscribers')
                     ->where('id', $oldSubscriber->id)
                     ->update([
                         'user_id' => ''
@@ -169,12 +193,11 @@ class AutoSubscribeHandler
                     $updateData['last_name'] = $user->last_name;
                 }
 
-                return wpFluent()->table('fc_subscribers')
+                return fluentCrmDb()->table('fc_subscribers')
                     ->where('id', $oldSubscriber->id)
                     ->update($updateData);
             }
         }
-
 
         // we just have to change the first name and lastname
         $updateData = Helper::getWPMapUserInfo($user);
@@ -187,9 +210,31 @@ class AutoSubscribeHandler
 
         $updateData['updated_at'] = current_time('mysql');
 
-        return wpFluent()->table('fc_subscribers')
+        return fluentCrmDb()->table('fc_subscribers')
             ->where('email', $user->user_email)
             ->update($updateData);
+    }
 
+    public function maybeDeleteContact($userId, $reassignId, $user)
+    {
+
+        if (is_multisite() && is_network_admin()) {
+            return false;
+        }
+
+        if (!Helper::isContactDeleteOnUserDeleteEnabled()) {
+            return false;
+        }
+
+        $subscriber = Subscriber::where('user_id', $userId)->first();
+        if (!$subscriber) {
+            $subscriber = Subscriber::where('email', $user->user_email)->first();
+        }
+
+        if (!$subscriber) {
+            return false;
+        }
+
+        return Helper::deleteContacts([$subscriber->id]);
     }
 }

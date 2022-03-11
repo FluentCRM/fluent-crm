@@ -36,6 +36,7 @@
                 <label><?php echo $texts['email_label']; ?></label>
                 <input readonly="true" value="<?php echo $mask_email; ?>" class="fluentcrm_form_control" type="text" name="email_address" />
             </div>
+            <?php if($reasons): ?>
             <div class="fluentcrm_form_item">
                 <label><?php echo $texts['reason_label']; ?></label>
                 <div class="fluentcrm_radio_group">
@@ -49,6 +50,7 @@
             <div style="display: none;" id="fluentcrm_other_reason_wrapper" class="fluentcrm_form_item">
                 <input placeholder="<?php _e('Please specify', 'fluent-crm'); ?>" class="fluentcrm_form_control" type="text" name="other_reason" />
             </div>
+            <?php endif; ?>
             <?php do_action('fluentcrm_before_unsubscribe_submit', $campaign_email); ?>
             <div class="fluentcrm_form_item">
                 <input id="fluentcrm_unsubscribe_submit" type="submit" value="<?php echo $texts['button_text']; ?>"></input>

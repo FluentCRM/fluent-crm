@@ -5,7 +5,7 @@ namespace FluentCrm\App\Services\Funnel\Triggers;
 use FluentCrm\App\Services\Funnel\BaseTrigger;
 use FluentCrm\App\Services\Funnel\FunnelHelper;
 use FluentCrm\App\Services\Funnel\FunnelProcessor;
-use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Framework\Support\Arr;
 
 class UserRegistrationTrigger extends BaseTrigger
 {
@@ -21,7 +21,8 @@ class UserRegistrationTrigger extends BaseTrigger
         return [
             'category'    => __('WordPress Triggers', 'fluent-crm'),
             'label'       => __('New User Sign Up', 'fluent-crm'),
-            'description' => __('This Funnel will be initiated when a new user has been registered in your site', 'fluent-crm')
+            'description' => __('This Funnel will be initiated when a new user has been registered in your site', 'fluent-crm'),
+            'icon'        => 'fc-icon-wp_new_user_signup',
         ];
     }
 
@@ -121,7 +122,7 @@ class UserRegistrationTrigger extends BaseTrigger
         $updateType = Arr::get($conditions, 'update_type');
 
         $subscriber = FunnelHelper::getSubscriber($subscriberData['email']);
-        if ($updateType == 'skip_all_if_exist') {
+        if ($updateType == 'skip_all_if_exist' && $subscriber) {
             return false;
         }
 

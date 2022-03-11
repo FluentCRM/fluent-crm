@@ -2,9 +2,21 @@
 
 namespace FluentCrm\App\Models;
 
+/**
+ *  FunnelMetric Model - DB Model for Automation Analytics
+ *
+ *  Database Model
+ *
+ * @package FluentCrm\App\Models
+ *
+ * @version 1.0.0
+ */
+
 class FunnelMetric extends Model
 {
     protected $table = 'fc_funnel_metrics';
+
+    protected $guarded = ['id'];
 
     public function scopeStatus($query, $status = 'completed')
     {

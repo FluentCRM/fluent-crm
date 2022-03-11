@@ -5,7 +5,7 @@ namespace FluentCrm\App\Services\Funnel\Triggers;
 use FluentCrm\App\Services\Funnel\BaseTrigger;
 use FluentCrm\App\Services\Funnel\FunnelHelper;
 use FluentCrm\App\Services\Funnel\FunnelProcessor;
-use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Framework\Support\Arr;
 use FluentForm\App\Modules\Form\FormFieldsParser;
 use FluentForm\App\Services\FormBuilder\ShortCodeParser;
 
@@ -26,9 +26,10 @@ class FluentFormSubmissionTrigger extends BaseTrigger
     public function getTrigger()
     {
         return [
-            'category'    => 'CRM',
+            'category'    => __('CRM', 'fluent-crm'),
             'label'       => __('New Form Submission (Fluent Forms)', 'fluent-crm'),
-            'description' => __('This Funnel will be initiated when a new form submission has been submitted', 'fluent-crm')
+            'description' => __('This Funnel will be initiated when a new form submission has been submitted', 'fluent-crm'),
+            'icon'        => 'fc-icon-fluentforms',
         ];
     }
 
@@ -81,12 +82,14 @@ class FluentFormSubmissionTrigger extends BaseTrigger
                     'fields'        => FunnelHelper::getPrimaryContactFieldMaps()
                 ],
                 'other_fields'             => [
-                    'label'         => __('Map Other Data', 'fluent-crm'),
-                    'type'          => 'form-many-drop-down-mapper',
-                    'value_options' => $valueOptions,
-                    'local_label'   => __('Select Contact Property', 'fluent-crm'),
-                    'remote_label'  => __('Select Form Field', 'fluent-crm'),
-                    'fields'        => apply_filters('fluentcrm_fluentform_other_map_fields',
+                    'label'              => __('Map Other Data', 'fluent-crm'),
+                    'type'               => 'form-many-drop-down-mapper',
+                    'value_options'      => $valueOptions,
+                    'local_label'        => __('Select Contact Property', 'fluent-crm'),
+                    'remote_label'       => __('Select Form Field', 'fluent-crm'),
+                    'local_placeholder'  => __('Select Contact Property', 'fluent-crm'),
+                    'remote_placeholder' => __('Select Form Property', 'fluent-crm'),
+                    'fields'             => apply_filters('fluentcrm_fluentform_other_map_fields',
                         FunnelHelper::getSecondaryContactFieldMaps()
                     )
                 ],
@@ -112,7 +115,7 @@ class FluentFormSubmissionTrigger extends BaseTrigger
 
     protected function getForms($funnel)
     {
-        return wpFluent()->table('fluentform_forms')
+        return fluentCrmDb()->table('fluentform_forms')
             ->select('id', 'title')
             ->orderBy('id', 'DESC')
             ->get();
@@ -125,7 +128,7 @@ class FluentFormSubmissionTrigger extends BaseTrigger
             return [];
         }
 
-        $form = wpFluent()->table('fluentform_forms')
+        $form = fluentCrmDb()->table('fluentform_forms')
             ->find($formId);
         $formFields = FormFieldsParser::getShortCodeInputs(
             $form, [
@@ -207,6 +210,12 @@ class FluentFormSubmissionTrigger extends BaseTrigger
         }
 
         $subscriberData['status'] = $processedValues['subscription_status'];
+
+        $entry = fluentFormApi('submissions')->find($insertId);
+
+        if ($entry && $entry->status == 'confirmed') {
+            $subscriberData['status'] = 'subscribed';
+        }
 
         if (!empty($subscriberData['country'])) {
             $countries = getFluentFormCountryList();

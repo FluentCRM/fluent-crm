@@ -8,9 +8,18 @@
 
 namespace FluentCrm\App\Http\Controllers;
 
-use FluentCrm\Includes\Request\Request;
-use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Framework\Request\Request;
+use FluentCrm\Framework\Support\Arr;
 
+/**
+ *  SetupController - REST API Handler Class
+ *
+ *  REST API Handler
+ *
+ * @package FluentCrm\App\Http
+ *
+ * @version 1.0.0
+ */
 class SetupController extends Controller
 {
     public function CompleteWizard(Request $request)
@@ -21,14 +30,14 @@ class SetupController extends Controller
             $this->installFluentForm();
         }
 
-        $shareEssential = $request->get('share_essentials', 'no');
-        if ($shareEssential == 'yes') {
-            fluentcrm_update_option('_fluentcrm_share_essential', $shareEssential);
-        }
-
         $optinEmail = $request->get('optin_email', 'no');
         if ($optinEmail && is_email($optinEmail)) {
             $this->shareEmail($optinEmail);
+        }
+
+        $shareEssential = $request->get('share_essentials', 'no');
+        if ($shareEssential == 'yes') {
+            fluentcrm_update_option('_fluentcrm_share_essential', $shareEssential);
         }
 
         return $this->sendSuccess([
@@ -40,17 +49,18 @@ class SetupController extends Controller
     {
         $this->installFluentForm();
         return [
-            'ff_config' => [
+            'ff_config'    => [
                 'is_installed'     => defined('FLUENTFORM'),
                 'create_form_link' => admin_url('admin.php?page=fluent_forms#add=1')
             ],
-            'message'   => __('Fluent Forms has been installed and activated', 'fluent-crm')
+            'is_installed' => defined('FLUENTFORM'),
+            'message'      => __('Fluent Forms has been installed and activated', 'fluent-crm')
         ];
     }
 
     public function handleFluentSmtpInstall()
     {
-        if(!current_user_can('install_plugins')) {
+        if (!current_user_can('install_plugins')) {
             return $this->sendError([
                 'message' => __('Sorry! you do not have permission to install plugin', 'fluent-crm')
             ]);
@@ -59,9 +69,32 @@ class SetupController extends Controller
         $this->installFluentSMTP();
 
         return [
-            'is_installed'     => defined('FLUENTMAIL'),
-            'config_url' => admin_url('options-general.php?page=fluent-mail#/'),
-            'message'   => __('FluentSMTP plugin has been installed and activated successfully', 'fluent-crm')
+            'is_installed' => defined('FLUENTMAIL'),
+            'config_url'   => admin_url('options-general.php?page=fluent-mail#/'),
+            'message'      => __('FluentSMTP plugin has been installed and activated successfully', 'fluent-crm')
+        ];
+
+    }
+
+    public function handleFluentConnectInstall()
+    {
+        if (!current_user_can('install_plugins')) {
+            return $this->sendError([
+                'message' => __('Sorry! you do not have permission to install plugin', 'fluent-crm')
+            ]);
+        }
+
+        $plugin_id = 'fluent-connect';
+        $plugin = [
+            'name'      => __('Fluent Connect', 'fluent-crm'),
+            'repo-slug' => 'fluent-connect',
+            'file'      => 'fluent-connect.php',
+        ];
+        $this->backgroundInstaller($plugin, $plugin_id);
+
+        return [
+            'is_installed' => defined('FLUENT_CONNECT_PLUGIN_VERSION'),
+            'message'      => __('FluentConnect plugin has been installed and activated successfully', 'fluent-crm')
         ];
 
     }
@@ -71,18 +104,18 @@ class SetupController extends Controller
         $user = get_user_by('ID', get_current_user_id());
         $data = [
             'answers'    => [
-                'website' => site_url(),
-                'email'   => $optinEmail,
+                'website'    => site_url(),
+                'email'      => $optinEmail,
                 'first_name' => $user->first_name,
-                'last_name' => $user->last_name,
-                'name'    => $user->display_name
+                'last_name'  => $user->last_name,
+                'name'       => $user->display_name
             ],
             'questions'  => [
-                'website' => 'website',
+                'website'    => 'website',
                 'first_name' => 'first_name',
-                'last_name' => 'last_name',
-                'email'   => 'email',
-                'name'    => 'name'
+                'last_name'  => 'last_name',
+                'email'      => 'email',
+                'name'       => 'name'
             ],
             'user'       => [
                 'email' => $optinEmail
@@ -100,7 +133,7 @@ class SetupController extends Controller
     {
         $plugin_id = 'fluentform';
         $plugin = [
-            'name'      => 'Fluent Forms',
+            'name'      => __('Fluent Forms', 'fluent-crm'),
             'repo-slug' => 'fluentform',
             'file'      => 'fluentform.php',
         ];
@@ -111,7 +144,7 @@ class SetupController extends Controller
     {
         $plugin_id = 'fluent-smtp';
         $plugin = [
-            'name'      => 'FluentSMTP',
+            'name'      => __('FluentSMTP', 'fluent-crm'),
             'repo-slug' => 'fluent-smtp',
             'file'      => 'fluent-smtp.php',
         ];

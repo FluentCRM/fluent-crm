@@ -6,6 +6,14 @@ use FluentCrm\App\Models\CampaignEmail;
 use FluentCrm\App\Models\CampaignUrlMetric;
 use FluentCrm\App\Models\UrlStores;
 
+/**
+ *  RedirectionHandler Class
+ *
+ * @package FluentCrm\App\Hooks
+ *
+ * @version 1.0.0
+ */
+
 class RedirectionHandler
 {
     public function redirect($data)
@@ -29,7 +37,8 @@ class RedirectionHandler
 
         if ($redirectUrl) {
             do_action('fluentcrm_email_url_click', $redirectUrl, $mailId, $urlData);
-            wp_redirect($redirectUrl);
+            nocache_headers();
+            wp_redirect($redirectUrl, 307);
             exit;
         }
     }
@@ -56,6 +65,7 @@ class RedirectionHandler
 
         if (apply_filters('fluentcrm_will_use_cookie', true)) {
             setcookie("fc_s_hash", $campaignEmail->subscriber->hash, time() + 9676800);  /* expire in 28 days */
+            $_COOKIE['fc_s_hash'] = $campaignEmail->subscriber->hash;
             if ($campaignEmail->campaign_id) {
                 setcookie("fc_cid", $campaignEmail->campaign_id, time() + 9676800);  /* expire in 28 days */
             }
@@ -71,10 +81,33 @@ class RedirectionHandler
 
         do_action('fluentform_track_activity_by_subscriber', $campaignEmail->subscriber_id);
 
-        if ($args) {
-            return esc_url_raw(add_query_arg($args, $urlData->url));
+        $url = str_replace('&amp;', '&', $urlData->url);;
+
+        if(strpos($url, 'route=smart_url')) {
+            // this is a smart URL
+            $url_components = parse_url($url);
+
+            parse_str($url_components['query'], $params);
+
+            if(!empty($params['slug'])) {
+                do_action('fluentcrm_smartlink_clicked_direct', sanitize_text_field($params['slug']), $campaignEmail->subscriber);
+            }
         }
 
-        return $urlData->url;
+        if(strpos($urlData->url, 'route=bnu')) {
+            $url_components = parse_url($url);
+            parse_str($url_components['query'], $params);
+            if(!empty($params['aid'])) {
+                $benchmarkActionId = intval($params['aid']);
+                do_action('fluencrm_benchmark_link_clicked', $benchmarkActionId, $campaignEmail->subscriber);
+            }
+            $args['bnu_timer_'.time()] = time();
+        }
+
+        if ($args) {
+            $url = add_query_arg($args, $url);
+        }
+
+        return esc_url_raw($url);
     }
 }

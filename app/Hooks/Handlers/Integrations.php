@@ -3,8 +3,15 @@
 namespace FluentCrm\App\Hooks\Handlers;
 
 use FluentCrm\App\Models\Tag;
-use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Framework\Support\Arr;
 
+/**
+ *  Integrations Class
+ *
+ * @package FluentCrm\App\Hooks
+ *
+ * @version 1.0.0
+ */
 class Integrations
 {
     public function register()
@@ -17,7 +24,7 @@ class Integrations
          * Oxygen Edito Integration
          */
         if (defined('CT_VERSION')) {
-            require_once FLUENTCRM_PLUGIN_PATH.'app/Services/ExternalIntegrations/Oxygen/oxy_init.php';
+            require_once FLUENTCRM_PLUGIN_PATH . 'app/Services/ExternalIntegrations/Oxygen/oxy_init.php';
         }
 
         $this->registerBlockEditorBlocks();
@@ -27,18 +34,18 @@ class Integrations
     {
         wp_register_script(
             'fluentcrm-blocks-block-editor',
-            fluentCrmMix('admin/js/conditional_block.js'),
-            ['wp-blocks', 'wp-element', 'wp-polyfill'],
+            fluentCrmMix('block_editor/fluent_conditional_block.js'),
+            ['wp-blocks', 'wp-element', 'wp-editor'],
             FLUENTCRM_PLUGIN_VERSION
         );
 
         wp_localize_script('fluentcrm-blocks-block-editor', 'fluenctm_block_vars', [
-            'available_tags' => Tag::get()
+            'tag_fetch_url' => rest_url('fluent-crm/v2/reports/options?fields=tags')
         ]);
 
         wp_register_style(
             'fluentcrm-blocks-block-editor',
-            fluentCrmMix('admin/css/conditional_block.css'),
+            fluentCrmMix('block_editor/fluent_conditional_block.css'),
             array(),
             FLUENTCRM_PLUGIN_VERSION
         );

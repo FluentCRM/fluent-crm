@@ -2,13 +2,30 @@
 
 namespace FluentCrm\App\Models;
 
+/**
+ *  CampaignUrlMetric Model - DB Model for Email URL Metrics
+ *
+ *  Database Model
+ *
+ * @package FluentCrm\App\Models
+ *
+ * @version 1.0.0
+ */
+
 class CampaignUrlMetric extends Model
 {
     protected $table = 'fc_campaign_url_metrics';
 
+    protected $guarded = ['id'];
+
     public function campaign()
     {
         return $this->belongsTo(__NAMESPACE__.'\Campaign', 'campaign_id', 'id');
+    }
+
+    public function subscriber()
+    {
+        return $this->belongsTo(__NAMESPACE__.'\Subscriber', 'subscriber_id', 'id');
     }
 
     public static function maybeInsert($data)
@@ -18,7 +35,7 @@ class CampaignUrlMetric extends Model
             'subscriber_id' => $data['subscriber_id'],
             'type' => $data['type']
         ])->when(!empty($data['url_id']), function ($query) use ($data) {
-            $query->where('url_id', $data['url_id']);
+            return $query->where('url_id', $data['url_id']);
         });
 
         if ($instance = $query->first()) {
@@ -33,7 +50,7 @@ class CampaignUrlMetric extends Model
     public function getLinksReport($campaignId)
     {
         $stats = static::select(
-                wpFluent()->raw('count(*) as total'),
+                fluentCrmDb()->raw('count(*) as total'),
                 'fc_url_stores.url',
                 'fc_url_stores.id'
             )
@@ -49,7 +66,7 @@ class CampaignUrlMetric extends Model
 
     public function getCampaignAnalytics($campaignId)
     {
-        $stats = static::select('type', wpFluent()->raw('count(*) as total'))
+        $stats = static::select('type', fluentCrmDb()->raw('count(*) as total'))
             ->where('campaign_id', $campaignId)
             ->groupBy('type')
             ->get();
@@ -57,38 +74,51 @@ class CampaignUrlMetric extends Model
         $clickCount = 0;
         $openCount = 0;
 
+        $formattedStatus = [];
+
         foreach ($stats as $stat) {
             if($stat->type == 'open') {
                 $openCount = $stat->total;
+                $stat->icon_class = 'dashicons dashicons-buddicons-pm';
             } else if($stat->type == 'click') {
                 $clickCount = $stat->total;
+                $stat->icon_class = 'el-icon el-icon-position';
+            } else if($stat->type == 'unsubscribe') {
+                $stat->icon_class = 'el-icon el-icon-warning-outline';
             }
             $stat->is_percent = true;
             $stat->label = ucfirst($stat->type) . ' Rate' . ' ('.$stat->total.')';
+
+            $formattedStatus[$stat->type] = $stat;
+
         }
 
         if($openCount && $clickCount) {
-            $stats['ctor'] = [
+            $formattedStatus['ctor'] = [
                 'total' => number_format( ($clickCount / $openCount) * 100, 2) . '%',
-                'label' => 'Click To Open Rate',
+                'label' => __('Click To Open Rate', 'fluent-crm'),
+                'type' => 'ctor',
+                'icon_class' => 'el-icon el-icon-chat-dot-square'
             ];
         }
-        
+
         $revenue = fluentcrm_get_campaign_meta($campaignId, '_campaign_revenue');
 
         if($revenue && $revenue->value) {
             $data = (array) $revenue->value;
             foreach ($data as $currency => $cents) {
                 if($cents) {
-                    $stats['revenue'] = [
-                        'label' => 'Revenue ('.$currency.')',
-                        'total' => number_format($cents / 100, 2)
+                    $formattedStatus['revenue'] = [
+                        'label' => __('Revenue', 'fluent-crm').' ('.$currency.')',
+                        'type' => 'revenue',
+                        'total' => number_format($cents / 100, 2),
+                        'icon_class' => 'el-icon el-icon-money'
                     ];
                 }
             }
         }
 
-        return $stats;
+        return $formattedStatus;
     }
 
     public function getSubjectStats($campaign)
@@ -126,7 +156,7 @@ class CampaignUrlMetric extends Model
 
         $openCount = (new CampaignEmail)->getOpenCount($subjectId);
 
-        $clickTotal = array_sum($clickMetrics->pluck('total'));
+        $clickTotal = array_sum($clickMetrics->pluck('total')->toArray());
 
         return [
             'clicks'       => $clickMetrics,
@@ -138,7 +168,7 @@ class CampaignUrlMetric extends Model
     public function getClickMetrics($campaignId, $subjectId)
     {
         return static::select(
-                wpFluent()->raw('count(*) as total'),
+                fluentCrmDb()->raw('count(*) as total'),
                 'fc_url_stores.url'
             )
             ->where('fc_campaign_url_metrics.campaign_id', $campaignId)

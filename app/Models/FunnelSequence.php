@@ -2,9 +2,20 @@
 
 namespace FluentCrm\App\Models;
 
+/**
+ *  FunnelSequence Model - DB Model for Automation Sequences
+ *
+ *  Database Model
+ *
+ * @package FluentCrm\App\Models
+ *
+ * @version 1.0.0
+ */
 class FunnelSequence extends Model
 {
     protected $table = 'fc_funnel_sequences';
+
+    protected $guarded = ['id'];
 
     /**
      * The attributes that are mass assignable.
@@ -32,10 +43,10 @@ class FunnelSequence extends Model
     public static function boot()
     {
         static::updating(function ($model) {
-            if(isset($model->settings)) {
+            if (isset($model->settings) && is_array($model->settings)) {
                 $model->settings = \maybe_serialize($model->settings);
             }
-            if(isset($model->conditions)) {
+            if (isset($model->conditions) && is_array($model->conditions)) {
                 $model->conditions = \maybe_serialize($model->conditions);
             }
         });
@@ -44,13 +55,17 @@ class FunnelSequence extends Model
     public function funnel()
     {
         return $this->belongsTo(
-            __NAMESPACE__.'\Funnel', 'funnel_id', 'id'
+            __NAMESPACE__ . '\Funnel', 'funnel_id', 'id'
         );
     }
 
     public function setSettingsAttribute($settings)
     {
-        $this->attributes['settings'] = \maybe_serialize($settings);
+        if (is_array($settings)) {
+            $this->attributes['settings'] = \maybe_serialize($settings);
+        } else {
+            $this->attributes['settings'] = $settings;
+        }
     }
 
     public function getSettingsAttribute($settings)
@@ -60,7 +75,11 @@ class FunnelSequence extends Model
 
     public function setConditionsAttribute($conditions)
     {
-        $this->attributes['conditions'] = \maybe_serialize($conditions);
+        if (is_array($conditions)) {
+            $this->attributes['conditions'] = \maybe_serialize($conditions);
+        } else {
+            $this->attributes['conditions'] = $conditions;
+        }
     }
 
     public function getConditionsAttribute($conditions)

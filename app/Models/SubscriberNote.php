@@ -2,9 +2,21 @@
 
 namespace FluentCrm\App\Models;
 
+/**
+ *  SubscriberNote Model - DB Model for Contact's notes
+ *
+ *  Database Model
+ *
+ * @package FluentCrm\App\Models
+ *
+ * @version 1.0.0
+ */
+
 class SubscriberNote extends Model
 {
     protected $table = 'fc_subscriber_notes';
+
+    protected $guarded = ['id'];
 
     protected $fillable = [
         'subscriber_id',
@@ -30,7 +42,7 @@ class SubscriberNote extends Model
     }
     /**
      * One2One: SubscriberNote belongs to one Subscriber
-     * @return Model
+     * @return \FluentCrm\Framework\Database\Orm\Relations\BelongsTo
      */
     public function subscriber()
     {
@@ -39,21 +51,26 @@ class SubscriberNote extends Model
         );
     }
 
-    /**
-     * One2One: SubscriberNote belongs to one User
-     * @return Model
-     */
-    public function added_by()
-    {
-        return $this->belongsTo(
-            __NAMESPACE__.'\User', 'created_by', 'ID'
-        );
-    }
-
     public function markAs($status)
     {
         $this->status = $status;
         $this->save();
         return $this;
+    }
+
+    public function createdBy()
+    {
+        if(!$this->created_by) {
+            return false;
+        }
+
+        $user = get_user_by('ID', $this->created_by);
+
+        return [
+            'ID' => $user->ID,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'display_name' => $user->display_name
+        ];
     }
 }

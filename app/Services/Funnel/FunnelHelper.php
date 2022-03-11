@@ -2,7 +2,6 @@
 
 namespace FluentCrm\App\Services\Funnel;
 
-use FluentCampaign\App\Models\SequenceTracker;
 use FluentCrm\App\Hooks\Handlers\FunnelHandler;
 use FluentCrm\App\Models\Funnel;
 use FluentCrm\App\Models\FunnelMetric;
@@ -10,7 +9,7 @@ use FluentCrm\App\Models\FunnelSequence;
 use FluentCrm\App\Models\FunnelSubscriber;
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Services\Helper;
-use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Framework\Support\Arr;
 
 class FunnelHelper
 {
@@ -58,11 +57,10 @@ class FunnelHelper
 
     public static function createOrUpdateContact($data)
     {
-
         return FluentCrmApi('contacts')->createOrUpdate($data);
     }
 
-    public static function getUserRoles()
+    public static function getUserRoles($keyed = false)
     {
         if (!function_exists('get_editable_roles')) {
             require_once(ABSPATH . '/wp-admin/includes/user.php');
@@ -71,10 +69,16 @@ class FunnelHelper
         $roles = \get_editable_roles();
         $formattedRoles = [];
         foreach ($roles as $roleKey => $role) {
-            $formattedRoles[] = [
-                'id'    => $roleKey,
-                'title' => $role['name']
-            ];
+
+            if ($keyed) {
+                $formattedRoles[$roleKey] = $role['name'];
+            } else {
+                $formattedRoles[] = [
+                    'id'    => $roleKey,
+                    'title' => $role['name']
+                ];
+            }
+
         }
         return $formattedRoles;
     }
@@ -198,6 +202,7 @@ class FunnelHelper
         FunnelMetric::where('funnel_id', $funnelId)
             ->whereIn('subscriber_id', $subscriberIds)
             ->delete();
+
         return true;
     }
 
@@ -303,6 +308,10 @@ class FunnelHelper
 
     public static function getDelayInSecond($sequence)
     {
+        if (Arr::get($sequence, 'settings.is_timestamp_wait') == 'yes') {
+            return 1;
+        }
+
         $unit = Arr::get($sequence, 'settings.wait_time_unit');
         $converter = 86400; // default day
         if ($unit == 'hours') {
@@ -370,45 +379,12 @@ class FunnelHelper
         return $formattedSequences;
     }
 
-    public static function getRuntimeSequences($funnel, $funnelSubscriber = false)
-    {
-        $lastSequence = false;
-        if($funnelSubscriber && $funnelSubscriber->last_sequence_id) {
-            $lastSequence = FunnelSequence::where('id', $funnelSubscriber->last_sequence_id);
-        }
-
-        if($lastSequence && $lastSequence->parent_id) {
-            // We just have to find the same child-block sequences
-            $sequences = FunnelSequence::where('parent_id', $lastSequence->parent_id)
-                ->where('condition_type', $lastSequence->condition_type)
-                ->where('sequence', '>', $lastSequence->sequence)
-                ->orderBy('sequence', 'ASC')
-                ->get();
-
-        }
-
-        $sequencesQuery = FunnelSequence::where('funnel_id', $funnel->id);
-        if($lastSequence) {
-            $sequencesQuery->where('sequence', '>', $lastSequence->sequence);
-        }
-
-        $sequences = $sequencesQuery->orderBy('sequence', 'ASC')->get();
-
-        if($sequences->isEmpty()) {
-            return [
-                'immediate_sequences' => [],
-                'next_sequence' => false
-            ];
-        }
-    }
-
-
     public static function extractSequences($sequences)
     {
-        if($sequences->isEmpty()) {
+        if ($sequences->isEmpty()) {
             return [
                 'immediate_sequences' => [],
-                'next_sequence' => false
+                'next_sequence'       => false
             ];
         }
 
@@ -450,4 +426,354 @@ class FunnelHelper
             }
         }
     }
+
+    public static function maybeMigrateConditions($funnelId)
+    {
+        $conditionSequences = FunnelSequence::where('funnel_id', $funnelId)
+            ->where('type', 'conditional')
+            ->where('action_name', '!=', 'funnel_condition')
+            ->get();
+
+        foreach ($conditionSequences as $conditionSequence) {
+            self::migrateConditionSequence($conditionSequence);
+        }
+
+        return !$conditionSequences->isEmpty();
+    }
+
+    public static function migrateConditionSequence($sequence, $dryRun = false)
+    {
+        if ($sequence->type != 'conditional' || $sequence->action_name == 'funnel_condition') {
+            return $sequence;
+        }
+
+        $simpleMaps = [
+            'fcrm_has_contact_tag'         => [
+                'source'        => ['segment', 'tags'],
+                'operator'      => 'in',
+                'value_access'  => 'tags',
+                'default_value' => [],
+            ],
+            'fcrm_has_contact_list'        => [
+                'source'        => ['segment', 'lists'],
+                'operator'      => 'in',
+                'value_access'  => 'lists',
+                'default_value' => [],
+            ],
+            'fcrm_has_user_role'           => [
+                'source'        => ['segment', 'user_role'],
+                'operator'      => 'in',
+                'value_access'  => 'roles',
+                'default_value' => [],
+            ],
+            'fcrm_woo_is_purchased'        => [
+                'source'        => ['woo', 'purchased_items'],
+                'operator'      => 'in',
+                'value_access'  => 'product_ids',
+                'default_value' => [],
+            ],
+            'fcrm_wishlist_is_in_level'    => [
+                'source'        => ['wishlist', 'in_membership'],
+                'operator'      => 'in',
+                'value_access'  => 'level_ids',
+                'default_value' => [],
+            ],
+            'fcrm_tutor_is_in_course'      => [
+                'source'        => ['tutorlms', 'is_in_course'],
+                'operator'      => 'in',
+                'value_access'  => 'course_ids',
+                'default_value' => [],
+            ],
+            'fcrm_pmpro_is_in_membership'  => [
+                'source'        => ['pmpro', 'in_membership'],
+                'operator'      => 'in',
+                'value_access'  => 'level_ids',
+                'default_value' => [],
+            ],
+            'fcrm_lifter_is_in_course'     => [
+                'source'        => ['lifterlms', 'purchased_items'],
+                'operator'      => 'in',
+                'value_access'  => 'course_ids',
+                'default_value' => [],
+            ],
+            'fcrm_lifter_is_in_membership' => [
+                'source'        => ['lifterlms', 'purchased_groups'],
+                'operator'      => 'in',
+                'value_access'  => 'course_ids',
+                'default_value' => [],
+            ],
+            'fcrm_learndhash_is_in_course' => [
+                'source'        => ['learndash', 'purchased_items'],
+                'operator'      => 'in',
+                'value_access'  => 'course_ids',
+                'default_value' => [],
+            ],
+            'fcrm_learndhash_is_in_group'  => [
+                'source'        => ['learndash', 'purchased_groups'],
+                'operator'      => 'in',
+                'value_access'  => 'group_ids',
+                'default_value' => [],
+            ],
+            'fcrm_edd_is_purchased'        => [
+                'source'        => ['edd', 'purchased_items'],
+                'operator'      => 'in',
+                'value_access'  => 'product_ids',
+                'default_value' => [],
+            ],
+            'fcrm_rcp_is_in_membership'    => [
+                'source'        => ['rcp', 'in_membership'],
+                'operator'      => 'in',
+                'value_access'  => 'level_ids',
+                'default_value' => [],
+            ]
+        ];
+
+        $operatorMaps = [
+            'match_all'     => 'in_all',
+            'match_none_of' => 'not_in_all',
+            'contains'      => 'contains',
+            'doNotContains' => 'not_contains',
+            'startsWith'    => 'startsWith',
+            'endsWith'      => 'endsWith'
+        ];
+
+        $conditionName = $sequence->action_name;
+
+        $oldSettings = $sequence->settings;
+
+        if (isset($simpleMaps[$conditionName])) {
+            $map = $simpleMaps[$conditionName];
+            $sequence->action_name = 'funnel_condition';
+            $sequence->settings = [
+                'conditions' => [
+                    [
+                        [
+                            'source'   => $map['source'],
+                            'operator' => $map['operator'],
+                            'value'    => Arr::get($sequence->settings, $map['value_access'], $map['default_value'])
+                        ]
+                    ]
+                ]
+            ];
+            if(!$dryRun) {
+                $sequence->save();
+            }
+        } else if ($conditionName == 'fcrm_check_user_prop') {
+            $sequence->action_name = 'funnel_condition';
+            $conditionGroups = $oldSettings['condition_groups'];
+
+            $formattedConditions = [[]];
+
+            if (isset($conditionGroups[0])) {
+                $conditions = $conditionGroups[0]['conditions'];
+                $conditionType = $conditionGroups[0]['match_type'];
+
+                if ($conditionType != 'match_all') {
+                    $formattedConditions = [];
+                }
+
+                foreach ($conditions as $condition) {
+                    $dataKey = $condition['data_key'];
+                    $operator = $condition['operator'];
+                    $dataValue = $condition['data_value'];
+                    if (!$dataKey || !$operator) {
+                        continue;
+                    }
+
+                    if (isset($operatorMaps[$operator])) {
+                        $operator = $operatorMaps[$operator];
+                    }
+
+                    if ($dataKey == 'contact_type' || $dataKey == 'country') {
+                        if ($operator == '=') {
+                            $operator = 'in';
+                        } else {
+                            $operator = 'not_in';
+                        }
+                        if ($dataKey == 'country') {
+                            $dataValue = (array)$dataValue;
+                        }
+
+                    }
+
+                    $provider = 'subscriber';
+
+                    if (strpos($dataKey, 'custom.') === 0) {
+                        $provider = 'custom_fields';
+                        $dataKey = str_replace('custom.', '', $dataKey);
+                    }
+
+                    $item = [
+                        'source'   => [
+                            $provider,
+                            $dataKey
+                        ],
+                        'operator' => $operator,
+                        'value'    => $dataValue
+                    ];
+
+                    if ($conditionType == 'match_all') {
+                        $formattedConditions[0][] = $item;
+                    } else {
+                        $formattedConditions[] = [$item];
+                    }
+                }
+            }
+            $sequence->settings = [
+                'conditions' => $formattedConditions
+            ];
+            if(!$dryRun) {
+                $sequence->save();
+            }
+        } else if ($conditionName == 'fcrm_woo_conditions') {
+            $sequence->action_name = 'funnel_condition';
+            $conditionGroups = $sequence->settings['conditional_groups'];
+
+            $formattedConditions = [[]];
+
+            if (isset($conditionGroups[0])) {
+                $conditions = $conditionGroups[0]['conditions'];
+
+                $keyMaps = [
+                    'order_total_value'     => [
+                        'woo_order',
+                        'total_value'
+                    ],
+                    'order_product_ids'     => [
+                        'woo_order',
+                        'product_ids'
+                    ],
+                    'order_cat_purchased'   => [
+                        'woo_order',
+                        'cat_purchased'
+                    ],
+                    'order_billing_country' => [
+                        'woo_order',
+                        'billing_country'
+                    ],
+                    'order_shipping_method' => [
+                        'woo_order',
+                        'shipping_method'
+                    ],
+                    'order_payment_gateway' => [
+                        'woo_order',
+                        'payment_gateway'
+                    ],
+
+                    'customer_total_spend'        => [
+                        'woo',
+                        'total_order_value'
+                    ],
+                    'customer_order_count'        => [
+                        'woo',
+                        'total_spend'
+                    ],
+                    'customer_guest_user'         => [
+                        'woo',
+                        'guest_user'
+                    ],
+                    'customer_billing_country'    => [
+                        'woo',
+                        'billing_country'
+                    ],
+                    'customer_cat_purchased'      => [
+                        'woo',
+                        'purchased_categories'
+                    ],
+                    'customer_purchased_products' => [
+                        'woo',
+                        'purchased_items'
+                    ],
+                ];
+
+                foreach ($conditions as $condition) {
+                    $dataKey = $condition['data_key'];
+                    $operator = $condition['operator'];
+                    $dataValue = $condition['data_value'];
+
+                    if (!$dataKey || !$operator || !isset($keyMaps[$dataKey])) {
+                        continue;
+                    }
+
+                    if (isset($operatorMaps[$operator])) {
+                        $operator = $operatorMaps[$operator];
+                    }
+
+                    if ($dataKey == 'order_billing_country' || $dataKey == 'customer_billing_country') {
+                        if ($operator != '=') {
+                            $operator = 'not_in';
+                        } else {
+                            $operator = 'in';
+                        }
+
+                        $dataValue = (array)$dataValue;
+                    }
+
+                    $item = [
+                        'source'   => $keyMaps[$dataKey],
+                        'operator' => $operator,
+                        'value'    => $dataValue
+                    ];
+                    $formattedConditions[0][] = $item;
+                }
+            }
+
+            $sequence->settings = [
+                'conditions' => $formattedConditions
+            ];
+
+            if(!$dryRun) {
+                $sequence->save();
+            }
+        }
+
+        return $sequence;
+    }
+
+
+    public static function createWpUserFromSubscriber($subscriber, $sendWelcomeEmail = false, $password = '', $role = '', $metaData = [])
+    {
+        if($userId = $subscriber->getWpUserId()) {
+            return $userId;
+        }
+
+        if(!$password) {
+            $password = wp_generate_password(8);
+        }
+
+        $userId = wp_create_user($subscriber->email, $password, $subscriber->email);
+        if (is_wp_error($userId)) {
+            return $userId;
+        }
+
+        if(!$role) {
+            // get default user role of WordPress
+            $role = get_option('default_role');
+            if(!$role) {
+                $role = 'subscriber';
+            }
+        }
+
+
+        $user = new \WP_User($userId);
+        $user->set_role($role);
+
+        $metaData['first_name'] = $subscriber->first_name;
+        $metaData['last_name'] = $subscriber->last_name;
+
+        $userMetas = array_filter($metaData);
+
+        foreach ($userMetas as $metaKey => $metaValue) {
+            update_user_meta($userId, $metaKey, $metaValue);
+        }
+
+        if ($sendWelcomeEmail) {
+            wp_send_new_user_notifications($userId, 'user');
+        }
+
+        $subscriber->user_id = $userId;
+        $subscriber->save();
+        return $userId;
+    }
+
 }

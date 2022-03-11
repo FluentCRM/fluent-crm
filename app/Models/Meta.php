@@ -2,11 +2,23 @@
 
 namespace FluentCrm\App\Models;
 
+/**
+ *  Meta Model - DB Model for Meta table
+ *
+ *  Database Model
+ *
+ * @package FluentCrm\App\Models
+ *
+ * @version 1.0.0
+ */
+
 class Meta extends Model
 {
     protected $table = 'fc_meta';
 
     protected $primaryKey = 'id';
+
+    protected $guarded = ['id'];
 
     protected $fillable = [
         'object_type',

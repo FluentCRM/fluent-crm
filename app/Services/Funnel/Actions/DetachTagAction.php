@@ -18,9 +18,10 @@ class DetachTagAction extends BaseAction
     public function getBlock()
     {
         return [
+            'category' => __('CRM', 'fluent-crm'),
             'title'       => __('Remove From Tag', 'fluent-crm'),
             'description' => __('Remove this contact from the selected Tags', 'fluent-crm'),
-            'icon' => fluentCrmMix('images/funnel_icons/tag_remove.svg'),
+            'icon' => 'fc-icon-tag_removed',//fluentCrmMix('images/funnel_icons/tag_remove.svg'),
             'settings'    => [
                 'tags' => []
             ]
@@ -56,6 +57,6 @@ class DetachTagAction extends BaseAction
         $renewedSubscriber = Subscriber::where('id', $subscriber->id)->first();
         $renewedSubscriber->detachTags($tags);
 
-        FunnelHelper::changeFunnelSubSequenceStatus($funnelSubscriberId, $sequence->id);
+        //FunnelHelper::changeFunnelSubSequenceStatus($funnelSubscriberId, $sequence->id);
     }
 }

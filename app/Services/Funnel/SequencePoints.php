@@ -3,6 +3,7 @@
 namespace FluentCrm\App\Services\Funnel;
 
 use FluentCrm\App\Models\FunnelSequence;
+use FluentCrm\Framework\Support\Arr;
 
 class SequencePoints
 {
@@ -19,6 +20,8 @@ class SequencePoints
     private $hasNext = null;
 
     private $funnelSubscriber;
+
+    private $nextSequenceExecutionTime = false;
 
     public function __construct($funnel, $funnelSubscriber = false)
     {
@@ -48,11 +51,11 @@ class SequencePoints
             }
             $sequences = $query->get();
 
-            if($isInChild && $sequences->isEmpty()) {
+            if ($isInChild && $sequences->isEmpty()) {
                 // No sequences found with the conditions so we may have to
                 // move to parent again
                 $nextSequenceNumber = $this->funnelSubscriber->next_sequence;
-                if($this->funnelSubscriber->next_sequence_item) {
+                if ($this->funnelSubscriber->next_sequence_item) {
                     $nextSequenceNumber = $this->funnelSubscriber->next_sequence_item->sequence;
                 }
 
@@ -76,6 +79,7 @@ class SequencePoints
         $conditionalBlock = false;
         $inWaitTimes = false;
 
+
         foreach ($sequences as $sequence) {
             if ($this->requiredBenchMark || $conditionalBlock) {
                 continue;
@@ -89,8 +93,15 @@ class SequencePoints
                 continue;
             }
 
-            if ($sequence->action_name == 'fluentcrm_wait_times') {
+            if ($sequence->action_name == 'fluentcrm_wait_times' && !$inWaitTimes) {
                 $inWaitTimes = true;
+                if (Arr::get($sequence->settings, 'is_timestamp_wait') == 'yes') {
+                    $date = current_time('mysql');
+                    if(strtotime(Arr::get($sequence->settings, 'wait_date_time')) > strtotime($date)) {
+                        $date = Arr::get($sequence->settings, 'wait_date_time');
+                    }
+                    $this->nextSequenceExecutionTime = $date;
+                }
             }
 
             /*
@@ -185,6 +196,11 @@ class SequencePoints
                 }
             }
         }
+
+        if($this->nextSequence && $this->nextSequenceExecutionTime) {
+            $this->nextSequence->execution_date_time = $this->nextSequenceExecutionTime;
+        }
+
     }
 
     public function getCurrentSequences()

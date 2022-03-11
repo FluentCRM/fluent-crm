@@ -7,6 +7,7 @@ use FluentCrm\App\Models\FunnelMetric;
 use FluentCrm\App\Models\FunnelSequence;
 use FluentCrm\App\Models\FunnelSubscriber;
 use FluentCrm\App\Models\Subscriber;
+use FluentCrm\Framework\Support\Arr;
 
 class FunnelProcessor
 {
@@ -85,7 +86,7 @@ class FunnelProcessor
             $data = wp_parse_args($funnelSubArgs, $data);
         }
 
-        if($subscriber->status == 'subscribed') {
+        if ($subscriber->status == 'subscribed') {
             $data['status'] = 'active';
         }
 
@@ -106,12 +107,14 @@ class FunnelProcessor
 
         foreach ($sequencePoints->getCurrentSequences() as $sequence) {
             $this->processSequence($subscriber, $sequence, $funnelSubscriber->id);
-            if($sequence->action_name == 'end_this_funnel') {
+            if ($sequence->action_name == 'end_this_funnel') {
                 return;
             }
         }
 
         $nextSequence = $sequencePoints->getNextSequence();
+
+
         $requiredBenchMark = $sequencePoints->getRequiredBenchmark();
 
         if ($nextSequence && $requiredBenchMark) {
@@ -138,11 +141,17 @@ class FunnelProcessor
         }
 
         if ($nextSequence) {
+            $nextDateTime = date('Y-m-d H:i:s', strtotime(current_time('mysql')) + $nextSequence->delay);
+
+            if ($nextSequence->execution_date_time) {
+                $nextDateTime = $nextSequence->execution_date_time;
+            }
+
             FunnelSubscriber::where('id', $funnelSubscriber->id)
                 ->update([
                     'next_sequence'       => $nextSequence->sequence,
                     'next_sequence_id'    => $nextSequence->id,
-                    'next_execution_time' => date('Y-m-d H:i:s', strtotime(current_time('mysql')) + $nextSequence->delay),
+                    'next_execution_time' => $nextDateTime,
                     'status'              => 'active'
                 ]);
         }
@@ -157,7 +166,6 @@ class FunnelProcessor
     public function processSequences($sequences, $subscriber, $funnelSubscriber)
     {
         _deprecated_function(__METHOD__, '1.2.0', "(new FunnelProcessor)->processSequencePoints()");
-        error_log('This method should not be called');
 
         $funnel = $this->getFunnel($funnelSubscriber->funnel_id);
         $funnelPoints = new SequencePoints($funnel, $funnelSubscriber);
@@ -168,6 +176,11 @@ class FunnelProcessor
     {
         $funnelMetric = $this->recordFunnelMetric($subscriber, $sequence);
         FunnelHelper::changeFunnelSubSequenceStatus($funnelSubscriberId, $sequence->id, 'complete');
+
+        if ($sequence->type == 'conditional' && $sequence->action_name != 'funnel_condition') {
+            $sequence = FunnelHelper::migrateConditionSequence($sequence);
+        }
+
         do_action('fluentcrm_funnel_sequence_handle_' . $sequence->action_name, $subscriber, $sequence, $funnelSubscriberId, $funnelMetric);
     }
 
@@ -183,7 +196,7 @@ class FunnelProcessor
     {
         $jobs = FunnelSubscriber::where('status', 'active')
             ->whereHas('funnel', function ($q) {
-                $q->where('status', 'published');
+                return $q->where('status', 'published');
             })
             ->where('next_execution_time', '<=', current_time('mysql'))
             ->whereNotNull('next_execution_time')
@@ -305,63 +318,81 @@ class FunnelProcessor
     public function initChildSequences($parent, $isMatched, $subscriber, $funnelSubscriberId, $funnelMetric)
     {
         $conditionType = 'no';
-        if($isMatched) {
+        if ($isMatched) {
             $conditionType = 'yes';
         }
         // find the corresponding sequence
         $sequences = FunnelSequence::where('funnel_id', $parent->funnel_id)
             ->where('parent_id', $parent->id)
+            ->orderBy('sequence', 'ASC')
             ->where('condition_type', $conditionType)
             ->get();
 
-        $immediateSequences = [];
-        $firstSequence = $sequences[0];
-        $nextSequence = false;
+        $waitTimes = 0;
+        if (!$sequences->isEmpty()) {
+            $immediateSequences = [];
+            $firstSequence = $sequences[0];
+            $nextSequence = false;
 
-        foreach ($sequences as $sequence) {
-            if ($sequence->c_delay == $firstSequence->c_delay) {
-                $immediateSequences[] = $sequence;
-            } else {
-                if (!$nextSequence) {
-                    $nextSequence = $sequence;
-                }
-                if ($sequence->c_delay < $nextSequence->c_delay) {
-                    $nextSequence = $sequence;
+            foreach ($sequences as $sequence) {
+                if ($sequence->c_delay == $firstSequence->c_delay) {
+                    $immediateSequences[] = $sequence;
+                } else {
+                    if (!$nextSequence) {
+                        $nextSequence = $sequence;
+                    }
+                    if ($sequence->c_delay < $nextSequence->c_delay) {
+                        $nextSequence = $sequence;
+                    }
                 }
             }
-        }
 
 
-        $waitTimes = 0;
-        foreach ($immediateSequences as $immediateSequence) {
-           $this->processSequence($subscriber, $immediateSequence, $funnelSubscriberId);
-           if($immediateSequence->action_name == 'end_this_funnel') {
-               return ;
-           }
+            foreach ($immediateSequences as $immediateSequence) {
+                $this->processSequence($subscriber, $immediateSequence, $funnelSubscriberId);
+                if ($immediateSequence->action_name == 'end_this_funnel') {
+                    return;
+                }
 
-           if($immediateSequence->action_name == 'fluentcrm_wait_times') {
-               $waitTimes = FunnelHelper::getDelayInSecond($immediateSequence);
-           }
-        }
+                if ($immediateSequence->action_name == 'fluentcrm_wait_times') {
+                    if (Arr::get($sequence, 'settings.is_timestamp_wait') == 'yes') {
+                        $waitTimes = strtotime(Arr::get($sequence, 'settings.wait_date_time')) - current_time('timestamp');
+                        if ($waitTimes < 1) {
+                            $waitTimes = 0;
+                        }
+                    } else {
+                        $waitTimes = FunnelHelper::getDelayInSecond($immediateSequence);
+                    }
+                }
+            }
 
-        if($nextSequence) {
-            return FunnelSubscriber::where('id', $funnelSubscriberId)
-                ->update([
-                    'next_sequence'       => $nextSequence->sequence,
-                    'next_sequence_id'    => $nextSequence->id,
-                    'next_execution_time' => date('Y-m-d H:i:s', strtotime(current_time('mysql')) + $nextSequence->delay),
-                    'status'              => 'active'
-                ]);
+            if ($nextSequence) {
+
+                $waitDateTimes = date('Y-m-d H:i:s', strtotime(current_time('mysql')) + $nextSequence->delay);
+
+                if ($waitTimes) {
+                    $waitDateTimes = date('Y-m-d H:i:s', strtotime(current_time('mysql')) + $waitTimes);
+                }
+
+                return FunnelSubscriber::where('id', $funnelSubscriberId)
+                    ->update([
+                        'next_sequence'       => $nextSequence->sequence,
+                        'next_sequence_id'    => $nextSequence->id,
+                        'next_execution_time' => $waitDateTimes,
+                        'status'              => 'active'
+                    ]);
+            }
         }
 
         $funnel = $this->getFunnel($parent->funnel_id);
         $funnelSubscriber = FunnelSubscriber::where('id', $funnelSubscriberId)->first();
 
         $funnelSubscriber->last_sequence_id = $parent->id;
+
         // we don't have next sequence so we have to loop back to the parent
         $sequencePoints = new SequencePoints($funnel, $funnelSubscriber);
 
-        if($waitTimes && $currentNextSequences = $sequencePoints->getCurrentSequences()) {
+        if ($waitTimes && $currentNextSequences = $sequencePoints->getCurrentSequences()) {
             $nextSequence = $currentNextSequences[0];
             return FunnelSubscriber::where('id', $funnelSubscriberId)
                 ->update([

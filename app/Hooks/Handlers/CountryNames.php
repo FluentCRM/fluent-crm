@@ -2,6 +2,14 @@
 
 namespace FluentCrm\App\Hooks\Handlers;
 
+/**
+ *  CountryNames Class
+ *
+ * @package FluentCrm\App\Hooks
+ *
+ * @version 1.0.0
+ */
+
 class CountryNames
 {
     private $names;

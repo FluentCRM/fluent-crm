@@ -3,14 +3,23 @@
 namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\Models\Tag;
-use FluentCrm\Includes\Helpers\Arr;
-use FluentCrm\Includes\Request\Request;
+use FluentCrm\Framework\Support\Arr;
+use FluentCrm\Framework\Request\Request;
 
+/**
+ *  TagsController - REST API Handler Class
+ *
+ *  REST API Handler
+ *
+ * @package FluentCrm\App\Http
+ *
+ * @version 1.0.0
+ */
 class TagsController extends Controller
 {
     /**
      * Get all of the tags
-     * @param \FluentCrm\Includes\Request\Request $request
+     * @param \FluentCrm\Framework\Request\Request $request
      * @return \WP_REST_Response | array
      */
     public function index(Request $request)
@@ -24,8 +33,10 @@ class TagsController extends Controller
             ->searchBy($request->get('search'))
             ->paginate();
 
-        foreach ($tags as $tag) {
-            $tag->subscribersCount = $tag->countByStatus('subscribed');
+        if (!$request->get('exclude_counts')) {
+            foreach ($tags as $tag) {
+                $tag->subscribersCount = $tag->countByStatus('subscribed');
+            }
         }
 
         $data = [
@@ -60,7 +71,7 @@ class TagsController extends Controller
 
     /**
      * Store a tag.
-     * @param \FluentCrm\Includes\Request\Request $request
+     * @param \FluentCrm\Framework\Request\Request $request
      * @return \WP_REST_Response
      */
     public function create(Request $request)
@@ -94,7 +105,7 @@ class TagsController extends Controller
 
     /**
      * Store a tag.
-     * @param \FluentCrm\Includes\Request\Request $request
+     * @param \FluentCrm\Framework\Request\Request $request
      * @param $id int Tag ID
      * @return \WP_REST_Response
      */
@@ -128,6 +139,8 @@ class TagsController extends Controller
             $tags = $this->request->get('items', []);
         }
 
+        $createdIds = [];
+
         foreach ($tags as $tag) {
             if (empty($tag['title'])) {
                 continue;
@@ -142,18 +155,21 @@ class TagsController extends Controller
                 ['title' => $tag['title']]
             );
 
+            $createdIds[] = $tag->id;
+
             do_action('fluentcrm_tag_created', $tag->id);
         }
 
         return $this->sendSuccess([
-            'message' => __('Successfully saved the tags.', 'fluent-crm')
+            'message' => __('Successfully saved the tags.', 'fluent-crm'),
+            'ids' => $createdIds
         ]);
     }
 
     /**
      * Delete a tag by id
      *
-     * @param \FluentCrm\Includes\Request\Request $request
+     * @param \FluentCrm\Framework\Request\Request $request
      * @param $tagId
      * @return \WP_REST_Response $object
      */

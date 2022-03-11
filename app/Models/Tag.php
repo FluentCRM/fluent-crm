@@ -2,9 +2,21 @@
 
 namespace FluentCrm\App\Models;
 
+/**
+ *  Tag Model - DB Model for Contact's Tags
+ *
+ *  Database Model
+ *
+ * @package FluentCrm\App\Models
+ *
+ * @version 1.0.0
+ */
+
 class Tag extends Model
 {
     protected $table = 'fc_tags';
+
+    protected $guarded = ['id'];
 
     /**
      * $searchable Columns in table to search
@@ -52,7 +64,7 @@ class Tag extends Model
 
     public function totalCount()
     {
-        return wpFluent()->table('fc_subscriber_pivot')
+        return fluentCrmDb()->table('fc_subscriber_pivot')
             ->where('object_type', 'FluentCrm\App\Models\Tag')
             ->where('object_id', $this->id)
             ->count();
@@ -60,7 +72,7 @@ class Tag extends Model
 
     public function countByStatus($status = 'subscribed')
     {
-        return wpFluent()->table('fc_subscriber_pivot')
+        return fluentCrmDb()->table('fc_subscriber_pivot')
             ->where('fc_subscriber_pivot.object_type', 'FluentCrm\App\Models\Tag')
             ->where('fc_subscriber_pivot.object_id', $this->id)
             ->join('fc_subscribers', 'fc_subscribers.id', '=', 'fc_subscriber_pivot.subscriber_id')

@@ -4,11 +4,23 @@ namespace FluentCrm\App\Models;
 
 use FluentCrm\App\Services\BlockParser;
 use FluentCrm\App\Services\Helper;
-use FluentCrm\Includes\Helpers\Arr;
+use FluentCrm\Framework\Support\Arr;
+
+/**
+ *  CampaignEmail Model - DB Model for Campaign Emails
+ *
+ *  Database Model
+ *
+ * @package FluentCrm\App\Models
+ *
+ * @version 1.0.0
+ */
 
 class CampaignEmail extends Model
 {
     protected $table = 'fc_campaign_emails';
+
+    protected $guarded = ['id'];
 
     /**
      * One2One: CampaignEmail belongs to one Campaign
@@ -99,21 +111,25 @@ class CampaignEmail extends Model
 
         $emailBody = (new BlockParser($this->subscriber))->parse($emailBody);
 
-        $emailBody = apply_filters('fluentcrm-parse_campaign_email_text', $emailBody, $this->subscriber);
+        $emailBody = apply_filters('fluentcrm_parse_campaign_email_text', $emailBody, $this->subscriber);
 
         $designTemplate = 'classic';
         if($this->campaign) {
             $designTemplate = $this->campaign->design_template;
         }
 
-        if($this->campaign && $this->campaign->settings['template_config']) {
+        if(!$designTemplate) {
+            $designTemplate = 'classic';
+        }
+
+        if($this->campaign && Arr::get($this->campaign->settings, 'template_config')) {
             $templateConfig = wp_parse_args($this->campaign->settings['template_config'], Helper::getTemplateConfig($this->campaign->design_template));
         } else {
             $templateConfig = Helper::getTemplateConfig();
         }
 
         $email_body = apply_filters(
-            'fluentcrm-email-design-template-' . $designTemplate,
+            'fluentcrm_email-design-template-' . $designTemplate,
             $this->email_body,
             [
                 'preHeader'   => ($this->campaign) ? $this->campaign->email_pre_header : '',
@@ -151,7 +167,10 @@ class CampaignEmail extends Model
     public function getEmailBody()
     {
         $subscriber = $this->subscriber;
-        $subscriber->email_id = $this->id;
+
+        if($subscriber) {
+            $subscriber->email_id = $this->id;
+        }
 
         $designTemplate = 'classic';
 
@@ -161,13 +180,13 @@ class CampaignEmail extends Model
 
         if (!$this->is_parsed) {
 
-            if($designTemplate == 'raw_html') {
+            if($designTemplate == 'raw_html' || $designTemplate == 'raw_classic') {
                 $emailBody = $this->campaign->email_body;
             } else {
                 $emailBody = $this->getParsedEmailBody();
             }
 
-            $emailBody = apply_filters('fluentcrm-parse_campaign_email_text', $emailBody, $subscriber);
+            $emailBody = apply_filters('fluentcrm_parse_campaign_email_text', $emailBody, $subscriber);
             $emailBody = apply_filters('fluentcrm_email_body_text', $emailBody, $subscriber, $this);
             $campaignUrls = $this->getCampaignUrls($emailBody);
             if ($campaignUrls) {
@@ -178,11 +197,14 @@ class CampaignEmail extends Model
             $this->save();
         }
 
-        $subscriber->campaign_id = $this->campaign_id;
-        $footerText = Arr::get(Helper::getGlobalEmailSettings(), 'email_footer', '');
-        $footerText = apply_filters('fluentcrm-parse_campaign_email_text', $footerText, $subscriber);
+        $footerText = '';
+        if($subscriber) {
+            $subscriber->campaign_id = $this->campaign_id;
+            $footerText = Arr::get(Helper::getGlobalEmailSettings(), 'email_footer', '');
+            $footerText = apply_filters('fluentcrm_parse_campaign_email_text', $footerText, $subscriber);
+        }
 
-        if($this->campaign && $this->campaign->settings['template_config']) {
+        if($this->campaign && Arr::get($this->campaign->settings, 'template_config')) {
             $templateConfig = wp_parse_args($this->campaign->settings['template_config'], Helper::getTemplateConfig($this->campaign->design_template));
         } else {
             $templateConfig = Helper::getTemplateConfig();
@@ -196,12 +218,16 @@ class CampaignEmail extends Model
         ];
 
         $content = apply_filters(
-            'fluentcrm-email-design-template-' . $designTemplate,
+            'fluentcrm_email-design-template-' . $designTemplate,
             $this->email_body,
             $templateData,
             $this->campaign,
             $this->subscriber
         );
+
+        $preViewUrl = site_url('?fluentcrm=1&route=email_preview&_e_hash=' . $this->email_hash);
+        // Replace Web Preview
+        $content = str_replace('##web_preview_url##', $preViewUrl, $content);
 
         return Helper::injectTrackerPixel($content, $this->email_hash);
     }
@@ -246,7 +272,7 @@ class CampaignEmail extends Model
 
     public function getClicks()
     {
-        return wpFluent()->table('fc_campaign_url_metrics')
+        return fluentCrmDb()->table('fc_campaign_url_metrics')
             ->select(['fc_campaign_url_metrics.counter', 'fc_url_stores.url', 'fc_campaign_url_metrics.id'])
             ->where('type', 'click')
             ->where('fc_campaign_url_metrics.subscriber_id', $this->subscriber_id)
@@ -259,7 +285,7 @@ class CampaignEmail extends Model
     {
         return static::select(
             'fc_campaign_emails.email_subject_id',
-            wpFluent()->raw('count(*) as total'),
+            fluentCrmDb()->raw('count(*) as total'),
             'fc_meta.value',
             'fc_meta.key'
         )

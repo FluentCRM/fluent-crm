@@ -18,9 +18,10 @@ class ApplyTagAction extends BaseAction
     public function getBlock()
     {
         return [
+            'category' => __('CRM', 'fluent-crm'),
             'title'       => __('Apply Tag', 'fluent-crm'),
             'description' => __('Add this contact to the selected Tags', 'fluent-crm'),
-            'icon'        => fluentCrmMix('images/funnel_icons/apply_tag.svg'),
+            'icon'        => 'fc-icon-apply_tag',//fluentCrmMix('images/funnel_icons/apply_tag.svg'),
             'settings'    => [
                 'tags' => []
             ]
@@ -55,6 +56,6 @@ class ApplyTagAction extends BaseAction
         $tags = $sequence->settings['tags'];
         $renewedSubscriber = Subscriber::where('id', $subscriber->id)->first();
         $renewedSubscriber->attachTags($tags);
-        FunnelHelper::changeFunnelSubSequenceStatus($funnelSubscriberId, $sequence->id);
+        //FunnelHelper::changeFunnelSubSequenceStatus($funnelSubscriberId, $sequence->id);
     }
 }

@@ -2,6 +2,16 @@
 
 namespace FluentCrm\App\Models;
 
+/**
+ *  Subject Model - DB Model for Email Subjects
+ *
+ *  Database Model
+ *
+ * @package FluentCrm\App\Models
+ *
+ * @version 1.0.0
+ */
+
 class Subject extends Model
 {
     protected $table = 'fc_meta';

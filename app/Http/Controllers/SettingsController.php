@@ -2,12 +2,24 @@
 
 namespace FluentCrm\App\Http\Controllers;
 
+use FluentCrm\App\Hooks\Handlers\ActivationHandler;
 use FluentCrm\App\Models\CampaignEmail;
 use FluentCrm\App\Models\CampaignUrlMetric;
 use FluentCrm\App\Services\AutoSubscribe;
 use FluentCrm\App\Services\Helper;
-use FluentCrm\Includes\Request\Request;
+use FluentCrm\App\Services\RoleBasedTagging;
+use FluentCrm\Framework\Support\Arr;
+use FluentCrm\Framework\Request\Request;
 
+/**
+ *  SettingsController - REST API Handler Class
+ *
+ *  REST API Handler
+ *
+ * @package FluentCrm\App\Http
+ *
+ * @version 1.0.0
+ */
 class SettingsController extends Controller
 {
     public function get(Request $request)
@@ -42,6 +54,15 @@ class SettingsController extends Controller
 
         foreach ($settings as $settingsKey => $setting) {
             $existingSettings[$settingsKey] = $setting;
+
+            if ($settingsKey == 'email_settings') {
+                $emailFooter = Arr::get($setting, 'email_footer');
+                if (!Helper::hasComplianceText($emailFooter)) {
+                    return $this->sendError([
+                        'message' => __('##crm.manage_subscription_url## or ##crm.unsubscribe_url## string is required for compliance. Please include unsubscription or manage subscription link', 'fluent-crm')
+                    ]);
+                }
+            }
         }
 
         update_option(
@@ -61,31 +82,67 @@ class SettingsController extends Controller
 
         if (in_array('settings_fields', $request->get('with', []))) {
             $data['settings_fields'] = [
-                'email_subject'         => [
+                'email_subject'            => [
                     'type'        => 'input-text-popper',
                     'placeholder' => __('Optin Email Subject', 'fluent-crm'),
                     'label'       => __('Email Subject', 'fluent-crm'),
                     'help'        => __('Your double-optin email subject', 'fluent-crm')
                 ],
-                'email_body'            => [
+                'email_body'               => [
                     'type'        => 'wp-editor',
                     'placeholder' => __('Double-Optin Email Body', 'fluent-crm'),
                     'label'       => __('Email Body', 'fluent-crm'),
                     'help'        => __('Provide Email Body for the double-optin', 'fluent-crm'),
                     'inline_help' => 'Use #activate_link# for plain url or {{crm.activate_button|Confirm Subscription}} for default button'
                 ],
-                'design_template'       => [
+                'design_template'          => [
                     'type'    => 'image-radio',
                     'label'   => __('Design Template', 'fluent-crm'),
                     'help'    => __('Email Design Template for this double-optin email', 'fluent-crm'),
                     'options' => Helper::getEmailDesignTemplates()
                 ],
-                'after_confirm_message' => [
+                'confirmation_html_viewer' => [
+                    'type'    => 'html-viewer',
+                    'heading' => __('After Confirmation Actions', 'fluent-crm'),
+                    'info'    => __('Please provide details after a contact confirm double option from email', 'fluent-crm') . '<hr />'
+                ],
+                'after_confirmation_type'  => [
+                    'type'    => 'input-radio',
+                    'label'   => __('After Confirmation Type', 'fluent-crm'),
+                    'help'    => __('Please select what will happen once a contact confirm double-optin ', 'fluent-crm'),
+                    'options' => [
+                        [
+                            'id'    => 'message',
+                            'label' => __('Show Message', 'fluent-crm')
+                        ],
+                        [
+                            'id'    => 'redirect',
+                            'label' => __('Redirect to an URL', 'fluent-crm')
+                        ]
+                    ]
+                ],
+                'after_confirm_message'    => [
                     'type'        => 'wp-editor',
                     'placeholder' => __('After Confirmation Message', 'fluent-crm'),
                     'label'       => __('After Confirmation Message', 'fluent-crm'),
-                    'help'        => __('This message will be shown after a subscriber confirm subscription', 'fluent-crm')
-                ]
+                    'help'        => __('This message will be shown after a subscriber confirm subscription', 'fluent-crm'),
+                    'dependency'  => [
+                        'depends_on' => 'after_confirmation_type',
+                        'operator'   => '=',
+                        'value'      => 'message'
+                    ]
+                ],
+                'after_conf_redirect_url'  => [
+                    'type'        => 'input-text-popper',
+                    'placeholder' => __('Redirect URL', 'fluent-crm'),
+                    'label'       => __('Redirect URL', 'fluent-crm'),
+                    'help'        => __('Please provide redirect URL after confirmation', 'fluent-crm'),
+                    'dependency'  => [
+                        'depends_on' => 'after_confirmation_type',
+                        'operator'   => '=',
+                        'value'      => 'redirect'
+                    ]
+                ],
             ];
         }
 
@@ -129,7 +186,7 @@ class SettingsController extends Controller
     public function TestRequestResolver(Request $request)
     {
         return [
-            'message' => 'Valid',
+            'message' => __('Valid', 'fluent-crm'),
             'params'  => $request->all()
         ];
     }
@@ -175,10 +232,18 @@ class SettingsController extends Controller
             $wpdb->query("DROP TABLE IF EXISTS " . $wpdb->prefix . $table);
         }
         // All tables are delete now let's run the migration
-        \FluentCrm\Includes\Activator::handle(false);
+        (new ActivationHandler)->handle(false);
 
         if (defined('FLUENTCAMPAIGN_PLUGIN_URL')) {
             \FluentCampaign\App\Migration\Migrate::run(false);
+        }
+
+        $options = [
+            '_fluentcrm_commerce_modules'
+        ];
+
+        foreach ($options as $option) {
+            delete_option($option);
         }
 
         return [
@@ -189,27 +254,70 @@ class SettingsController extends Controller
 
     public function getBounceConfigs()
     {
-        $sesBounceKey = fluentcrm_get_option('_fc_bounce_key');
-        if (!$sesBounceKey) {
-            $sesBounceKey = substr(md5(wp_generate_uuid4()), 0, 10); // first 8 digit
-            fluentcrm_update_option('_fc_bounce_key', $sesBounceKey);
+        $securityCode = fluentcrm_get_option('_fc_bounce_key');
+        if (!$securityCode) {
+            $securityCode = 'fcrm_' . substr(md5(wp_generate_uuid4()), 0, 14); // first 14 digit
+            fluentcrm_update_option('_fc_bounce_key', $securityCode);
         }
 
-        $data = [
-            'bounce_settings' => [
-                'ses' => site_url('?fluentcrm=1&route=bounce_handler&provider=ses&verify_key=' . $sesBounceKey)
+        $bounceSettings = [
+            'ses'       => [
+                'label'       => __('Amazon SES', 'fluent-crm'),
+                'webhook_url' => site_url('index.php?fluentcrm=1&route=bounce_handler&provider=ses&verify_key=' . $securityCode),
+                'doc_url'     => 'https://fluentcrm.com/docs/bounce-handler-with-amazon-ses/',
+                'input_title' => __('Amazon SES Bounce Handler URL', 'fluent-crm'),
+                'input_info'  => __('Please use this bounce handler url in your Amazon SES + SNS settings', 'fluent-crm')
+            ],
+            'mailgun'   => [
+                'label'       => __('Mailgun', 'fluent-crm'),
+                'webhook_url' => get_rest_url(null, 'fluent-crm/v2/public/bounce_handler/mailgun/handle/' . $securityCode),
+                'doc_url'     => 'https://fluentcrm.com/docs/bounce-handling-with-mailgun/',
+                'input_title' => __('Mailgun Bounce Handler Webhook URL', 'fluent-crm'),
+                'input_info'  => __('Please paste this URL into your Mailgun\'s Webhook settings to enable Bounce Handling with FluentCRM', 'fluent-crm')
+            ],
+            'pepipost'  => [
+                'label'       => __('PepiPost', 'fluent-crm'),
+                'webhook_url' => get_rest_url(null, 'fluent-crm/v2/public/bounce_handler/pepipost/handle/' . $securityCode),
+                'doc_url'     => 'https://fluentcrm.com/docs/bounce-handling-with-pepipost/',
+                'input_title' => __('PepiPost Bounce Handler Webhook URL', 'fluent-crm'),
+                'input_info'  => __('Please paste this URL into your PepiPost\'s Webhook settings to enable Bounce Handling with FluentCRM', 'fluent-crm')
+            ],
+            'postmark'  => [
+                'label'       => __('PostMark', 'fluent-crm'),
+                'webhook_url' => get_rest_url(null, 'fluent-crm/v2/public/bounce_handler/postmark/handle/' . $securityCode),
+                'doc_url'     => 'https://fluentcrm.com/docs/bounce-handling-with-postmark/',
+                'input_title' => __('PostMark Bounce Handler Webhook URL', 'fluent-crm'),
+                'input_info'  => __('Please paste this URL into your PostMark\'s Webhook settings to enable Bounce Handling with FluentCRM', 'fluent-crm')
+            ],
+            'sendgrid'  => [
+                'label'       => __('SendGrid', 'fluent-crm'),
+                'webhook_url' => get_rest_url(null, 'fluent-crm/v2/public/bounce_handler/sendgrid/handle/' . $securityCode),
+                'doc_url'     => 'https://fluentcrm.com/docs/bounce-handling-with-sendgrid/',
+                'input_title' => __('SendGrid Bounce Handler Webhook URL', 'fluent-crm'),
+                'input_info'  => __('Please paste this URL into your SendGrid\'s Webhook settings to enable Bounce Handling with FluentCRM', 'fluent-crm')
+            ],
+            'sparkpost' => [
+                'label'       => __('SparkPost', 'fluent-crm'),
+                'webhook_url' => get_rest_url(null, 'fluent-crm/v2/public/bounce_handler/sparkpost/handle/' . $securityCode),
+                'doc_url'     => 'https://fluentcrm.com/docs/bounce-handling-with-sparkpost/',
+                'input_title' => __('SparkPost Bounce Handler Webhook URL', 'fluent-crm'),
+                'input_info'  => __('Please paste this URL into your SparkPost\'s Webhook settings to enable Bounce Handling with FluentCRM', 'fluent-crm')
             ]
         ];
 
-        if(defined('FLUENTMAIL')) {
+        $data = [
+            'bounce_settings' => $bounceSettings
+        ];
+
+        if (defined('FLUENTMAIL')) {
             $smtpSettings = get_option('fluentmail-settings', []);
-            if(!$smtpSettings || !count($smtpSettings['connections'])) {
+            if (!$smtpSettings || !count($smtpSettings['connections'])) {
                 $data['fluentsmtp_info'] = [
                     'configured' => false
                 ];
             } else {
                 $data['fluentsmtp_info'] = [
-                    'configured' => true,
+                    'configured'       => true,
                     'verified_senders' => array_keys($smtpSettings['mappings'])
                 ];
             }
@@ -225,10 +333,13 @@ class SettingsController extends Controller
     {
         $autoSubscribeService = new AutoSubscribe();
 
+        $roleBasedTaggingClass = new RoleBasedTagging();
+
         $data = [
-            'registration_setting' => $autoSubscribeService->getRegistrationSettings(),
-            'comment_settings'     => $autoSubscribeService->getCommentSettings(),
-            'user_syncing_settings' => $autoSubscribeService->getUserSyncSettings()
+            'registration_setting'        => $autoSubscribeService->getRegistrationSettings(),
+            'comment_settings'            => $autoSubscribeService->getCommentSettings(),
+            'user_syncing_settings'       => $autoSubscribeService->getUserSyncSettings(),
+            'role_based_tagging_settings' => $roleBasedTaggingClass->getSettings(true)
         ];
 
         $with = $request->get('with', []);
@@ -236,9 +347,10 @@ class SettingsController extends Controller
             $data['registration_fields'] = $autoSubscribeService->getRegistrationFields();
             $data['comment_fields'] = $autoSubscribeService->getCommentFields();
             $data['user_syncing_fields'] = $autoSubscribeService->getUserSyncFields();
+            $data['role_based_tagging_settings_fields'] = $roleBasedTaggingClass->getFields();
         }
 
-        if(defined('WC_PLUGIN_FILE') && defined('FLUENTCAMPAIGN_DIR_FILE')) {
+        if (defined('WC_PLUGIN_FILE') && defined('FLUENTCAMPAIGN_DIR_FILE')) {
             $data['woo_checkout_fields'] = $autoSubscribeService->getWooCheckoutFields();
             $data['woo_checkout_settings'] = $autoSubscribeService->getWooCheckoutSettings();
         }
@@ -257,7 +369,12 @@ class SettingsController extends Controller
         fluentcrm_update_option('comment_form_subscribe_settings', $commentSettings);
         fluentcrm_update_option('user_syncing_settings', $userSyncSettings);
 
-        if(defined('WC_PLUGIN_FILE') && defined('FLUENTCAMPAIGN_DIR_FILE')) {
+        if (defined('FLUENTCAMPAIGN_PLUGIN_VERSION')) {
+            $roleBasedSettings = $request->get('role_based_tagging_settings', []);
+            fluentcrm_update_option('role_based_tagging_settings', $roleBasedSettings);
+        }
+
+        if (defined('WC_PLUGIN_FILE') && defined('FLUENTCAMPAIGN_DIR_FILE')) {
             $wooCheckoutSettings = $request->get('woo_checkout_settings');
             fluentcrm_update_option('woo_checkout_form_subscribe_settings', $wooCheckoutSettings);
         }
@@ -266,7 +383,6 @@ class SettingsController extends Controller
             'message' => __('Settings has been updated', 'fluent-crm')
         ];
     }
-
 
     public function getCronStatus()
     {
@@ -308,7 +424,7 @@ class SettingsController extends Controller
             'fluentcrm_scheduled_hourly_tasks' => __('Scheduled Automation Tasks', 'fluent-crm')
         ];
 
-        if(!isset($hookNames[$hookName])) {
+        if (!isset($hookNames[$hookName])) {
             return $this->sendError([
                 'message' => __('The provided hook name is not valid', 'fluent-crm')
             ]);
@@ -323,9 +439,9 @@ class SettingsController extends Controller
 
     public function getOldLogDetails(Request $request)
     {
-        $data =  $request->all();
+        $data = $request->all();
         $this->validate($data, [
-            'days_before' => 'required|numeric|min:7',
+            'days_before'   => 'required|numeric|min:7',
             'selected_logs' => 'array|required'
         ]);
 
@@ -335,7 +451,7 @@ class SettingsController extends Controller
         $refDate = date('Y-m-d 00:00:01', time() - $daysBefore * 86400);
 
         $dataCounters = [];
-        if(in_array('emails', $selectedLogs)) {
+        if (in_array('emails', $selectedLogs)) {
             $dataCounters[] = [
                 'title' => __('Email History Logs', 'fluent-crm'),
                 'count' => CampaignEmail::where('created_at', '<', $refDate)
@@ -344,20 +460,20 @@ class SettingsController extends Controller
             ];
         }
 
-        if(in_array('email_clicks', $selectedLogs)) {
+        if (in_array('email_clicks', $selectedLogs)) {
             $dataCounters[] = [
                 'title' => __('Email clicks', 'fluent-crm'),
                 'count' => CampaignUrlMetric::where('type', 'click')
-                    ->where('created_at', '<',  $refDate)
+                    ->where('created_at', '<', $refDate)
                     ->count()
             ];
         }
 
-        if(in_array('email_open', $selectedLogs)) {
+        if (in_array('email_open', $selectedLogs)) {
             $dataCounters[] = [
                 'title' => __('Email clicks', 'fluent-crm'),
                 'count' => CampaignUrlMetric::where('type', 'open')
-                    ->where('created_at', '<',  $refDate)
+                    ->where('created_at', '<', $refDate)
                     ->count()
             ];
         }
@@ -369,9 +485,9 @@ class SettingsController extends Controller
 
     public function removeOldLogs(Request $request)
     {
-        $data =  $request->all();
+        $data = $request->all();
         $this->validate($data, [
-            'days_before' => 'required|numeric|min:7',
+            'days_before'   => 'required|numeric|min:7',
             'selected_logs' => 'array|required'
         ]);
 
@@ -379,28 +495,205 @@ class SettingsController extends Controller
         $daysBefore = $data['days_before'];
 
         $refDate = date('Y-m-d 00:00:01', time() - $daysBefore * 86400);
-        if(in_array('emails', $selectedLogs)) {
+        if (in_array('emails', $selectedLogs)) {
             CampaignEmail::where('created_at', '<', $refDate)
                 ->where('status', 'sent')
                 ->delete();
         }
         $urlMetricsTypes = [];
-        if(in_array('email_clicks', $selectedLogs)) {
+        if (in_array('email_clicks', $selectedLogs)) {
             $urlMetricsTypes[] = 'click';
         }
-        if(in_array('email_open', $selectedLogs)) {
+        if (in_array('email_open', $selectedLogs)) {
             $urlMetricsTypes[] = 'open';
         }
 
-        if($urlMetricsTypes) {
+        if ($urlMetricsTypes) {
             CampaignUrlMetric::whereIn('type', $urlMetricsTypes)
-                ->where('created_at', '<',  $refDate)
+                ->where('created_at', '<', $refDate)
                 ->delete();
         }
 
         return [
             'message' => sprintf(__('Logs older than %d days have been deleted successfully', 'fluent-crm'), $daysBefore)
         ];
+    }
+
+    public function getRestKeys(Request $request)
+    {
+        $query = new \WP_User_Query(array(
+            'meta_key'     => '_fcrm_has_role',
+            'meta_value'   => 1,
+            'meta_compare' => '=',
+            'number'       => 200
+        ));
+
+        $managers = [];
+
+        foreach ($query->get_results() as $user) {
+            if (user_can($user, 'manage_options')) {
+                continue;
+            }
+
+            $managers[] = [
+                'id'        => $user->ID,
+                'full_name' => $user->first_name . ' - ' . $user->last_name,
+                'email'     => $user->user_email
+            ];
+        }
+
+        $applicationUsers = fluentcrm_get_option('_rest_api_users', []);
+        $restApps = [];
+
+        if ($applicationUsers) {
+            $userIds = array_keys($applicationUsers);
+            $restUsers = get_users([
+                'include' => $userIds,
+                'number'  => 20
+            ]);
+
+            foreach ($restUsers as $restUser) {
+                $applicationUUIDs = $applicationUsers[$restUser->ID];
+                $passwords = get_user_meta($restUser->ID, '_application_passwords', true);
+
+                $crmApps = [];
+
+                foreach ($passwords as $password) {
+                    if (in_array($password['uuid'], $applicationUUIDs)) {
+                        $crmApps[] = [
+                            'name'    => $password['name'],
+                            'created' => date('Y-m-d H:i:s', $password['created'])
+                        ];
+                    }
+                }
+
+                if (!$crmApps) {
+                    continue;
+                }
+
+                $restApps[] = [
+                    'id'         => $restUser->ID,
+                    'first_name' => $restUser->first_name,
+                    'last_name'  => $restUser->last_name,
+                    'email'      => $restUser->user_email,
+                    'api_keys'   => $crmApps,
+                    'manage_url' => admin_url('user-edit.php?user_id=' . $restUser->ID . '#application-passwords-section')
+                ];
+            }
+        }
+
+
+        return [
+            'managers'  => $managers,
+            'rest_keys' => $restApps
+        ];
+    }
+
+    public function createRestKey(Request $request)
+    {
+        $data = $request->all();
+        $this->validate($data, [
+            'api_name'    => 'required',
+            'api_user_id' => 'required'
+        ]);
+
+        $data['api_user_id'] = intval($data['api_user_id']);
+        $data['api_name'] = sanitize_text_field($data['api_name']);
+
+        // check if the provided user has FluentCRM Access
+        if (!get_user_meta($data['api_user_id'], '_fcrm_has_role', true)) {
+            return $this->sendError([
+                'message' => __('Sorry, the provided user does not have FluentCRM access', 'fluent-crm')
+            ]);
+        }
+
+        if (!current_user_can('manage_options')) {
+            return $this->sendError([
+                'message' => __('Sorry, You do not have permission to create REST API', 'fluent-crm')
+            ]);
+        }
+
+        $user = get_user_by('ID', $data['api_user_id']);
+
+        if (is_wp_error($user)) {
+            return $this->sendError([
+                'message' => __('Sorry, the provided user does not have FluentCRM access', 'fluent-crm')
+            ]);
+        }
+
+        $prepared = (object)[
+            'name' => $data['api_name']
+        ];
+
+        $created = \WP_Application_Passwords::create_new_application_password($user->ID, wp_slash((array)$prepared));
+
+        if (is_wp_error($created)) {
+            return $this->sendError([
+                'message' => $created->get_error_message()
+            ]);
+        }
+
+
+        $password = $created[0];
+        $item = \WP_Application_Passwords::get_user_application_password($user->ID, $created[1]['uuid']);
+
+        $item['info'] = [
+            'api_password' => \WP_Application_Passwords::chunk_password($password),
+            'api_username' => $user->user_login,
+        ];
+
+        $uuid = $item['uuid'];
+
+        $applicationUsers = fluentcrm_get_option('_rest_api_users', []);
+
+        if (!isset($applicationUsers[$user->ID])) {
+            $applicationUsers[$user->ID] = [];
+        }
+        $applicationUsers[$user->ID][] = $uuid;
+
+        fluentcrm_update_option('_rest_api_users', $applicationUsers);
+
+        return [
+            'item'    => $item,
+            'message' => __('API Key has been successfully created', 'fluent-crm')
+        ];
+    }
+
+    public function getIntegrations(Request $request)
+    {
+        $withFields = in_array('fields', $request->get('with', []));
+
+        $deepIntegrationProviders = apply_filters('fluentcrm_deep_integration_providers', [], $withFields);
+
+        return [
+            'integrations' => $deepIntegrationProviders
+        ];
+    }
+
+    public function saveIntegration(Request $request)
+    {
+        $provider = $request->get('provider');
+        $action = $request->get('action');
+        $data = $request->all();
+
+        if ($action == 'sync') {
+            $result = apply_filters('fluentcrm_deep_integration_sync_' . $provider, false, $data);
+        } else {
+            $result = apply_filters('fluentcrm_deep_integration_save_' . $provider, false, $data);
+        }
+
+        if ($result) {
+            if (is_wp_error($result)) {
+                return $this->sendError([
+                    'message' => $result->get_error_message()
+                ]);
+            }
+            return $result;
+        }
+
+        return $this->sendError([
+            'message' => __('Sorry, the provided provider does not exist', 'fluent-crm')
+        ]);
     }
 
 }

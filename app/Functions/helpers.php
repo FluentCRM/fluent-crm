@@ -8,6 +8,10 @@ use FluentCrm\App\Models\SubscriberMeta;
 # $app is available
 
 if (!function_exists('FluentCrm')) {
+    /**
+     * @param null|string $module Module name or empty string to get the app of specific moduleFh
+     * @return \FluentCrm\App\App $app | object $instance if specific FluentCRM Framework Module
+     */
     function FluentCrm($module = null)
     {
         return App::getInstance($module);
@@ -15,15 +19,22 @@ if (!function_exists('FluentCrm')) {
 }
 
 if (!function_exists('FluentCrmApi')) {
+
+    /**
+     * @param string|null $key
+     * @return Object $phpApiInstance Get Contacts/Lists/Tags Php API Wrapper
+     */
     function FluentCrmApi($key = null)
     {
         $api = FluentCrm('api');
-
         return is_null($key) ? $api : $api->{$key};
     }
 }
 
 if (!function_exists('dd')) {
+    /**
+     * Internal function for debugging
+     */
     function dd($data)
     {
         foreach (func_get_args() as $arg) {
@@ -36,6 +47,9 @@ if (!function_exists('dd')) {
 }
 
 if (!function_exists('ddd')) {
+    /**
+     * Internal function for debugging
+     */
     function ddd($data)
     {
         foreach (func_get_args() as $arg) {
@@ -48,10 +62,9 @@ if (!function_exists('ddd')) {
 
 if (!function_exists('fluentCrmMix')) {
     /**
-     * Get the path to a versioned Mix file.
+     * Generate URL for static assets for plugin's assets directory
      *
      * @param string $path
-     * @param string $manifestDirectory
      *
      * @return string
      */
@@ -61,11 +74,21 @@ if (!function_exists('fluentCrmMix')) {
     }
 }
 
+/**
+ * Get Current Date time
+ *
+ * @return string Datetime in format Y-m-d H:i:s
+ */
 function fluentCrmTimestamp($timestamp = null)
 {
     return current_time('mysql');
 }
 
+/**
+ * Get Current Date time as UTC Format
+ *
+ * @return string Datetime in format Y-m-d H:i:s as UTC Format
+ */
 function fluentCrmUTCTimestamp($timestamp = null)
 {
     $timestamp = is_null($timestamp) ? time() : $timestamp;
@@ -78,7 +101,7 @@ function fluentCrmUTCTimestamp($timestamp = null)
 }
 
 /**
- * Modified version of source
+ * Get Actual Timezone string for WP
  *
  * @source https://www.skyverge.com/blog/down-the-rabbit-hole-wordpress-and-timezones/
  * @return string
@@ -122,6 +145,9 @@ function fluentCrmGetTimezoneString()
     return 'UTC';
 }
 
+/*
+ * Internal Function For debugging only
+ */
 function fluentCrmMaybeRegisterQueryLoggerIfAvailable($app)
 {
     if (fluentCrmQueryLoggingEnabled()) {
@@ -129,6 +155,9 @@ function fluentCrmMaybeRegisterQueryLoggerIfAvailable($app)
     }
 }
 
+/*
+ * Internal Function For debugging only
+ */
 function fluentCrmQueryLoggingEnabled()
 {
     if (file_exists(__DIR__ . '/../Hooks/Handlers/WpQueryLogger.php')) {
@@ -136,6 +165,9 @@ function fluentCrmQueryLoggingEnabled()
     }
 }
 
+/*
+ * Internal Function For debugging only
+ */
 function fluentCrmEnableQueryLog()
 {
     if (file_exists(__DIR__ . '/../Hooks/Handlers/WpQueryLogger.php')) {
@@ -143,6 +175,9 @@ function fluentCrmEnableQueryLog()
     }
 }
 
+/*
+ * Internal Function For debugging only
+ */
 function fluentCrmGetQueryLog($withStack = true)
 {
     if (file_exists(__DIR__ . '/../Hooks/Handlers/WpQueryLogger.php')) {
@@ -152,6 +187,14 @@ function fluentCrmGetQueryLog($withStack = true)
     }
 }
 
+
+/**
+ * Get meta entry of a FluentCRM entity
+ * @param int $objectId ID of referenced object
+ * @param string $objectType Type of referenced object
+ * @param string $key Key of the reference
+ * @return object FluentCrm\App\Models\Meta Object of the Meta Table Model
+ */
 function fluentcrm_get_meta($objectId, $objectType, $key)
 {
     return Meta::where('object_id', $objectId)
@@ -160,6 +203,14 @@ function fluentcrm_get_meta($objectId, $objectType, $key)
         ->first();
 }
 
+/**
+ * Update or create a meta entry of the given entity
+ * @param int $objectId ID of referenced object
+ * @param string $objectType Type of referenced object
+ * @param string $key Key of the reference
+ * @param mixed $value
+ * @return \FluentCrm\App\Models\Meta|object
+ */
 function fluentcrm_update_meta($objectId, $objectType, $key, $value)
 {
     $model = fluentcrm_get_meta($objectId, $objectType, $key);
@@ -178,6 +229,13 @@ function fluentcrm_update_meta($objectId, $objectType, $key, $value)
     ]);
 }
 
+/**
+ * Delete a Object Meta of FluentCRM
+ * @param int $objectId ID of referenced entity
+ * @param string $objectType Type of referenced entity
+ * @param string $key Key of the reference
+ * @return boolean
+ */
 function fluentcrm_delete_meta($objectId, $objectType, $key)
 {
     return Meta::where('object_id', $objectId)
@@ -186,6 +244,12 @@ function fluentcrm_delete_meta($objectId, $objectType, $key)
         ->delete();
 }
 
+/**
+ * Get FluentCRM Option
+ * @param $optionName string
+ * @param mixed $default
+ * @return mixed|string
+ */
 function fluentcrm_get_option($optionName, $default = '')
 {
     $option = Meta::where('key', $optionName)
@@ -198,6 +262,12 @@ function fluentcrm_get_option($optionName, $default = '')
     return ($option->value) ? $option->value : $default;
 }
 
+/**
+ * Update FluentCRM Option
+ * @param $optionName
+ * @param $value
+ * @return int Created or updated meta entry id
+ */
 function fluentcrm_update_option($optionName, $value)
 {
     $option = Meta::where('key', $optionName)
@@ -219,9 +289,16 @@ function fluentcrm_update_option($optionName, $value)
 
 }
 
-function fluentcrm_get_campaign_meta($objectId, $key, $returnValue = false)
+/**
+ * Get Email Campaign meta value
+ * @param int $campaignId ID of the campaign
+ * @param string $key Key of the meta
+ * @param false $returnValue If true, return the value, otherwise return the meta object
+ * @return false|object
+ */
+function fluentcrm_get_campaign_meta($campaignId, $key, $returnValue = false)
 {
-    $item = fluentcrm_get_meta($objectId, 'FluentCrm\App\Models\Campaign', $key);
+    $item = fluentcrm_get_meta($campaignId, 'FluentCrm\App\Models\Campaign', $key);
     if ($returnValue) {
         if ($item) {
             return $item->value;
@@ -232,46 +309,104 @@ function fluentcrm_get_campaign_meta($objectId, $key, $returnValue = false)
     return $item;
 }
 
-function fluentcrm_update_campaign_meta($objectId, $key, $value)
+/**
+ * update Email Campaign meta value
+ * @param int $campaignId ID of the campaign
+ * @param string $key Key of the meta
+ * @param mixed $value Value of the meta
+ * @return \FluentCrm\App\Models\Meta|object
+ */
+function fluentcrm_update_campaign_meta($campaignId, $key, $value)
 {
-    return fluentcrm_update_meta($objectId, 'FluentCrm\App\Models\Campaign', $key, $value);
+    return fluentcrm_update_meta($campaignId, 'FluentCrm\App\Models\Campaign', $key, $value);
 }
 
-function fluentcrm_delete_campaign_meta($objectId, $key)
+/**
+ * Delete email campaign meta
+ * @param int $campaignId
+ * @param string $key Key of the meta
+ * @return bool
+ */
+function fluentcrm_delete_campaign_meta($campaignId, $key)
 {
-    return fluentcrm_delete_meta($objectId, 'FluentCrm\App\Models\Campaign', $key);
+    return fluentcrm_delete_meta($campaignId, 'FluentCrm\App\Models\Campaign', $key);
 }
 
-function fluentcrm_get_template_meta($objectId, $key)
+/**
+ * Get Email Campaign meta value
+ * @param int $templateId ID of the template
+ * @param string $key Key of the meta
+ * @return object
+ */
+function fluentcrm_get_template_meta($templateId, $key)
 {
-    return fluentcrm_get_meta($objectId, 'FluentCrm\App\Models\Template', $key);
+    return fluentcrm_get_meta($templateId, 'FluentCrm\App\Models\Template', $key);
 }
 
-function fluentcrm_update_template_meta($objectId, $key, $value)
+/**
+ * update Email Template meta value
+ * @param int $templateId id of the template
+ * @param string $key Key of the meta
+ * @param mixed $value Value of the meta
+ * @return \FluentCrm\App\Models\Meta|object
+ */
+function fluentcrm_update_template_meta($templateId, $key, $value)
 {
-    return fluentcrm_update_meta($objectId, 'FluentCrm\App\Models\Template', $key, $value);
+    return fluentcrm_update_meta($templateId, 'FluentCrm\App\Models\Template', $key, $value);
 }
 
-function fluentcrm_delete_template_meta($objectId, $key)
+/**
+ * Delete email template meta
+ * @param int $templateId
+ * @param string $key key of the meta
+ * @return bool
+ */
+function fluentcrm_delete_template_meta($templateId, $key)
 {
-    return fluentcrm_delete_meta($objectId, 'FluentCrm\App\Models\Template', $key);
+    return fluentcrm_delete_meta($templateId, 'FluentCrm\App\Models\Template', $key);
 }
 
-function fluentcrm_get_list_meta($objectId, $key)
+/**
+ * get meta value of Contact lists
+ * @param int $listId
+ * @param string $key key of the meta
+ * @return object
+ */
+function fluentcrm_get_list_meta($listId, $key)
 {
-    return fluentcrm_get_meta($objectId, 'FluentCrm\App\Models\Lists', $key);
+    return fluentcrm_get_meta($listId, 'FluentCrm\App\Models\Lists', $key);
 }
 
-function fluentcrm_update_list_meta($objectId, $key, $value)
+/**
+ * Update meta value of Contact lists
+ * @param int $listId
+ * @param string $key
+ * @param mixed $value
+ * @return \FluentCrm\App\Models\Meta|object
+ */
+function fluentcrm_update_list_meta($listId, $key, $value)
 {
-    return fluentcrm_update_meta($objectId, 'FluentCrm\App\Models\Lists', $key, $value);
+    return fluentcrm_update_meta($listId, 'FluentCrm\App\Models\Lists', $key, $value);
 }
 
-function fluentcrm_delete_list_meta($objectId, $key)
+/**
+ * Delete meta value of Contact lists
+ * @param int $listId
+ * @param string $key
+ * @return bool
+ */
+function fluentcrm_delete_list_meta($listId, $key)
 {
-    return fluentcrm_delete_meta($objectId, 'FluentCrm\App\Models\Lists', $key);
+    return fluentcrm_delete_meta($listId, 'FluentCrm\App\Models\Lists', $key);
 }
 
+/**
+ * get meta value of a Contact
+ * @param int $subscriberId contact ID
+ * @param string $key key of the meta
+ * @param string $deafult default value if meta not found
+ * @return mixed|string
+ */
 function fluentcrm_get_subscriber_meta($subscriberId, $key, $deafult = '')
 {
     $item = SubscriberMeta::where('key', $key)
@@ -285,6 +420,13 @@ function fluentcrm_get_subscriber_meta($subscriberId, $key, $deafult = '')
     return $deafult;
 }
 
+/**
+ * update meta value of a Contact
+ * @param int $subscriberId
+ * @param string $key
+ * @param mixed $value
+ * @return \FluentCrm\App\Models\SubscriberMeta
+ */
 function fluentcrm_update_subscriber_meta($subscriberId, $key, $value)
 {
     $value = maybe_serialize($value);
@@ -301,12 +443,19 @@ function fluentcrm_update_subscriber_meta($subscriberId, $key, $value)
 
     return SubscriberMeta::create([
         'key'           => $key,
+        'created_by'    => get_current_user_id(),
         'value'         => $value,
         'subscriber_id' => $subscriberId,
         'created_at'    => fluentCrmTimestamp()
     ]);
 }
 
+/**
+ * Delete a meta value of a contact
+ * @param int $subscriberId
+ * @param string $key
+ * @return boolean
+ */
 function fluentcrm_delete_subscriber_meta($subscriberId, $key)
 {
     return SubscriberMeta::where('key', $key)
@@ -321,6 +470,11 @@ function fluentcrm_delete_subscriber_meta($subscriberId, $key)
  */
 function fluentcrm_subscriber_statuses()
 {
+    /**
+     * Subscriber Statuses
+     *
+     * @param: array $statuses array of subscriber statuses
+     */
     return apply_filters('fluentcrm_subscriber_statuses', [
         'subscribed',
         'pending',
@@ -337,6 +491,11 @@ function fluentcrm_subscriber_statuses()
  */
 function fluentcrm_subscriber_editable_statuses()
 {
+    /**
+     * Contact's Editable Statuses
+     *
+     * @param: array $editableStatuses array of subscriber's editable statuses
+     */
     return apply_filters('fluentcrm_subscriber_editable_statuses', [
         'subscribed',
         'unsubscribed',
@@ -344,16 +503,35 @@ function fluentcrm_subscriber_editable_statuses()
     ]);
 }
 
+/**
+ * Get Contact Types
+ * @return array
+ */
 function fluentcrm_contact_types()
 {
+    /**
+     * Contact Types
+     *
+     * @param: array $contactTypes array of contact types
+     */
     return apply_filters('fluentcrm_contact_types', [
-        'lead' => __('Lead', 'fluent-crm'),
+        'lead'     => __('Lead', 'fluent-crm'),
         'customer' => __('Customer', 'fluent-crm')
     ]);
 }
 
+/**
+ * Get Contact's Activity Types
+ *
+ * @return array
+ */
 function fluentcrm_activity_types()
 {
+    /**
+     * Contact Activities
+     *
+     * @param: array $activityTypes array of contact's Activity Types
+     */
     return apply_filters('fluentcrm_contact_activity_types', [
         'note'              => __('Note', 'fluent-crm'),
         'call'              => __('Call', 'fluent-crm'),
@@ -373,8 +551,18 @@ function fluentcrm_activity_types()
     ]);
 }
 
+/**
+ * Get Contact's Strict status Types
+ *
+ * @return array
+ */
 function fluentcrm_strict_statues()
 {
+    /**
+     * Contact's strict Statuses
+     *
+     * @return array contact strict statuses
+     */
     return apply_filters('subscriber_strict_statuses', [
         'unsubscribed',
         'bounced',
@@ -382,11 +570,19 @@ function fluentcrm_strict_statues()
     ]);
 }
 
+/**
+ * Email Template CPT Slug
+ * @return string
+ */
 function fluentcrmTemplateCPTSlug()
 {
     return 'fc_template';
 }
 
+/**
+ * Email Template CPT Slug
+ * @return string
+ */
 function fluentcrmCampaignTemplateCPTSlug()
 {
     return FLUENTCRM . 'campaigntemplate';
@@ -399,7 +595,12 @@ function fluentcrmCampaignTemplateCPTSlug()
  */
 function fluentcrmCsvMimes()
 {
-    return apply_filters('fluentcrm_csv_mimes', [
+    /**
+     * Contact Import CSV Mimes
+     *
+     * @return array array of CSV mimes
+     */
+    return apply_filters('fluencrm_csv_mimes', [
         'text/csv',
         'text/plain',
         'application/csv',
@@ -422,16 +623,27 @@ function fluentcrmCsvMimes()
 function fluentcrmGravatar($email)
 {
     $hash = md5(strtolower(trim($email)));
-    return apply_filters(
-        FLUENTCRM . '_get_avatar',
+
+    /**
+     * Gravatar URL by Email
+     *
+     * @return string $gravatar url of the gravatar image
+     */
+    return apply_filters('fluentcrm_get_avatar',
         "https://www.gravatar.com/avatar/${hash}?s=128",
         $email
     );
 }
 
+/**
+ * get FluentCRM's Global Settings
+ * @param string $key key of the setting
+ * @param mixed $default default value
+ * @return mixed
+ */
 function fluentcrmGetGlobalSettings($key, $default = false)
 {
-    $settings = get_option(FLUENTCRM . '-global-settings');
+    $settings = get_option('fluentcrm-global-settings');
     if ($settings && isset($settings[$key])) {
         return $settings[$key];
     }
@@ -448,28 +660,78 @@ function fluentcrmHrefParams($content, $params = [])
 }
 
 
+/**
+ * get if click tracking is enabled or disabled
+ * @return bool
+ */
 function fluentcrmTrackClicking()
 {
+    /**
+     * Enable or Disable Click Tracking for Emails
+     *
+     * @param bool $trackClicking if click tracking is enabled or disabled
+     * @return bool
+     */
     return apply_filters('fluentcrm_track_click', true);
 }
 
 
+/**
+ * get if IP Address Tracking is enabled or disabled
+ * @return bool
+ */
 function fluentCrmWillTrackIp()
 {
+    /**
+     * Enable or Disable IP Address Tracking for Emails
+     *
+     * @param bool $trackIp return true if ip address tracking is enabled or false if disabled
+     * @return bool
+     */
     return apply_filters('fluentcrm_will_track_user_ip', true);
 }
 
+/**
+ * Add tags to a subscriber
+ * @param array $attachedTagIds IDs of the tags that will be added to the subscriber
+ * @param \FluentCrm\App\Models\Subscriber $subscriber
+ * @return void
+ */
 function fluentcrm_contact_added_to_tags($attachedTagIds, Subscriber $subscriber)
 {
-    return do_action(
+    if (defined('FLUENTCRM_DISABLE_TAG_LIST_EVENTS')) {
+        return;
+    }
+    /**
+     * Fires when tags have been added to a subscriber
+     *
+     * @param array $attachedTagIds IDs of the tags that will be added to the subscriber
+     * @param \FluentCrm\App\Models\Subscriber $subscriber
+     */
+    do_action(
         'fluentcrm_contact_added_to_tags',
         (array)$attachedTagIds,
         $subscriber
     );
 }
 
+/**
+ * Add Lists to a subscriber
+ * @param array $attachedListIds IDs of the lists that will be added to the subscriber
+ * @param \FluentCrm\App\Models\Subscriber $subscriber
+ * @return void
+ */
 function fluentcrm_contact_added_to_lists($attachedListIds, Subscriber $subscriber)
 {
+    if (defined('FLUENTCRM_DISABLE_TAG_LIST_EVENTS')) {
+        return;
+    }
+    /**
+     * Fires when lists have been added to a subscriber
+     *
+     * @param array $attachedListIds IDs of the lists that will be added to the subscriber
+     * @param \FluentCrm\App\Models\Subscriber $subscriber
+     */
     return do_action(
         'fluentcrm_contact_added_to_lists',
         (array)$attachedListIds,
@@ -477,18 +739,50 @@ function fluentcrm_contact_added_to_lists($attachedListIds, Subscriber $subscrib
     );
 }
 
+/**
+ * Remove tags from a subscriber
+ * @param $detachedTagIds
+ * @param \FluentCrm\App\Models\Subscriber $subscriber
+ * @return void
+ */
 function fluentcrm_contact_removed_from_tags($detachedTagIds, Subscriber $subscriber)
 {
-    return do_action(
+    if (defined('FLUENTCRM_DISABLE_TAG_LIST_EVENTS')) {
+        return;
+    }
+
+    /**
+     * Fires when tags have been removed from a subscriber
+     *
+     * @param array $detachedTagIds IDs of the tags that will be removed from the subscriber
+     * @param \FluentCrm\App\Models\Subscriber $subscriber
+     */
+    do_action(
         'fluentcrm_contact_removed_from_tags',
         (array)$detachedTagIds,
         $subscriber
     );
 }
 
+/**
+ * Remove lists from a subscriber
+ * @param $detachedListIds
+ * @param \FluentCrm\App\Models\Subscriber $subscriber
+ * @return void
+ */
 function fluentcrm_contact_removed_from_lists($detachedListIds, Subscriber $subscriber)
 {
-    return do_action(
+    if (defined('FLUENTCRM_DISABLE_TAG_LIST_EVENTS')) {
+        return;
+    }
+
+    /**
+     * Fires when lists have been removed from a subscriber
+     *
+     * @param array $detachedListIds IDs of the lists that will be removed from the subscriber
+     * @param \FluentCrm\App\Models\Subscriber $subscriber
+     */
+    do_action(
         'fluentcrm_contact_removed_from_lists',
         (array)$detachedListIds,
         $subscriber
@@ -496,7 +790,9 @@ function fluentcrm_contact_removed_from_lists($detachedListIds, Subscriber $subs
 }
 
 /*
- * @return object \FluentCrm\App\Models\Subscriber
+ * Get Current Contact based on the current userID or contact from the cookie value
+ *
+ * @return false|object \FluentCrm\App\Models\Subscriber
  */
 function fluentcrm_get_current_contact()
 {
@@ -510,22 +806,23 @@ function fluentcrm_get_current_contact()
             $subscriber = Subscriber::where('email', $user->user_email)->first();
         }
     } else {
-        $fcSubscriberHash = FluentCrm\Includes\Helpers\Arr::get($_COOKIE, 'fc_s_hash');
-        if($fcSubscriberHash) {
+        $fcSubscriberHash = FluentCrm\Framework\Support\Arr::get($_COOKIE, 'fc_s_hash');
+        if ($fcSubscriberHash) {
             $subscriber = Subscriber::where('hash', $fcSubscriberHash)->first();
-        } else {
-            // @todo: We will remove this after february
-            $subscriberId = intval(FluentCrm\Includes\Helpers\Arr::get($_COOKIE, 'fc_sid'));
-            if ($subscriberId) {
-                $subscriber = Subscriber::where('id', $subscriberId)->first();
-            }
         }
-
     }
 
     return $subscriber;
 }
 
+/**
+ * Get FluentCRM's contact profile widget HTML
+ *
+ * @param int|string $userIdOrEmail User ID or email address
+ * @param bool $checkPermission Whether to check permission
+ * @param bool $withCss Whether to include CSS
+ * @return false|string HTML of the profile Widget
+ */
 function fluentcrm_get_crm_profile_html($userIdOrEmail, $checkPermission = true, $withCss = true)
 {
     if (!$userIdOrEmail) {
@@ -538,11 +835,16 @@ function fluentcrm_get_crm_profile_html($userIdOrEmail, $checkPermission = true,
         }
     }
 
+
     $profile = FluentCrmApi('contacts')->getContactByUserRef($userIdOrEmail);
     if (!$profile) {
         return '';
     }
 
+    /**
+     * Filter for URL Base of CRM Admin menu
+     * @param string The full url of the admin page
+     */
     $urlBase = apply_filters('fluentcrm_menu_url_base', admin_url('admin.php?page=fluentcrm-admin#/'));
     $crmProfileUrl = $urlBase . 'subscribers/' . $profile->id;
     $tags = $profile->tags;
@@ -648,6 +950,7 @@ function fluentcrm_get_crm_profile_html($userIdOrEmail, $checkPermission = true,
             font-size: 11px;
             margin-top: 7px;
         }
+
         .fc_stats {
             list-style: none;
             margin-bottom: 20px;
@@ -670,13 +973,20 @@ function fluentcrm_get_crm_profile_html($userIdOrEmail, $checkPermission = true,
 }
 
 
+/**
+ * Maybe Disable the FluentSMTP's Email Logging based provided $settings
+ *
+ * @param bool $status
+ * @param array $settings
+ * @return bool
+ */
 function fluentcrm_maybe_disable_fsmtp_log($status, $settings)
 {
-    if(!$status) {
+    if (!$status) {
         return $status;
     }
 
-    if(isset($settings['disable_fluentcrm_logs']) && $settings['disable_fluentcrm_logs'] == 'yes') {
+    if (isset($settings['disable_fluentcrm_logs']) && $settings['disable_fluentcrm_logs'] == 'yes') {
         return false;
     }
 
@@ -684,13 +994,115 @@ function fluentcrm_maybe_disable_fsmtp_log($status, $settings)
 }
 
 
+/**
+ * Get Custom Fields schema for contacts
+ *
+ * @return array
+ */
 function fluentcrm_get_custom_contact_fields()
 {
     static $fields;
-    if($fields) {
+    if ($fields) {
         return $fields;
     }
     $fields = fluentcrm_get_option('contact_custom_fields', []);
 
     return $fields;
+}
+
+/**
+ * Sending a job to background for further processing
+ *
+ * @param string $callbackName - name of the callback
+ * @param mixed $payload
+ * @return bool
+ */
+function fluentcrm_queue_on_background($callbackName, $payload)
+{
+    $body = [
+        'payload'       => $payload,
+        'callback_name' => $callbackName
+    ];
+
+    $args = array(
+        'timeout'   => 0.1,
+        'blocking'  => false,
+        'body'      => $body,
+        'cookies'   => $_COOKIE,
+        'sslverify' => apply_filters('fluentcrm_https_local_ssl_verify', false),
+    );
+
+    $queryArgs = array(
+        'action' => 'fluentcrm_callback_for_background',
+        'nonce'  => wp_create_nonce('fluentcrm_callback_for_background'),
+    );
+
+    $url = add_query_arg($queryArgs, admin_url('admin-ajax.php'));
+    wp_remote_post(esc_url_raw($url), $args);
+    return true;
+}
+
+/**
+ * Check if FluentCRM will render the email contents as RTL mode
+ *
+ * @return mixed|void
+ */
+function fluentcrm_is_rtl()
+{
+    /**
+     * If FluentCRM is running on RTL Mode
+     *
+     * @param bool $is_rtl - return true if you want to render FluentCRM emails in RTL mode
+     */
+    return apply_filters('fluentcrm_is_rtl', is_rtl());
+}
+
+/**
+ * Get FluentCRM Query Builder instance
+ *
+ * @return FluentCrm\Framework\Database\Query\WPDBConnection
+ */
+function fluentCrmDb()
+{
+    return fluentCrm('db');
+}
+
+function fluentCrmIsMemoryExceeded()
+{
+    $memory_limit = fluentCrmGetMemoryLimit() * 0.80;
+    $current_memory = memory_get_usage(true);
+
+    return $current_memory >= $memory_limit;
+}
+
+function fluentCrmGetMemoryLimit()
+{
+    if (function_exists('ini_get')) {
+        $memory_limit = ini_get('memory_limit');
+    } else {
+        $memory_limit = '128M'; // Sensible default, and minimum required by WooCommerce
+    }
+
+    if (!$memory_limit || -1 === $memory_limit || '-1' === $memory_limit) {
+        // Unlimited, set to 12GB.
+        $memory_limit = '12G';
+    }
+
+
+    if (function_exists('wp_convert_hr_to_bytes')) {
+        return wp_convert_hr_to_bytes($memory_limit);
+    }
+
+    $value = strtolower(trim($memory_limit));
+    $bytes = (int)$value;
+
+    if (false !== strpos($value, 'g')) {
+        $bytes *= GB_IN_BYTES;
+    } elseif (false !== strpos($value, 'm')) {
+        $bytes *= MB_IN_BYTES;
+    } elseif (false !== strpos($value, 'k')) {
+        $bytes *= KB_IN_BYTES;
+    }
+
+    return min($bytes, PHP_INT_MAX);
 }
