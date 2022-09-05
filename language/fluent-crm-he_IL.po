@@ -179,7 +179,7 @@ msgstr "[TutorLMS] בדוק אם איש הקשר רושם קורס"
 #: app/Hooks/Handlers/ExternalPages.php:729
 #, php-format
 msgid ""
-"A conformation email has been sent to %s. Please confirm your email address "
+"A confirmation email has been sent to %s. Please confirm your email address "
 "to resubscribe"
 msgstr ""
 "דוא\"ל קונפורמציה נשלח אל %s. אנא אשר את כתובת הדוא\"ל שלך כדי להירשם מחדש"
@@ -187,7 +187,7 @@ msgstr ""
 #: app/Hooks/Handlers/ExternalPages.php:709
 #, php-format
 msgid ""
-"A conformation email has been sent to %s. Please confirm your email address "
+"A confirmation email has been sent to %s. Please confirm your email address "
 "to resubscribe with changed email address"
 msgstr ""
 "דוא\"ל קונפורמציה נשלח אל %s. אנא אשר את כתובת הדוא\"ל שלך כדי להירשם מחדש "
