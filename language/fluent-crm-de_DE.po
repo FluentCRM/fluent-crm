@@ -188,7 +188,7 @@ msgstr ""
 #: app/Hooks/Handlers/ExternalPages.php:729
 #, php-format
 msgid ""
-"A conformation email has been sent to %s. Please confirm your email address "
+"A confirmation email has been sent to %s. Please confirm your email address "
 "to resubscribe"
 msgstr ""
 "Eine Bestätigungs-E-Mail wurde an %s gesendet. Bitte bestätigen Sie Ihre E-"
@@ -197,7 +197,7 @@ msgstr ""
 #: app/Hooks/Handlers/ExternalPages.php:709
 #, php-format
 msgid ""
-"A conformation email has been sent to %s. Please confirm your email address "
+"A confirmation email has been sent to %s. Please confirm your email address "
 "to resubscribe with changed email address"
 msgstr ""
 "Eine Bestätigungs-E-Mail wurde an %s gesendet. Bitte bestätigen Sie Ihre E-"

@@ -707,7 +707,7 @@ class ExternalPages
             }
 
             wp_send_json_success([
-                'message' => sprintf(__('A conformation email has been sent to %s. Please confirm your email address to resubscribe with changed email address', 'fluent-crm'), $email)
+                'message' => sprintf(__('A confirmation email has been sent to %s. Please confirm your email address to resubscribe with changed email address', 'fluent-crm'), $email)
             ], 200);
         }
 
@@ -727,7 +727,7 @@ class ExternalPages
         if ($subscriber->status != 'subscribed') {
             $subscriber->sendDoubleOptinEmail();
             wp_send_json_success([
-                'message' => sprintf(__('A conformation email has been sent to %s. Please confirm your email address to resubscribe', 'fluent-crm'), $email)
+                'message' => sprintf(__('A confirmation email has been sent to %s. Please confirm your email address to resubscribe', 'fluent-crm'), $email)
             ], 200);
         }
 
