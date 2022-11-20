@@ -1,17 +1,17 @@
-=== Email Marketing Automation, Email Newsletter and CRM Plugin for WordPress by FluentCRM ===
+=== Email Marketing, Newsletter, Email Automation and CRM Plugin for WordPress by FluentCRM ===
 Contributors: techjewel,adreastrian,heera,wpmanageninja
-Tags: newsletter, crm, Email Marketing, Funnel, Email Newsletter
+Tags: email marketing, newsletter, crm, email newsletter, subscribers
 Requires at least: 5.0
-Tested up to: 5.9
-Requires PHP: 5.6
-Stable tag: 2.5.8
+Tested up to: 6.1
+Requires PHP: 7.1
+Stable tag: 2.6.51
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-The easiest and fastest Email Newsletter, Email Marketing Plugin & CRM Solution for WordPress
+The easiest and fastest Email Marketing, Newsletter, Marketing Automation Plugin & CRM Solution for WordPress
 
 == Description ==
-= The easiest and fastest Email Newsletter, Email Marketing Plugin & CRM Solution for WordPress =
+= The easiest and fastest Email Marketing, Newsletter, Marketing Automation Plugin & CRM Solution for WordPress =
 
 👉 Official Website Link: [Official Website](https://fluentcrm.com/)
 👉 Join Our FB Community: [FluentCRM Facebook Group](https://web.facebook.com/groups/fluentcrm)
@@ -22,6 +22,11 @@ The easiest and fastest Email Newsletter, Email Marketing Plugin & CRM Solution 
 = Your Self Hosted CRM & Email Marketing Solution in WordPress  =
 
 [FluentCRM](https://fluentcrm.com) is the best and complete feature-rich Email Marketing & CRM solution. It is also the simplest and fastest CRM and Marketing Plugin on WordPress. Manage your customer relationships, build your email lists, send email campaigns, build funnels, and make more profit and increase your conversion rates. (Yes, It's Free!)
+
+= The most complete Email Newsletter and Campaigns Plugin for WordPress =
+[youtube https://www.youtube.com/watch?v=QSVpos-WJFg]
+
+Want to run email campaigns or email newsletter for your leads or customers? FluentCRM is the perfect solution for your email newsletter and email campaigns. Just import a csv or WordPress Users and you ready to go. Segment your contacts and send emails whenever you want.
 
 = FEATURES - Every online business needs =
 
@@ -221,6 +226,8 @@ Just go to contact imports then select your current provider (ActiveCampaign, Ma
 FluentCRM has a full REST API support. If you want to integrate with Other System or building an APP then You can take a look of our REST API Documentation
 👉 [View Rest API Documentation](https://rest-api.fluentcrm.com/)👈
 
+<h4>Migrate from Other Email Marketing System</h4>
+We made it easier for you to migrate from other email marketing tools like MailChimp, ConvertKit, MailerLite, Drip and Active Campaign. You can migrate from these system in minutes. Migrate today and enjoy all the cool features and own your own data.
 
 == Other Plugins By The Same Team ==
 <ul>
@@ -263,7 +270,7 @@ You can use any SMTP service like MailGun, SendGrid, Amazon SES. We recommend us
 
 Yes, FluentCRM is 100% self-hosted. FluentCRM will not connect with any of our SAAS servers. You own the data, and your data should be hosted on your hosting server.
 
-= Is it a GDPR compliant? =
+= Is it a GDPR-Compliant? =
 
 Yes, your data never goes to a different server like MailChimp, ActiveCampaign, or 100s of other CRM. All the data will be saved and managed into WordPress.
 
@@ -298,6 +305,64 @@ The entire source code is <a href="https://github.com/fluentcrm/fluent-crm/">ava
 10. Pro Integrations
 
 == Changelog ==
+
+= 2.6.51 Date: Nov 17, 2022 =
+* Email Audit for invalid Links for Email Editor
+* Huge Improvement on Email Builder
+* In-Page Documentation for top level feature pages
+* UI & UX improvement across the full application
+* Better Mobile optimized screens
+* User registration automation trigger issues are solved
+
+= 2.6.0 Date: Oct 20, 2022 =
+* Faster email editor
+* Improved Email Sequences
+* Improvement on Automation Goals
+* Select and modify email template blocks in bulk
+* Experimental features for Faster Contact Navigations, Date Formats
+* UI & UX Improvements
+* Bug fixes and minor improvements
+* Experimental Feature: Email Archives in the frontend (Pro)
+* Email campaign, sequence, automation activity conditions on Contact Advanced Filters (pro)
+* New WooCommerce/EDD/LearnDash/LifterLMS conditions (Pro)
+* New Trigger: Birthday Automation (Pro)
+* New Action: Remove WordPress User Role
+* New Trigger: Leave from a Course(LearnDash)
+
+= 2.5.95 (Date: Aug 19, 2022) =
+* Advanced wait action in Automation
+* Added restart automation to all(almost) triggers
+* Sequence filtering for automation
+* View revenue for specific emails
+* Create Fluent Support tickets from Automation
+* Split test automation scenarios (pro)
+* Revenue metrics in email sequences
+* More conditions in Advanced Filtering (pro)
+* Enable/Disable auto sync for integrated tools
+* Email preference management short-code
+* Detailed CRM reporting (pro)
+* Pre-populate Fluent Forms data from FluentCRM
+* Improved Tag import and auto-syncing for MailChimp Driver
+* Bug fixes & improvements
+
+= 2.5.93 (Date: July 07, 2022 ) =
+* Improved scheduled campaigns
+* Huge Performance Improvement
+* Fixed Country Name Filters
+* Improved Contact Imports
+* WP User Sync Issue fixed
+* Contact Exclude from campaign fixed
+* WP Ultimo conflict issue resolved
+
+= 2.5.91 (Date: Jun 01, 2022 ) =
+* HOT FIX:User registration issue fixed
+
+= 2.5.9 (Date: May 27, 2022 ) =
+* UI Improvements
+* Integration Improvements
+* More Bulk Actions Added
+* Added Subscriber Segment selections view for campaign
+* Added more filters for contacts
 
 = 2.5.8 (Date: March 07, 2022 ) =
 * Fixed campaign sending issue for some server
@@ -403,109 +468,6 @@ The entire source code is <a href="https://github.com/fluentcrm/fluent-crm/">ava
 * Email sending speed improvement
 * Contact Data syncing with WordPress Users
 * Overall UI and REST API improvements
-
-= 1.1.93 (Date: February 05, 2021) =
-* PHP 8.0 Compatible
-* Setup wizard fixed
-
-= 1.1.92 (Date: January 25, 2021) =
-* Added Post/Page Block for Dynamic content based on tag or login state
-* Added feature to delete old logs
-* Added all emails activity page
-* Fix issue on dynamic smart tags on the email subject
-* UI improvement
-* Added FluentSMTP Support
-
-= 1.1.91 (Date: November 27, 2020) =
-* List Action issue resolved
-* Prepare For WordPress 5.6
-* Editor Improvement
-* Custom HTML parser for Email Campaign Fix
-
-= 1.1.90 (Date: November 23, 2020) =
-* Email Builder Improvement
-* Inline Contact Tagging with Fluent Forms
-* Better Email and Automation Reporting from Contact Profile
-* Rename Campaign from any campaign screen
-* Better Automation Visibility
-* Automation Trigger related bug fixed
-
-= 1.1.80 (Date: November 19, 2020) =
-* Short URL redirect issue resolved
-* Tag Automation Trigger fixed
-* Automation Action Fixes
-
-= 1.1.7 (Date: November 14, 2020) =
-* Contact Search Improvement
-* Automation Improvement
-* User Data endpoint improvements
-* Bounce Handler Improvement
-* Internal Improvements
-
-= 1.1.5 (Date: October 29, 2020) =
-* Email Builder improvement
-* Email Campaign Duplication
-* Automation Funnel Improvement
-* Added global reply configuration
-* Improved Amazon SES Bounce Handler
-
-= 1.1.4 (Date: October 25, 2020) =
-* Funnel Reporting improvement
-* Fix issue for double optin + Automation trigger
-* UI Improvements
-* Show CRM Profile Link in Edit user screen
-
-= 1.1.3 (Date: October 23, 2020) =
-* Funnel Benchmark issue has been fixed
-* Added RTL support
-* Bulk Email Sending Memory issue has been fixed
-* Added Duplicate Automation Feature
-* Added More Hooks for 3rd Party Developers
-* Improvement on Big Lists for email sending
-* Oxygen Builder Compatibility issues fixed
-
-= 1.1.2 (Date: October 16, 2020) =
-* Funnel automation fix with Fluent Forms
-* Segmentation Selection fix
-* Fix custom fields mapping
-* Double Opt-in Fixed and controlled
-* Added search on Emails
-* Added More API endpoints
-* Overall performance improvement
-
-= 1.1.1 (Date: October 09, 2020) =
-* Massive Optimization for large lists like 300K
-* Fixed API namespace fixed
-* WPFusion & MailOptin Issue fixed
-* Unsubscribe Page improvement
-* Step save on email campaign
-
-= 1.0.8 (Date: October 07, 2020) =
-* Fixed unsubscription issue
-* Custom filed mapper has been added with Fluent Froms
-* Funnel renamed to Automations
-* Fix language text-doamin
-* Internal Improvements
-
-= 1.0.6 (Date: October 02, 2020) =
-* Fix Double Optin Issues
-* Improved Tools Page
-
-= 1.0.3 (Date: October 01, 2020) =
-* Fix Tag creation title
-* Fix form creation wizard
-* Fix Setup wizard
-
-= 1.0.1 (Date: October 01, 2020) =
-* Few Typo Fix
-* List issue fix in funnel
-
-= 1.0.0 (Date: September 29, 2020) =
-* Initial Launch
-* 1482 git commits so far
-* 1982 cup of coffee (Just kidding, We lost count)
-* Work of 1 year + 5 developers
-* Let's make WordPress great!
 
 == Upgrade Notice ==
 The latest version is compatible with the previous version, So nothing to worry.

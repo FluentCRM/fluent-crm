@@ -184,7 +184,7 @@ trait Output
         if (!empty($bom)) {
             $csv->fseek(mb_strlen($input_bom));
         }
-        echo $bom;
+        echo $bom; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         $res = $csv->fpassthru();
 
         return $res + strlen($bom);

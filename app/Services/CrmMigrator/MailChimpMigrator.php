@@ -2,11 +2,14 @@
 
 namespace FluentCrm\App\Services\CrmMigrator;
 
+use FluentCrm\App\Models\Tag;
 use FluentCrm\App\Services\CrmMigrator\Api\MailChimp;
 use FluentCrm\Framework\Support\Arr;
 
 class MailChimpMigrator extends BaseMigrator
 {
+    private $tagNameCache = [];
+
     public function getInfo()
     {
         return [
@@ -17,7 +20,8 @@ class MailChimpMigrator extends BaseMigrator
                 'tags'                => true,
                 'lists'               => true,
                 'empty_tags'          => true,
-                'active_imports_only' => true
+                'active_imports_only' => true,
+                'auto_tag_mapper'     => true
             ],
             'credentials'            => [
                 'api_key' => ''
@@ -32,7 +36,7 @@ class MailChimpMigrator extends BaseMigrator
                 ]
             ],
             'refresh_on_list_change' => true,
-            'doc_url' => 'https://fluentcrm.com/docs/migrating-into-fluentcrm-from-mailchimp/'
+            'doc_url'                => 'https://fluentcrm.com/docs/migrating-into-fluentcrm-from-mailchimp/'
         ];
     }
 
@@ -173,6 +177,9 @@ class MailChimpMigrator extends BaseMigrator
 
     public function runImport($postedData)
     {
+
+        $isAutoTagMapping = Arr::get($postedData, 'auto_mapping') == 'yes';
+
         if (!defined('FLUENTCRM_DISABLE_TAG_LIST_EVENTS')) {
             define('FLUENTCRM_DISABLE_TAG_LIST_EVENTS', true);
         }
@@ -185,12 +192,15 @@ class MailChimpMigrator extends BaseMigrator
 
         $params = [
             'offset' => Arr::get($postedData, 'completed', 0),
-            'count'  => $processPerPage
+            'count'  => $processPerPage,
+            'status' => ''
         ];
 
-        $tagMappings = Arr::get($postedData, 'tags', []);
-
-        $taggingArray = $this->mapTags($tagMappings);
+        $taggingArray = [];
+        if(!$isAutoTagMapping) {
+            $tagMappings = Arr::get($postedData, 'tags', []);
+            $taggingArray = $this->mapTags($tagMappings);
+        }
 
         if ($mapSettings['import_active_only'] == 'yes') {
             $params['status'] = 'subscribed';
@@ -203,10 +213,15 @@ class MailChimpMigrator extends BaseMigrator
         $fieldMaps = Arr::get($postedData, 'contact_fields', []);
 
         foreach ($subscribers as $subscriber) {
+            $created_at = date('Y-m-d H:i:s');
+            if (!empty($subscriber['timestamp_signup'])) {
+                $created_at = date('Y-m-d H:i:s', strtotime($subscriber['timestamp_signup']));
+            }
+
             $data = [
                 'email'      => $subscriber['email_address'],
                 'full_name'  => $subscriber['full_name'],
-                'created_at' => date('Y-m-d H:i:s', strtotime($subscriber['timestamp_signup'])),
+                'created_at' => $created_at,
                 'source'     => $subscriber['source'],
                 'ip'         => $subscriber['ip_signup'],
                 'country'    => Arr::get($subscriber, 'location.country_code'),
@@ -245,23 +260,7 @@ class MailChimpMigrator extends BaseMigrator
                 $data['lists'] = [$mapSettings['local_list_id']];
             }
 
-            if (!empty($subscriber['tags'])) {
-                $tagIds = [];
-                foreach ($subscriber['tags'] as $contactTag) {
-                    if (!empty($taggingArray[$contactTag['id']])) {
-                        $tagIds[] = $taggingArray[$contactTag['id']];
-                    }
-                }
-
-                if (empty($tagIds) && !empty($mapSettings['local_tag_id'])) {
-                    $tagIds = [$mapSettings['local_tag_id']];
-                }
-
-                $data['tags'] = $tagIds;
-
-            } else if (!empty($mapSettings['local_tag_id'])) {
-                $data['tags'] = [$mapSettings['local_tag_id']];
-            }
+            $data['tags'] = $this->formatRemoteTags($subscriber['tags'], $isAutoTagMapping, $mapSettings);
 
             $contact = FluentCrmApi('contacts')->createOrUpdate($data);
 
@@ -269,6 +268,7 @@ class MailChimpMigrator extends BaseMigrator
                 $oldStatus = $contact->status;
                 $contact->status = 'subscribed';
                 $contact->save();
+
                 do_action('fluentcrm_subscriber_status_to_subscribed', $contact, $oldStatus);
             }
 
@@ -281,6 +281,45 @@ class MailChimpMigrator extends BaseMigrator
             'total'     => $members['total_items'],
             'has_more'  => $completed < $members['total_items']
         ];
+    }
+
+    private function formatRemoteTags($remoteTags, $isAuto, $mapSettings)
+    {
+        $tagIds = [];
+        if($isAuto) {
+            foreach ($remoteTags as $tag) {
+                $tagName = sanitize_text_field($tag['name']);
+                if(!empty($this->tagNameCache[$tagName])) {
+                    $tagIds[] = $this->tagNameCache[$tagName];
+                } else {
+                    $createdTag = Tag::updateOrCreate(
+                        ['slug' => sanitize_title($tagName, 'display')],
+                        ['title' => sanitize_text_field($tagName)]
+                    );
+                    if($createdTag) {
+                        $this->tagNameCache[$createdTag->title] = $createdTag->id;
+                        $tagIds[] = $createdTag->id;
+                    }
+                }
+            }
+
+            if (empty($tagIds) && !empty($mapSettings['local_tag_id'])) {
+                $tagIds = [$mapSettings['local_tag_id']];
+            }
+
+            return $tagIds;
+        }
+
+        foreach ($remoteTags as $contactTag) {
+            if (!empty($taggingArray[$contactTag['id']])) {
+                $tagIds[] = $taggingArray[$contactTag['id']];
+            }
+        }
+
+        if (empty($tagIds) && !empty($mapSettings['local_tag_id'])) {
+            $tagIds = [$mapSettings['local_tag_id']];
+        }
+        return $tagIds;
     }
 
     private function getApi($credential)

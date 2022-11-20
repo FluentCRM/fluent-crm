@@ -11,6 +11,7 @@ use FluentCrm\App\Models\SubscriberPivot;
 use FluentCrm\App\Services\ContactsQuery;
 use FluentCrm\App\Services\Funnel\FunnelProcessor;
 use FluentCrm\App\Services\Helper;
+use FluentCrm\App\Services\Sanitize;
 use FluentCrm\Framework\Support\Arr;
 use FluentCrm\Framework\Request\Request;
 
@@ -33,18 +34,18 @@ class SubscriberController extends Controller
             $queryArgs = [
                 'filter_type'        => 'advanced',
                 'filters_groups_raw' => $this->request->getJson('advanced_filters'),
-                'search'             => $this->request->get('search', ''),
-                'sort_by'            => $this->request->get('sort_by', 'id'),
-                'sort_type'          => $this->request->get('sort_type', 'DESC'),
+                'search'             => trim(sanitize_text_field($this->request->get('search', ''))),
+                'sort_by'            => sanitize_sql_orderby($this->request->get('sort_by', 'id')),
+                'sort_type'          => sanitize_sql_orderby($this->request->get('sort_type', 'DESC')),
                 'has_commerce'       => $this->request->get('has_commerce'),
                 'custom_fields'      => $this->request->get('custom_fields') == 'true'
             ];
         } else {
             $queryArgs = [
                 'filter_type'   => 'simple',
-                'search'        => $this->request->get('search', ''),
-                'sort_by'       => $this->request->get('sort_by', 'id'),
-                'sort_type'     => $this->request->get('sort_type', 'DESC'),
+                'search'        => trim(sanitize_text_field($this->request->get('search', ''))),
+                'sort_by'       => sanitize_sql_orderby($this->request->get('sort_by', 'id')),
+                'sort_type'     => sanitize_sql_orderby($this->request->get('sort_type', 'DESC')),
                 'has_commerce'  => $this->request->get('has_commerce'),
                 'custom_fields' => $this->request->get('custom_fields') == 'true',
                 'tags'          => $this->request->get('tags', []),
@@ -70,7 +71,14 @@ class SubscriberController extends Controller
     {
         $with = $this->request->get('with', []);
 
-        $subscriber = Subscriber::with(['tags', 'lists'])->find($this->request->get('id'));
+        $contactId = $this->request->get('id');
+
+        $subscriber = false;
+        if ($contactId) {
+            $subscriber = Subscriber::with(['tags', 'lists'])->find($contactId);
+        } else if ($byEmail = $this->request->get('get_by_email')) {
+            $subscriber = Subscriber::with(['tags', 'lists'])->where('email', sanitize_email($byEmail))->first();
+        }
 
         if (!$subscriber) {
             return $this->sendError([
@@ -86,8 +94,9 @@ class SubscriberController extends Controller
             }
         }
 
-        if ($subscriber->user_id) {
-            $subscriber->user_edit_url = get_edit_user_link($subscriber->user_id);
+        if ($wpUser = $subscriber->getWpUser()) {
+            $subscriber->user_edit_url = get_edit_user_link($wpUser->ID);
+            $subscriber->user_roles = array_values($wpUser->roles);
         }
 
         if (in_array('stats', $with)) {
@@ -104,8 +113,10 @@ class SubscriberController extends Controller
 
         if ($subscriber->status == 'unsubscribed') {
             $subscriber->unsubscribe_reason = $subscriber->unsubscribeReason();
+            $subscriber->unsubscribe_date = $subscriber->unsubscribeReasonDate();
         } else if ($subscriber->status == 'bounced' || $subscriber->status == 'complained') {
             $subscriber->unsubscribe_reason = $subscriber->unsubscribeReason('reason');
+            $subscriber->unsubscribe_date = $subscriber->unsubscribeReasonDate('reason');
         }
 
         $data = [
@@ -122,9 +133,9 @@ class SubscriberController extends Controller
 
     public function updateProperty()
     {
-        $column = sanitize_text_field($this->request->get('property'));
-        $value = sanitize_text_field($this->request->get('value'));
-        $subscriberIds = $this->request->get('subscribers');
+        $column = $this->request->getSafe('property');
+        $value = $this->request->getSafe('value');
+        $subscriberIds = $this->request->getSafe('subscribers', [], 'intval');
 
         $validColumns = ['status', 'contact_type', 'avatar'];
         $subscriberStatuses = fluentcrm_subscriber_statuses();
@@ -150,7 +161,9 @@ class SubscriberController extends Controller
             return $this->sendError([
                 'message' => __('Value is not valid', 'fluent-crm')
             ]);
-        } else if ($column == 'contact_type' && !isset($leadStatuses[$value])) {
+        }
+
+        if ($column == 'contact_type' && !isset($leadStatuses[$value])) {
             return $this->sendError([
                 'message' => __('Value is not valid', 'fluent-crm')
             ]);
@@ -173,6 +186,17 @@ class SubscriberController extends Controller
 
         return $this->sendSuccess([
             'message' => __('Subscribers successfully updated', 'fluent-crm')
+        ]);
+    }
+
+    public function deleteSubscriber(Request $request, $id)
+    {
+        $subscriber = Subscriber::findOrFail($id);
+
+        Helper::deleteContacts([$subscriber->id]);
+
+        return $this->sendSuccess([
+            'message' => __('Selected Subscriber has been deleted successfully', 'fluent-crm')
         ]);
     }
 
@@ -258,10 +282,33 @@ class SubscriberController extends Controller
 
         unset($data['__force_update']);
 
+        $data = Sanitize::contact($data);
+
+        $user = get_user_by('email', $data['email']);
+        if ($user) {
+            $data['user_id'] = $user->ID;
+        } else {
+            $data['user_id'] = '';
+        }
+
         if ($this->isNew()) {
+            $data['created_at'] = current_time('mysql');
             $contact = Subscriber::store($data);
 
+            /**
+             * new Contact has been created
+             *
+             * @param Subscriber $contact Subscriber Model.
+             * @param array $data Original raw subscriber.
+             * @since 3.30.2
+             *
+             */
             do_action('fluentcrm_contact_created', $contact, $data);
+            $double_optin = filter_var($request->get('double_optin'), FILTER_VALIDATE_BOOLEAN);
+
+            if ($double_optin) {
+                $contact->sendDoubleOptinEmail();
+            }
 
             return [
                 'message'     => __('Successfully added the subscriber.', 'fluent-crm'),
@@ -272,7 +319,7 @@ class SubscriberController extends Controller
         } else if ($forceUpdate) {
             $contact = FluentCrmApi('contacts')->createOrUpdate($data, false, false);
 
-            if ($contact->status == 'pending') {
+            if ($contact && $contact->status == 'pending') {
                 $contact->sendDoubleOptinEmail();
             }
 
@@ -293,6 +340,12 @@ class SubscriberController extends Controller
         $subscriber = Subscriber::findOrFail($id);
         $originalData = $request->getJson('subscriber');
 
+        if (!$originalData) {
+            $originalData = $request->all();
+        }
+
+        $data = [];
+
         if (isset($originalData['email'])) {
             $data = $this->validate($originalData, [
                 'email' => 'required|email|unique:fc_subscribers,email,' . $id,
@@ -305,47 +358,33 @@ class SubscriberController extends Controller
             // Maybe update user id
             if ($user = get_user_by('email', $data['email'])) {
                 $data['user_id'] = $user->ID;
+            } else {
+                $data['user_id'] = NULL;
             }
         }
 
         if (!empty($data['user_id'])) {
-            $data['user_id'] = intval($data['user_id']);
+            $data['user_id'] = (int)$data['user_id'];
         }
 
         if (isset($data['date_of_birth']) && empty($data['date_of_birth'])) {
             $data['date_of_birth'] = '0000-00-00';
         }
 
-        $validFields = $subscriber->getFillable();
-
-        $validData = [];
-
-        foreach ($data as $key => $datum) {
-            if (in_array($key, $validFields)) {
-                if (is_string($datum)) {
-                    $datum = sanitize_text_field($datum);
-                }
-                $validData[$key] = $datum;
-            }
-        }
+        $validData = Sanitize::contact($data);
 
         unset($validData['created_at']);
         unset($validData['last_activity']);
-        $customValues = Arr::get($originalData, 'custom_values');
+        $customValues = Arr::get($originalData, 'custom_values', []);
 
-        if (!$customValues && !$validFields) {
-            return $this->sendError([
-                'message' => __('Provided data is not valid', 'fluent-crm')
-            ]);
-        }
 
         $oldEmail = $subscriber->email;
 
         $subscriber->fill($validData);
         $dirtyFields = $subscriber->getDirty();
 
-        $subscriber->save();
 
+        $subscriber->save();
         if ($customValues) {
             $subscriber->syncCustomFieldValues($customValues, true);
         }
@@ -369,16 +408,33 @@ class SubscriberController extends Controller
         if ($dirtyFields) {
 
             if (isset($dirtyFields['email'])) {
+                /**
+                 * Contact's Email address has been updated
+                 *
+                 * @param Subscriber $subscriber Subscriber Model.
+                 * @param string $oldEmail Old Email Address.
+                 * @since 1.0
+                 *
+                 */
                 do_action('fluentcrm_contact_email_changed', $subscriber, $oldEmail);
             }
 
+            /**
+             * Contact's information has been updated
+             *
+             * @param Subscriber $subscriber Subscriber Model.
+             * @param array $validData Raw data that has been updated.
+             * @since 1.0
+             *
+             */
             do_action('fluentcrm_contact_updated', $subscriber, $validData);
         }
 
         return $this->sendSuccess([
             'message' => __('Subscriber successfully updated', 'fluent-crm'),
             'contact' => $subscriber,
-            'isDirty' => !!$dirtyFields
+            'isDirty' => !!$dirtyFields,
+            'values'  => $customValues
         ], 200);
     }
 
@@ -429,7 +485,7 @@ class SubscriberController extends Controller
     private function isNew()
     {
         $subscriber = Subscriber::where(
-            'email', $this->request->get('email')
+            'email', $this->request->getSafe('email', '', 'sanitize_email')
         )->first();
 
         if ($subscriber) {
@@ -452,7 +508,7 @@ class SubscriberController extends Controller
 
     public function deleteEmails(Request $request, $subscriberId)
     {
-        $emailIds = $request->get('email_ids');
+        $emailIds = array_map('intval', $request->get('email_ids'));
         CampaignEmail::where('subscriber_id', $subscriberId)
             ->whereIn('id', $emailIds)
             ->delete();
@@ -463,34 +519,72 @@ class SubscriberController extends Controller
 
     public function addNote(Request $request, $id)
     {
+        $subscriber = Subscriber::findOrFail($id);
         $note = $this->validate($request->get('note'), [
             'title'       => 'required',
             'description' => 'required',
-            'type'        => 'required'
+            'type'        => 'required',
+            'created_at'  => 'sometimes|datetime'
         ]);
 
-        $subsciberNote = SubscriberNote::create(array_merge(
-            wp_unslash($note), ['subscriber_id' => $id]
-        ));
+        if (empty($note['created_at'])) {
+            $note['created_at'] = current_time('mysql');
+        }
+
+        $note['subscriber_id'] = $id;
+
+        $note = Sanitize::contactNote($note);
+
+        $subscriberNote = SubscriberNote::create(wp_unslash($note));
+
+        /**
+         * Subscriber's Note Added
+         *
+         * @param SubscriberNote $subscriberNote Note Model.
+         * @param Subscriber $subscriber Contact Model.
+         * @param array $note Contact Note Data Array.
+         * @since 1.0
+         */
+        do_action('fluent_crm/note_added', $subscriberNote, $subscriber, $note);
 
         return $this->sendSuccess([
-            'note'    => $subsciberNote,
+            'note'    => $subscriberNote,
             'message' => __('Note successfully added', 'fluent-crm')
         ]);
     }
 
     public function updateNote(Request $request, $id, $noteId)
     {
+        $subscriber = Subscriber::findOrFail($id);
+
         $note = $this->validate($request->get('note'), [
             'title'       => 'required',
             'description' => 'required',
-            'type'        => 'required'
+            'type'        => 'required',
+            'created_at'  => 'sometimes|datetime'
         ]);
 
-        $note = Arr::only(wp_unslash($note), ['title', 'description', 'type']);
+        $note = Arr::only(wp_unslash($note), ['title', 'description', 'type', 'created_at']);
+
+        if (empty($note['created_at'])) {
+            unset($note['created_at']);
+        }
+
+        $note = Sanitize::contactNote($note);
+
         $subsciberNote = SubscriberNote::find($noteId);
         $subsciberNote->fill($note);
         $subsciberNote->save();
+
+        /**
+         * Subscriber's Note Updated
+         *
+         * @param SubscriberNote $subscriberNote Note Model.
+         * @param Subscriber $subscriber Contact Model.
+         * @param array $note Contact Note Data Array.
+         * @since 1.0
+         */
+        do_action('fluent_crm/note_updated', $subsciberNote, $subscriber, $note);
 
         return $this->sendSuccess([
             'note'    => $subsciberNote,
@@ -500,7 +594,17 @@ class SubscriberController extends Controller
 
     public function deleteNote($id, $noteId)
     {
+        $subscriber = Subscriber::findOrFail($id);
         SubscriberNote::where('id', $noteId)->delete();
+
+        /**
+         * Subscriber's Note Delete
+         *
+         * @param SubscriberNote $subscriberNote Note Model.
+         * @param Subscriber $subscriber Contact Model.
+         * @since 1.0
+         */
+        do_action('fluent_crm/note_delete', $noteId, $subscriber);
 
         return $this->sendSuccess([
             'message' => __('Note successfully deleted', 'fluent-crm')
@@ -510,9 +614,15 @@ class SubscriberController extends Controller
     public function getNotes()
     {
         $subscriberId = $this->request->get('id');
+        $search = $this->request->get('search');
 
-        $notes = SubscriberNote::where('subscriber_id', $subscriberId)
-            ->orderBy('id', 'DESC')
+        $notes = SubscriberNote::where('subscriber_id', $subscriberId);
+
+        if (!empty($search)) {
+            $notes = $notes->where('title', 'LIKE', '%' . $search . '%');
+        }
+
+        $notes = $notes->orderBy('id', 'DESC')
             ->paginate();
 
         foreach ($notes as $note) {
@@ -600,6 +710,8 @@ class SubscriberController extends Controller
         $newCampaign = $request->get('campaign');
         unset($newCampaign['id']);
 
+        $newCampaign = Sanitize::campaign($newCampaign);
+
         $campaign = CustomEmailCampaign::create($newCampaign);
 
         $campaign->subscribe([$contactId], [
@@ -629,14 +741,9 @@ class SubscriberController extends Controller
     {
         $actionName = sanitize_text_field($request->get('action_name', ''));
 
-        $subscriberIds = $request->get('subscriber_ids', []);
-
-        $subscriberIds = array_map(function ($id) {
-            return (int)$id;
-        }, $subscriberIds);
+        $subscriberIds = array_map('intval', $request->get('subscriber_ids', []));
 
         $subscriberIds = array_filter($subscriberIds);
-
 
         if (!$subscriberIds) {
             return $this->sendError([
@@ -649,7 +756,12 @@ class SubscriberController extends Controller
             return $this->sendSuccess([
                 'message' => __('Selected Contacts has been deleted permanently', 'fluent-crm'),
             ]);
-        } else if ($actionName == 'add_to_email_sequence') {
+        } elseif ($actionName == 'send_double_optin') {
+            Helper::sendDoubleOptin($subscriberIds);
+            return $this->sendSuccess([
+                'message' => __('Double optin sent to selected contacts', 'fluent-crm'),
+            ]);
+        } elseif ($actionName == 'add_to_email_sequence') {
             if (!defined('FLUENTCAMPAIGN')) {
                 return $this->sendError([
                     'message' => __('This action requires FluentCRM Pro', 'fluent-crm')
@@ -684,7 +796,7 @@ class SubscriberController extends Controller
                 'message' => sprintf(__('%d subscribers has been attached to the selected email sequence', 'fluent-crm'), count($validSubscribers))
             ];
 
-        } else if ($actionName == 'change_contact_status') {
+        } elseif ($actionName == 'change_contact_status') {
             $newStatus = sanitize_text_field($request->get('new_status', ''));
             if (!$newStatus) {
                 return $this->sendError([
@@ -706,7 +818,7 @@ class SubscriberController extends Controller
             return [
                 'message' => __('Status has been changed for the selected subscribers', 'fluent-crm')
             ];
-        } else if ($actionName == 'add_to_automation') {
+        } elseif ($actionName == 'add_to_automation') {
             if (!defined('FLUENTCAMPAIGN')) {
                 return $this->sendError([
                     'message' => __('This action requires FluentCRM Pro', 'fluent-crm')
@@ -742,8 +854,28 @@ class SubscriberController extends Controller
             }
 
             return [
-                'message' => sprintf(__('%d subscribers has been attached to the selected automation funnel', 'fluent-crm'), count($validSubscribers)),
+                'message'     => sprintf(__('%d subscribers has been attached to the selected automation funnel', 'fluent-crm'), count($validSubscribers)),
                 'subscribers' => $validSubscribers
+            ];
+        } else if ($actionName == 'change_contact_type') {
+            $subscribers = Subscriber::whereIn('id', $subscriberIds)->get();
+            $newType = sanitize_text_field($request->get('new_status', ''));
+            if (!$newType) {
+                return $this->sendError([
+                    'message' => 'Please select new type'
+                ]);
+            }
+            foreach ($subscribers as $subscriber) {
+                $oldType = $subscriber->contact_type;
+                if ($oldType != $newType) {
+                    $subscriber->contact_type = $newType;
+                    $subscriber->save();
+                    do_action('fluentcrm_subscriber_contact_type_to_' . $newType, $subscriber, $oldType);
+                }
+            }
+
+            return [
+                'message' => __('Contact Type has been updated for the selected subscribers', 'fluent-crm')
             ];
         }
 
@@ -755,9 +887,12 @@ class SubscriberController extends Controller
         ];
 
         if (!isset($validActions[$actionName])) {
-            return $this->sendError([
+
+            $response = $this->sendError([
                 'message' => __('Selected Action is not valid', 'fluent-crm')
             ]);
+
+            return apply_filters('fluent_crm/contact_bulk_action_' . $actionName, $response, $subscriberIds, $request->all());
         }
 
         $options = $request->get('action_options', []);
@@ -785,6 +920,82 @@ class SubscriberController extends Controller
         return [
             'message' => __('Selected bulk action has been successfully completed', 'fluent-crm')
         ];
+    }
+
+    public function getPrevNextIds(Request $request)
+    {
+        $filterType = $this->request->get('filter_type');
+
+        $currentId = (int)$this->request->get('current_id');
+
+        if (!$filterType || !$currentId) {
+            return $this->sendError([
+                'message' => 'filter_type & current_id is required'
+            ]);
+        }
+
+        $sortType = sanitize_sql_orderby($this->request->get('sort_type', 'DESC'));
+        $prevSortType = ($sortType == 'DESC') ? 'ASC' : 'DESC';
+
+        if ($filterType == 'advanced') {
+            $queryArgs = [
+                'filter_type'        => 'advanced',
+                'filters_groups_raw' => $this->request->getJson('advanced_filters'),
+                'search'             => trim(sanitize_text_field($this->request->get('search', ''))),
+                'sort_by'            => 'id',
+                'sort_type'          => $sortType,
+                'with'               => []
+            ];
+        } else {
+            $queryArgs = [
+                'filter_type' => 'simple',
+                'search'      => trim(sanitize_text_field($this->request->get('search', ''))),
+                'sort_by'     => 'id',
+                'sort_type'   => $sortType,
+                'tags'        => $this->request->get('tags', []),
+                'statuses'    => $this->request->get('statuses', []),
+                'lists'       => $this->request->get('lists', []),
+                'with'        => []
+            ];
+        }
+
+        $prevQueryArgs = $queryArgs;
+
+        $prevQueryArgs['sort_type'] = ($sortType == 'DESC') ? 'ASC' : 'DESC';
+
+        $prevItems = (new ContactsQuery($prevQueryArgs))
+            ->getModel()
+            ->select(['id'])
+            ->limit(10)
+            ->where('id', ($sortType == 'DESC') ? '>' : '<', $currentId)
+            ->get();
+
+        $nextItems = (new ContactsQuery($queryArgs))
+            ->getModel()
+            ->select(['id'])
+            ->limit(10)
+            ->where('id', ($sortType == 'DESC') ? '<' : '>', $currentId)
+            ->get();
+
+        $formattedNext = [];
+        foreach ($nextItems as $nextItem) {
+            $formattedNext[] = $nextItem->id;
+        }
+
+        $formattedPrev = [];
+        foreach ($prevItems as $prevItem) {
+            $formattedPrev[] = $prevItem->id;
+        }
+
+        return [
+            'navigation' => [
+                'next' => $formattedNext,
+                'prev' => $formattedPrev
+            ],
+            'has_next'   => count($formattedNext) == 10,
+            'has_prev'   => count($formattedPrev) == 10
+        ];
+
     }
 
 }

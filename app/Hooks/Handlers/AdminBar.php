@@ -34,7 +34,7 @@ class AdminBar
     public function addGlobalSearch($adminBar)
     {
         wp_enqueue_script(
-            'fluentcrm_global_seach',
+            'fluentcrm_global_search',
             fluentCrmMix('/admin/js/global-search.js'),
             ['jquery']
         );
@@ -47,7 +47,7 @@ class AdminBar
         $currentScreen = get_current_screen();
         $editingUserVars = null;
         if ($currentScreen && $currentScreen->id == 'user-edit') {
-            $userId = Arr::get($_REQUEST, 'user_id');
+            $userId = (int) Arr::get($_REQUEST, 'user_id');
             $user = get_user_by('ID', $userId);
 
             if ($userId && $user) {
@@ -65,7 +65,7 @@ class AdminBar
             }
         }
 
-        wp_localize_script('fluentcrm_global_seach', 'fc_bar_vars', [
+        wp_localize_script('fluentcrm_global_search', 'fc_bar_vars', [
             'rest'            => $this->getRestInfo(),
             'links'           => (new Stats)->getQuickLinks(),
             'subscriber_base' => $urlBase . 'subscribers/',

@@ -18,8 +18,6 @@ class SubscriberNotes
 
         $table = $wpdb->prefix .'fc_subscriber_notes';
 
-        $subscriberTable = $wpdb->prefix .'fc_subscribers';
-
         $indexPrefix = $wpdb->prefix .'fc_sn_';
 
         if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
@@ -36,7 +34,8 @@ class SubscriberNotes
                 `created_at` TIMESTAMP NULL,
                 `updated_at` TIMESTAMP NULL,
                 INDEX `{$indexPrefix}_s_id_idx` (`subscriber_id` DESC),
-                INDEX `{$indexPrefix}_s_idx` (`status` DESC)
+                INDEX `{$indexPrefix}_s_idx` (`status` DESC),
+                KEY `type` (`type`)
             ) $charsetCollate;";
 
             dbDelta($sql);
@@ -44,6 +43,17 @@ class SubscriberNotes
             $charsetCollate = $wpdb->collate;
             $sql = "ALTER TABLE {$table} CHANGE `description` `description` longtext COLLATE '".$charsetCollate."' NULL AFTER `title`;";
             $wpdb->query($sql);
+
+            $indexes = $wpdb->get_results("SHOW INDEX FROM $table");
+            $indexedColumns = [];
+            foreach ($indexes as $index) {
+                $indexedColumns[] = $index->Column_name;
+            }
+
+            if(!in_array('type', $indexedColumns)) {
+                $indexSql = "ALTER TABLE `{$table}` ADD INDEX `type` (`type`);";
+                $wpdb->query($indexSql);
+            }
         }
     }
 }

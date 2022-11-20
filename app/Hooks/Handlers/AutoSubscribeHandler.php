@@ -19,17 +19,30 @@ use FluentCrm\Framework\Support\Arr;
  */
 class AutoSubscribeHandler
 {
+
     public function userRegistrationHandler($userId)
     {
-
-        if (is_multisite() && is_network_admin()) {
-            return false;
+        if (is_multisite()) {
+            if (is_network_admin()) {
+                return false;
+            }
+            if (function_exists('WP_Ultimo')) {
+                return false;
+            }
         }
 
         $settings = (new AutoSubscribe())->getRegistrationSettings();
 
         if (Arr::get($settings, 'status') != 'yes') {
-            return;
+
+            $user = get_user_by('ID', $userId);
+            $contact = Subscriber::where('email', $user->user_email)->first();
+            if ($contact) {
+                $contact->user_id = $user->ID;
+                $contact->save();
+            }
+
+            return false;
         }
 
         $subscriberData = FunnelHelper::prepareUserData($userId);
@@ -49,12 +62,23 @@ class AutoSubscribeHandler
             $subscriberData['status'] = 'subscribed';
         }
 
-
         $contact = FunnelHelper::createOrUpdateContact($subscriberData);
 
-        if ($contact->status == 'pending') {
+        if (!$contact) {
+            return false;
+        }
+
+        if ($contact->status == 'pending' && $subscriberData['status'] == 'pending') {
             $contact->sendDoubleOptinEmail();
         }
+
+        add_action("updated_user_meta", function ($meta_id, $userId, $meta_key, $_meta_value) use ($contact) {
+            if ($userId == $contact->user_id && ($meta_key == 'first_name' || $meta_key == 'last_name') && $_meta_value) {
+                $contact->{$meta_key} = $_meta_value;
+                $contact->save();
+            }
+        }, 10, 4);
+
     }
 
     public function addSubscribeCheckbox($buttonHtml)
@@ -139,6 +163,10 @@ class AutoSubscribeHandler
         }
 
         $contact = FunnelHelper::createOrUpdateContact($subscriberData);
+
+        if (!$contact) {
+            return false;
+        }
 
         if ($contact->status == 'pending') {
             $contact->sendDoubleOptinEmail();

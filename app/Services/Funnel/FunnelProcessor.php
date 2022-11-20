@@ -52,6 +52,11 @@ class FunnelProcessor
         if (!$subscriber) {
             // it's new so let's create new subscriber
             $subscriber = FunnelHelper::createOrUpdateContact($subscriberData);
+
+            if (!$subscriber) {
+                return false;
+            }
+
             if ($subscriber->status == 'pending' || $subscriber->status == 'unsubscribed') {
                 $subscriber->sendDoubleOptinEmail();
             }
@@ -105,6 +110,7 @@ class FunnelProcessor
             return;
         }
 
+
         foreach ($sequencePoints->getCurrentSequences() as $sequence) {
             $this->processSequence($subscriber, $sequence, $funnelSubscriber->id);
             if ($sequence->action_name == 'end_this_funnel') {
@@ -141,7 +147,7 @@ class FunnelProcessor
         }
 
         if ($nextSequence) {
-            $nextDateTime = date('Y-m-d H:i:s', strtotime(current_time('mysql')) + $nextSequence->delay);
+            $nextDateTime = date('Y-m-d H:i:s', current_time('timestamp') + $nextSequence->delay);
 
             if ($nextSequence->execution_date_time) {
                 $nextDateTime = $nextSequence->execution_date_time;
@@ -227,7 +233,19 @@ class FunnelProcessor
 
     public function startFunnelFromSequencePoint($startSequence, $subscriber, $args = [], $metricArgs = [])
     {
+        if (!$subscriber) {
+            return false;
+        }
+
         $funnelSubscriber = FunnelHelper::ifAlreadyInFunnel($startSequence->funnel_id, $subscriber->id);
+
+        if (!$funnelSubscriber && $startSequence->type == 'benchmark') {
+            // it's new starting point for a goal type sequence
+            // so if the can start is set to no then we will skip this
+            if (Arr::get($startSequence->settings, 'can_enter') == 'no') {
+                return false;
+            }
+        }
 
         $this->recordFunnelMetric($subscriber, $startSequence, $metricArgs);
 
@@ -347,7 +365,6 @@ class FunnelProcessor
                 }
             }
 
-
             foreach ($immediateSequences as $immediateSequence) {
                 $this->processSequence($subscriber, $immediateSequence, $funnelSubscriberId);
                 if ($immediateSequence->action_name == 'end_this_funnel') {
@@ -355,23 +372,16 @@ class FunnelProcessor
                 }
 
                 if ($immediateSequence->action_name == 'fluentcrm_wait_times') {
-                    if (Arr::get($sequence, 'settings.is_timestamp_wait') == 'yes') {
-                        $waitTimes = strtotime(Arr::get($sequence, 'settings.wait_date_time')) - current_time('timestamp');
-                        if ($waitTimes < 1) {
-                            $waitTimes = 0;
-                        }
-                    } else {
-                        $waitTimes = FunnelHelper::getDelayInSecond($immediateSequence);
-                    }
+                    $waitTimes = FunnelHelper::getCurrentDelayInSeconds($immediateSequence->settings);
                 }
             }
 
             if ($nextSequence) {
 
-                $waitDateTimes = date('Y-m-d H:i:s', strtotime(current_time('mysql')) + $nextSequence->delay);
+                $waitDateTimes = date('Y-m-d H:i:s', current_time('timestamp') + $nextSequence->delay);
 
                 if ($waitTimes) {
-                    $waitDateTimes = date('Y-m-d H:i:s', strtotime(current_time('mysql')) + $waitTimes);
+                    $waitDateTimes = date('Y-m-d H:i:s', current_time('timestamp') + $waitTimes);
                 }
 
                 return FunnelSubscriber::where('id', $funnelSubscriberId)
@@ -384,10 +394,13 @@ class FunnelProcessor
             }
         }
 
-        $funnel = $this->getFunnel($parent->funnel_id);
         $funnelSubscriber = FunnelSubscriber::where('id', $funnelSubscriberId)->first();
+        if (!$funnelSubscriber) {
+            return false;
+        }
 
         $funnelSubscriber->last_sequence_id = $parent->id;
+        $funnel = $this->getFunnel($parent->funnel_id);
 
         // we don't have next sequence so we have to loop back to the parent
         $sequencePoints = new SequencePoints($funnel, $funnelSubscriber);

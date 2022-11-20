@@ -73,6 +73,20 @@ class Request
         return Arr::get($this->inputs(), $key, $default);
     }
 
+    public function getSafe($key = null, $default = null, $callback = 'sanitize_text_field')
+    {
+        $value = $this->get($key, $default);
+        if($value || $default == $value) {
+            return $value;
+        }
+
+        if(is_array($value)) {
+            return map_deep($value, $callback);
+        }
+
+        return call_user_func($callback, $value);
+    }
+
     /**
      * Get the files from the request.
      *
@@ -128,16 +142,31 @@ class Request
 
     /**
      * Get user ip address
+     * @param $anonymize
      * @return string
      */
-    public function getIp()
+    public function getIp($anonymize = false)
     {
-        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-            $ip = $this->server('HTTP_CLIENT_IP');
-        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            $ip = $this->server('HTTP_X_FORWARDED_FOR');
+        // Get real visitor IP behind CloudFlare network
+        // https://stackoverflow.com/questions/13646690/how-to-get-real-ip-from-visitor
+        if (isset($_SERVER["HTTP_CF_CONNECTING_IP"])) {
+            $_SERVER['REMOTE_ADDR'] = $_SERVER["HTTP_CF_CONNECTING_IP"];
+            $_SERVER['HTTP_CLIENT_IP'] = $_SERVER["HTTP_CF_CONNECTING_IP"];
+        }
+        $client = isset($_SERVER['HTTP_CLIENT_IP']) ? $_SERVER['HTTP_CLIENT_IP'] : '';
+        $forward = isset($_SERVER['HTTP_X_FORWARDED_FOR']) ? $_SERVER['HTTP_X_FORWARDED_FOR'] : '';
+        $remote = $_SERVER['REMOTE_ADDR'];
+
+        if (filter_var($client, FILTER_VALIDATE_IP)) {
+            $ip = $client;
+        } elseif (filter_var($forward, FILTER_VALIDATE_IP)) {
+            $ip = $forward;
         } else {
-            $ip = $this->server('REMOTE_ADDR');
+            $ip = $remote;
+        }
+
+        if ($anonymize) {
+            return wp_privacy_anonymize_ip($ip);
         }
 
         return $ip;

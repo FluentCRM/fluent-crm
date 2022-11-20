@@ -2446,6 +2446,7 @@ abstract class Model implements ArrayAccess, ArrayableInterface, JsonableInterfa
      *
      * @return array
      */
+    #[\ReturnTypeWillChange]
     public function jsonSerialize()
     {
         return $this->toArray();
@@ -2977,9 +2978,7 @@ abstract class Model implements ArrayAccess, ArrayableInterface, JsonableInterfa
         // and format a DateTime object from this timestamp. This allows flexibility
         // when defining your date fields as they might be UNIX timestamps here.
         if (is_numeric($value)) {
-        	$dateTime = new DateTime();
-        	$dateTime->setTimestamp($value);
-        	return $dateTime;
+        	return new \DateTime($value);
         }
 
         // If the value is in simply year, month, day format, we will instantiate the
@@ -3444,6 +3443,7 @@ abstract class Model implements ArrayAccess, ArrayableInterface, JsonableInterfa
      * @param  mixed  $offset
      * @return bool
      */
+    #[\ReturnTypeWillChange]
     public function offsetExists($offset)
     {
         return isset($this->$offset);
@@ -3455,6 +3455,7 @@ abstract class Model implements ArrayAccess, ArrayableInterface, JsonableInterfa
      * @param  mixed  $offset
      * @return mixed
      */
+    #[\ReturnTypeWillChange]
     public function offsetGet($offset)
     {
         return $this->$offset;
@@ -3467,6 +3468,7 @@ abstract class Model implements ArrayAccess, ArrayableInterface, JsonableInterfa
      * @param  mixed  $value
      * @return void
      */
+    #[\ReturnTypeWillChange]
     public function offsetSet($offset, $value)
     {
         $this->$offset = $value;
@@ -3478,6 +3480,7 @@ abstract class Model implements ArrayAccess, ArrayableInterface, JsonableInterfa
      * @param  mixed  $offset
      * @return void
      */
+    #[\ReturnTypeWillChange]
     public function offsetUnset($offset)
     {
         unset($this->$offset);

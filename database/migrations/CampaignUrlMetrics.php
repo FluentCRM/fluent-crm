@@ -30,10 +30,30 @@ class CampaignUrlMetrics
                 `city` VARCHAR(40) NULL,
                 `counter` INT UNSIGNED NOT NULL DEFAULT 1,
                 `created_at` TIMESTAMP NULL,
-                `updated_at` TIMESTAMP NULL
+                `updated_at` TIMESTAMP NULL,
+                KEY `url_id` (`url_id`),
+                KEY `campaign_id` (`campaign_id`),
+                KEY `subscriber_id` (`subscriber_id`),
+                KEY `type` (`type`)
             ) $charsetCollate;";
 
             dbDelta($sql);
+        } else {
+
+            $indexes = $wpdb->get_results("SHOW INDEX FROM $table");
+            $indexedColumns = [];
+            foreach ($indexes as $index) {
+                $indexedColumns[] = $index->Column_name;
+            }
+
+            if(!in_array('subscriber_id', $indexedColumns)) {
+                $indexSql = "ALTER TABLE {$table} ADD INDEX `url_id` (`url_id`),
+                        ADD INDEX `campaign_id` (`campaign_id`),
+                        ADD INDEX `subscriber_id` (`subscriber_id`),
+                        ADD INDEX `type` (`type`);";
+
+                $wpdb->query($indexSql);
+            }
         }
     }
 }

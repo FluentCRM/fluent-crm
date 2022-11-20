@@ -1789,7 +1789,7 @@ class Emogrifier
         $message,
         $file,
         $line,
-        array $context
+        array $context = []
     ) {
         $selector = '';
         if (isset($context['cssRule']['selector'])) {

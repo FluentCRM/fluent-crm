@@ -5,6 +5,7 @@
     <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
     <meta http-equiv="Imagetoolbar" content="No"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
     <title><?php echo esc_attr($email_heading); ?></title>
     <?php foreach ($cssAssets as $asset): ?>
         <link rel='stylesheet' href='<?php echo esc_url($asset); ?>' media='all'/>
@@ -15,13 +16,13 @@
 </head>
 <body class="fluentcrm_web_body">
 <div class="fluentcrm_web_view_wrapper">
-    <?php do_action('fluentcrm_view_on_browser_after_email_heading');; ?>
+    <?php do_action('fluentcrm_view_on_browser_after_email_heading', $email);; ?>
 
     <div class="fluentcrm_web_view_header">
         <div class="fluentcrm_web_logo">
             <?php if (!empty($business['logo'])): ?>
-                <a href="<?php echo site_url(); ?>"><img src="<?php echo $business['logo']; ?>"
-                                                         alt="<?php echo $business['business_name']; ?>"/></a>
+                <a href="<?php echo esc_url(site_url()); ?>"><img src="<?php echo esc_url($business['logo']); ?>"
+                                                         alt="<?php echo esc_html($business['business_name']); ?>"/></a>
             <?php endif; ?>
         </div>
         <div class="fluentcrm_web_heading">
@@ -32,17 +33,17 @@
     <?php do_action('fluentcrm_view_on_browser_before_email_body');; ?>
 
     <div class="fluentcrm_email_wrapper">
-        <?php echo $email_body; ?>
+        <?php echo wp_kses_post($email_body); ?>
     </div>
 
     <?php do_action('fluentcrm_view_on_browser_after_email_body');; ?>
 
     <div class="fluentcrm_email_footer">
-        <?php echo $footer_text; ?>
+        <?php echo wp_kses_post($footer_text); ?>
     </div>
 </div>
 <?php
-do_action('fluentcrm_view_on_browser_footer');
+do_action('fluentcrm_view_on_browser_footer', $email);
 ?>
 </body>
 </html>

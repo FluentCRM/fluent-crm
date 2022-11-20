@@ -115,11 +115,18 @@ class FileSystem
         $param['path'] = $param['basedir'] . FLUENTCRM_UPLOAD_DIR;
 
         if (!is_dir($param['path'])) {
-            mkdir($param['path'], 0755);
-            // file_put_contents(
-            //     $param['basedir']['basedir'].FLUENTCRM_UPLOAD_DIR.'/.htaccess',
-            //     file_get_contents(__DIR__.'/Stubs/htaccess.stub')
-            // );
+             mkdir($param['path'], 0755);
+             file_put_contents(
+                 $param['basedir'].FLUENTCRM_UPLOAD_DIR.'/.htaccess',
+                 file_get_contents(__DIR__.'/Stubs/htaccess.stub')
+             );
+        }
+
+        if(!file_exists($param['basedir'].FLUENTCRM_UPLOAD_DIR.'/index.php')) {
+            file_put_contents(
+                $param['basedir'].FLUENTCRM_UPLOAD_DIR.'/index.php',
+                file_get_contents(__DIR__.'/Stubs/index.stub')
+            );
         }
 
         return $param;

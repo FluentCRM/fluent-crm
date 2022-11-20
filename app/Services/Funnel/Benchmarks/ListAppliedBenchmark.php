@@ -26,7 +26,8 @@ class ListAppliedBenchmark extends BaseBenchMark
             'settings'    => [
                 'lists'       => [],
                 'select_type' => 'any',
-                'type'        => 'optional'
+                'type'        => 'optional',
+                'can_enter'   => 'yes'
             ]
         ];
     }
@@ -36,7 +37,8 @@ class ListAppliedBenchmark extends BaseBenchMark
         return [
             'lists'       => [],
             'select_type' => 'any',
-            'type'        => 'optional'
+            'type'        => 'optional',
+            'can_enter'   => 'yes'
         ];
     }
 
@@ -72,21 +74,8 @@ class ListAppliedBenchmark extends BaseBenchMark
                         'value'      => []
                     ]
                 ],
-                'type'        => [
-                    'label'       => __('Benchmark type', 'fluent-crm'),
-                    'type'        => 'radio',
-                    'options'     => [
-                        [
-                            'id'    => 'optional',
-                            'title' => __('[Optional Point] This is an optional trigger point', 'fluent-crm')
-                        ],
-                        [
-                            'id'    => 'required',
-                            'title' => __('[Essential Point] Select IF this step is required for processing further actions', 'fluent-crm')
-                        ]
-                    ],
-                    'inline_help' => __('If you select [Optional Point] it will work as an Optional Trigger otherwise, it will wait for full-fill this action', 'fluent-crm')
-                ]
+                'type'        => $this->benchmarkTypeField(),
+                'can_enter'   => $this->canEnterField()
             ]
         ];
     }

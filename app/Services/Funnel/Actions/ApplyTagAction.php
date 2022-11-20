@@ -56,6 +56,5 @@ class ApplyTagAction extends BaseAction
         $tags = $sequence->settings['tags'];
         $renewedSubscriber = Subscriber::where('id', $subscriber->id)->first();
         $renewedSubscriber->attachTags($tags);
-        //FunnelHelper::changeFunnelSubSequenceStatus($funnelSubscriberId, $sequence->id);
     }
 }

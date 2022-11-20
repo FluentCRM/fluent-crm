@@ -99,6 +99,29 @@ class SetupController extends Controller
 
     }
 
+    public function handleFluentSupportInstall()
+    {
+        if (!current_user_can('install_plugins')) {
+            return $this->sendError([
+                'message' => __('Sorry! you do not have permission to install plugin', 'fluent-crm')
+            ]);
+        }
+
+        $plugin_id = 'fluent-support';
+        $plugin = [
+            'name'      => __('Fluent Support', 'fluent-crm'),
+            'repo-slug' => 'fluent-support',
+            'file'      => 'fluent-support.php',
+        ];
+        $this->backgroundInstaller($plugin, $plugin_id);
+
+        return [
+            'is_installed' => defined('FLUENT_SUPPORT_VERSION'),
+            'message'      => __('Fluent Support plugin has been installed and activated successfully', 'fluent-crm')
+        ];
+
+    }
+
     private function shareEmail($optinEmail)
     {
         $user = get_user_by('ID', get_current_user_id());

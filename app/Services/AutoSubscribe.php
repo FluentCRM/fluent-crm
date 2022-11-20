@@ -40,6 +40,7 @@ class AutoSubscribe
                     'label'       => __('Assign List', 'fluent-crm'),
                     'option_key'  => 'lists',
                     'is_multiple' => false,
+                    'creatable' => true,
                     'placeholder' => __('Select Assign List', 'fluent-crm'),
                     'inline_help' => __('Select the list that will be assigned for new user registration in your site', 'fluent-crm'),
                     'dependency'  => [
@@ -53,6 +54,7 @@ class AutoSubscribe
                     'label'       => __('Assign Tags', 'fluent-crm'),
                     'option_key'  => 'tags',
                     'is_multiple' => true,
+                    'creatable' => true,
                     'placeholder' => __('Select Assign Tag', 'fluent-crm'),
                     'inline_help' => __('Select the tags that will be assigned for new user registration in your site', 'fluent-crm'),
                     'dependency'  => [

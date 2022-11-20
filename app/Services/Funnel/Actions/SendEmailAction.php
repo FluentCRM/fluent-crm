@@ -35,7 +35,14 @@ class SendEmailAction extends BaseAction
                 'campaign'           => FunnelCampaign::getMock(),
                 'is_scheduled'       => 'no',
                 'scheduled_at'       => '',
-                'skip_if_overdue'    => 'no'
+                'skip_if_overdue'    => 'no',
+                'mailer_settings'    => [
+                    'from_name'      => '',
+                    'from_email'     => '',
+                    'reply_to_name'  => '',
+                    'reply_to_email' => '',
+                    'is_custom'      => 'no'
+                ]
             ]
         ];
     }
@@ -75,17 +82,28 @@ class SendEmailAction extends BaseAction
                 ],
                 'campaign'           => [
                     'label' => '',
+                    'wrapper_class' => 'fc_email_writer',
                     'type'  => 'email_campaign_composer'
                 ],
                 'is_scheduled'       => [
                     'type'          => 'yes_no_check',
                     'check_label'   => __('Schedule this email to a specific date', 'fluent-crm'),
+                    'wrapper_class' => 'fc_half_field fc_no_pad_l',
+                ],
+                'skip_if_overdue'    => [
+                    'type'          => 'yes_no_check',
                     'wrapper_class' => 'fc_half_field',
+                    'check_label'   => __('Skip sending email if date is overdued', 'fluent-crm'),
+                    'dependency'    => [
+                        'depends_on' => 'is_scheduled',
+                        'operator'   => '=',
+                        'value'      => 'yes'
+                    ]
                 ],
                 'scheduled_at'       => [
                     'label'         => __('Schedule Date and Time', 'fluent-crm'),
                     'type'          => 'date_time',
-                    'wrapper_class' => 'fc_half_field',
+                    'wrapper_class' => 'fc_no_marg_b',
                     'placeholder'   => __('Select Date and Time', 'fluent-crm'),
                     'inline_help'   => __('If schedule date is past in the runtime then email will be sent immediately', 'fluent-crm'),
                     'dependency'    => [
@@ -94,30 +112,30 @@ class SendEmailAction extends BaseAction
                         'value'      => 'yes'
                     ]
                 ],
-                'skip_if_overdue'    => [
-                    'type'        => 'yes_no_check',
-                    'check_label' => __('Skip sending email if date is overdued', 'fluent-crm'),
-                    'dependency'  => [
-                        'depends_on' => 'is_scheduled',
-                        'operator'   => '=',
-                        'value'      => 'yes'
-                    ]
+                'mailer_settings'    => [
+                    'type'        => 'custom_sender_config',
+                    'check_label' => __('Set Custom From Name and Email', 'fluent-crm')
                 ]
             ]
         ];
     }
 
-
     public function savingAction($sequence, $funnel)
     {
-
         $funnelCampaign = Arr::get($sequence, 'settings.campaign', []);
-
         $funnelCampaignId = Arr::get($funnelCampaign, 'id');
 
-        $data = Arr::only($funnelCampaign, array_keys(FunnelCampaign::getMock()));
+        $isStripped = Arr::get($sequence, 'is_stripped');
+        if ($isStripped && $funnelCampaignId) {
+            $refCampaign = FunnelCampaign::find($funnelCampaignId);
+            $data = Arr::only($refCampaign->toArray(), array_keys(FunnelCampaign::getMock()));
+        } else {
+            $data = Arr::only($funnelCampaign, array_keys(FunnelCampaign::getMock()));
+        }
 
         $sequenceId = Arr::get($sequence, 'id');
+
+        $data['settings']['mailer_settings'] = Arr::get($sequence, 'settings.mailer_settings', []);
 
         if ($funnelCampaignId && $funnel->id == Arr::get($data, 'parent_id')) {
             // We have this campaign
@@ -131,6 +149,10 @@ class SendEmailAction extends BaseAction
             $data['title'] = $funnel->title . ' (' . $funnel->id . ' - ' . $sequenceId . ')';
             $campaign = FunnelCampaign::create($data);
             $funnelCampaignId = $campaign->id;
+
+            if ($data['design_template'] == 'visual_builder' && !empty($funnelCampaign['_visual_builder_design'])) {
+                fluentcrm_update_campaign_meta($funnelCampaignId, '_visual_builder_design', $funnelCampaign['_visual_builder_design']);
+            }
         }
 
         $sequence['settings']['reference_campaign'] = $funnelCampaignId;
@@ -145,19 +167,36 @@ class SendEmailAction extends BaseAction
             $refCampaign = FunnelCampaign::find($refCampaignId);
             if ($refCampaign) {
                 $refCampaignData = Arr::only($refCampaign->toArray(), array_keys(FunnelCampaign::getMock()));
+
+                if ($refCampaignData['design_template'] == 'visual_builder') {
+                    $refCampaignData['_visual_builder_design'] = fluentcrm_get_campaign_meta($refCampaignData['id'], '_visual_builder_design', true);
+                }
             }
         }
 
         $sequence['settings']['campaign'] = $refCampaignData;
+
+        if (empty($sequence['settings']['mailer_settings'])) {
+            $sequence['settings']['mailer_settings'] = [
+                'from_name'      => '',
+                'from_email'     => '',
+                'reply_to_name'  => '',
+                'reply_to_email' => '',
+                'is_custom'      => 'no'
+            ];
+        }
+
         return $sequence;
     }
 
     public function deleteAction($sequence, $funnel)
     {
-        if ($refCampaign = Arr::get($sequence->settings, 'reference_campaign')) {
+        $refCampaign = Arr::get($sequence->settings, 'reference_campaign');
+        if ($refCampaign) {
             FunnelCampaign::where('id', $refCampaign)->delete();
             CampaignEmail::where('campaign_id', $refCampaign)->delete();
             CampaignUrlMetric::where('campaign_id', $refCampaign)->delete();
+            fluentcrm_delete_campaign_meta($refCampaign, '');
         }
     }
 
@@ -191,7 +230,7 @@ class SendEmailAction extends BaseAction
                 $scheduledAt = $providedDate;
             }
         }
-        
+
         $args = [
             'status'       => 'scheduled',
             'scheduled_at' => $scheduledAt,

@@ -15,8 +15,8 @@ class Stats
     {
         $data = [
             'total_subscribers' => [
-                'title' => __('Total Contacts', 'fluent-crm'),
-                'count' => Subscriber::count(),
+                'title' => __('Active Contacts', 'fluent-crm'),
+                'count' => Subscriber::where('status', 'subscribed')->count(),
                 'route' => [
                     'name' => 'subscribers'
                 ]
@@ -113,6 +113,12 @@ class Stats
                 'title' => __('Documentations', 'fluent-crm'),
                 'url'   =>  $urlBase . 'documentation',
                 'icon'  => 'el-icon-document'
+            ],
+            [
+                'title' => __('Video Tutorials (Free)', 'fluent-crm'),
+                'url' => 'https://www.youtube.com/playlist?list=PLXpD0vT4thWG-ZPeM6cco7BS5cJY9bTjL',
+                'icon' => 'el-icon-video-camera',
+                'is_external' => true
             ]
         ]);
     }

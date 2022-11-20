@@ -66,7 +66,7 @@ class ImporterController extends Controller
     public function importData(Request $request, $driver)
     {
         $config = $request->get('config');
-        $page = $request->get('importing_page');
+        $page = $request->getSafe('importing_page', '', 'intval');
 
         if ($driver == 'users') {
             return $this->processUserImport($config, $page);

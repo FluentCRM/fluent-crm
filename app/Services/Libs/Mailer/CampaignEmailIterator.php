@@ -18,51 +18,59 @@ class CampaignEmailIterator implements \Iterator
         $this->limit = $limit ? $limit : 10;
     }
 
+    #[\ReturnTypeWillChange]
     public function current()
     {
         return $this->emails;
     }
 
+    #[\ReturnTypeWillChange]
     public function key()
     {
         return $this->key++;
     }
 
+    #[\ReturnTypeWillChange]
     public function next()
     {
         $this->offset = $this->offset;
     }
 
+    #[\ReturnTypeWillChange]
     public function rewind()
     {
         $this->offset = 0;
     }
 
+    #[\ReturnTypeWillChange]
     public function valid()
     {
-        $emails = CampaignEmail::whereIn('status', [ 'pending', 'scheduled' ])
-            ->when($this->campaignId, function($query) {
+        $currentTime = current_time('mysql');
+
+        $emails = CampaignEmail::whereIn('status', ['pending', 'scheduled'])
+            ->when($this->campaignId, function ($query) {
                 return $query->where('campaign_id', $this->campaignId);
             })
-            ->where('scheduled_at', '<=', current_time('mysql'))
+            ->where('scheduled_at', '<=', $currentTime)
             ->whereNotNull('scheduled_at')
             ->with('campaign', 'subscriber')
+            ->orderBy('scheduled_at', 'ASC')
             ->offset($this->offset)
             ->limit($this->limit)
             ->get();
 
         $ids = $emails->pluck('id')->toArray();
 
-        if($ids) {
+        if ($ids) {
             CampaignEmail::whereIn('id', $ids)
                 ->update([
-                    'status' => 'processing',
-                    'updated_at' => date('Y-m-d H:i:s')
+                    'status'       => 'processing',
+                    'updated_at'   => $currentTime,
+                    'scheduled_at' => $currentTime
                 ]);
         }
 
         $this->emails = $emails;
-
 
         return !$this->emails->isEmpty();
     }

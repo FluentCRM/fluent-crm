@@ -4,6 +4,7 @@ namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Services\Helper;
+use FluentCrm\App\Services\Sanitize;
 use FluentCrm\Framework\Support\Arr;
 use FluentCrm\Framework\Request\Request;
 
@@ -25,7 +26,7 @@ class UsersController extends Controller
      */
     public function index(Request $request)
     {
-        $roles = $request->get('roles', []);
+        $roles = $request->getSafe('roles', []);
         $limit = $request->limit ?: 5;
         $fields = $request->fields ?: ['ID', 'display_name', 'user_email'];
 
@@ -92,7 +93,7 @@ class UsersController extends Controller
             $subscriber = Helper::getWPMapUserInfo($user);
             $subscriber['source'] = 'wp_users';
             if ($subscriber['email']) {
-                $subscribers[] = $subscriber;
+                $subscribers[] = Sanitize::contact($subscriber);
             }
         }
 

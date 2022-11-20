@@ -23,9 +23,21 @@ class UrlStores
                 `url` TINYTEXT NOT NULL,
                 `short` VARCHAR(50) NOT NULL,
                 `created_at` TIMESTAMP NULL,
-                `updated_at` TIMESTAMP NULL
+                `updated_at` TIMESTAMP NULL,
+                KEY `short` (`short`)
             ) $charsetCollate;";
             dbDelta($sql);
+        } else {
+            $indexes = $wpdb->get_results("SHOW INDEX FROM $table");
+            $indexedColumns = [];
+            foreach ($indexes as $index) {
+                $indexedColumns[] = $index->Column_name;
+            }
+
+            if(!in_array('short', $indexedColumns)) {
+                $sql = "ALTER TABLE {$table} ADD INDEX `short` (`short`);";
+                $wpdb->query($sql);
+            }
         }
     }
 }

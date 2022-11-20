@@ -3,6 +3,7 @@
 namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\Services\Libs\FileSystem;
+use FluentCrm\App\Services\Sanitize;
 use FluentCrm\Framework\Support\Arr;
 use FluentCrm\Framework\Request\Request;
 use FluentCrm\App\Models\Subscriber;
@@ -195,7 +196,7 @@ class CsvController extends Controller
             $subscriber['email'] = trim($subscriber['email']);
 
             if ($subscriber['email'] && is_email($subscriber['email'])) {
-                $subscribers[] = $subscriber;
+                $subscribers[] = Sanitize::contact($subscriber);
             } else {
                 $skipped[] = $subscriber;
             }
@@ -211,10 +212,8 @@ class CsvController extends Controller
 
         $sendDoubleOptin = Arr::get($inputs, 'double_optin_email') == 'yes';
 
-        $totalInput = count($subscribers);
-
         $result = Subscriber::import(
-            $subscribers, $inputs['tags'], $inputs['lists'], $inputs['update'], $status, $sendDoubleOptin, $forceStatusChange
+            $subscribers, $inputs['tags'], $inputs['lists'], $inputs['update'], $status, $sendDoubleOptin, $forceStatusChange, 'csv'
         );
 
         $totalSkipped = count($result['skips']) + count($skipped);

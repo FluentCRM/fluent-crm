@@ -15,11 +15,13 @@ class Helper
         $replaces = $urls[1];
         $urls = $urls[2];
         $formatted = [];
+        $baseUrl = self::getSiteUrl();
+
         foreach ($urls as $index => $url) {
             $urlSlug = UrlStores::getUrlSlug($url);
             $formatted[$replaces[$index]] = add_query_arg([
                 'ns_url' => $urlSlug
-            ], site_url());
+            ], $baseUrl);
         }
         return $formatted;
     }
@@ -43,7 +45,6 @@ class Helper
             return $emailBody;
         }
 
-
         if (apply_filters('fluentcrm_disable_email_open_tracking', false)) {
             return $emailBody;
         }
@@ -52,8 +53,8 @@ class Helper
             'fluentcrm' => 1,
             'route'     => 'open',
             '_e_hash'   => $hash
-        ], site_url());
-        $trackPixelHtml = '<img src="' . $trackImageUrl . '" alt="" />';
+        ], self::getSiteUrl());
+        $trackPixelHtml = '<img src="' . esc_url($trackImageUrl) . '" alt="" />';
 
         if (strpos($emailBody, '{fluent_track_pixel}') !== false) {
             $emailBody = str_replace('{fluent_track_pixel}', $trackPixelHtml, $emailBody);
@@ -166,6 +167,7 @@ class Helper
                 '{{crm.business_address}}'                           => __('Business Address', 'fluent-crm'),
                 '{{wp.admin_email}}'                                 => __('Admin Email', 'fluent-crm'),
                 '{{wp.url}}'                                         => __('Site URL', 'fluent-crm'),
+                '{{other.date.+2 days}}'                             => __('Dynamic Date (ex: +2 days from now)', 'fluent-crm'),
                 '##crm.unsubscribe_url##'                            => __('Unsubscribe URL', 'fluent-crm'),
                 '##crm.manage_subscription_url##'                    => __('Manage Subscription URL', 'fluent-crm'),
                 '##web_preview_url##'                                => __('View On Browser URL', 'fluent-crm'),
@@ -248,32 +250,32 @@ class Helper
         $plainConfig = $defaultDesignConfig;
         $plainConfig['body_bg_color'] = '#FFFFFF';
 
-        return apply_filters('fluentcrm_email_design_templates', [
+        $templates = apply_filters('fluent_crm/email_design_templates', [
             'simple'      => [
                 'id'            => 'simple',
                 'label'         => __('Simple Boxed', 'fluent-crm'),
-                'image'         => fluentCrm('url.assets') . 'images/simple.png',
+                'image'         => fluentCrmMix('images/simple.png'),
                 'config'        => $defaultDesignConfig,
                 'use_gutenberg' => true
             ],
             'plain'       => [
                 'id'            => 'plain',
                 'label'         => __('Plain Centered', 'fluent-crm'),
-                'image'         => fluentCrm('url.assets') . 'images/plain-centered.png',
+                'image'         => fluentCrmMix('images/plain-centered.png'),
                 'config'        => $plainConfig,
                 'use_gutenberg' => true
             ],
             'classic'     => [
                 'id'            => 'classic',
                 'label'         => __('Plain Left', 'fluent-crm'),
-                'image'         => fluentCrm('url.assets') . 'images/classic.png',
+                'image'         => fluentCrmMix('images/classic.png'),
                 'config'        => $plainConfig,
                 'use_gutenberg' => true
             ],
             'raw_classic' => [
                 'id'            => 'raw_classic',
                 'label'         => __('Classic Editor', 'fluent-crm'),
-                'image'         => fluentCrm('url.assets') . 'images/classic_raw.png',
+                'image'         => fluentCrmMix('images/classic_raw.png'),
                 'config'        => $classicConfig,
                 'use_gutenberg' => false,
                 'template_type' => 'classic_editor',
@@ -282,21 +284,42 @@ class Helper
             'raw_html'    => [
                 'id'            => 'raw_html',
                 'label'         => __('Raw HTML', 'fluent-crm'),
-                'image'         => fluentCrm('url.assets') . 'images/raw-html.png',
+                'image'         => fluentCrmMix('images/raw-html.png'),
                 'config'        => [],
                 'use_gutenberg' => false,
                 'template_type' => 'raw_text_box',
                 'template_info' => '<h3>Raw HTML Template</h3><p>You can use any type of valid html and FluentCRM will send that without altering any design processing.</p>'
             ]
         ]);
+
+        if (!defined('FLUENTCAMPAIGN')) {
+            $templates['visual_builder'] = [
+                'id'            => 'visual_builder',
+                'label'         => __('Visual Builder', 'fluentcampaign-pro'),
+                'image'         => fluentCrmMix('images/drag-drop.png'),
+                'config'        => $classicConfig,
+                'use_gutenberg' => false,
+                'template_type' => 'visual_builder_demo'
+            ];
+        }
+
+        return $templates;
     }
 
-    public static function getTemplateConfig($templateName = '')
+    public static function getTemplateConfig($templateName = '', $withGlobal = true)
     {
         if (!$templateName) {
             $templateName = self::getDefaultEmailTemplate();
         }
-        return Arr::get(self::getEmailDesignTemplates(), $templateName . '.config', []);
+        $config = Arr::get(self::getEmailDesignTemplates(), $templateName . '.config', []);
+
+        if ($withGlobal) {
+            $globalSettings = fluentcrm_get_option('global_email_style_config', []);
+            return wp_parse_args($globalSettings, $config);
+        }
+
+        return $config;
+
     }
 
     public static function getActivatedFeatures()
@@ -332,6 +355,13 @@ class Helper
             if (empty($settings['email_footer'])) {
                 $settings['email_footer'] = $defaultFooter;
             }
+
+            if (empty($settings['pref_form'])) {
+                $settings['pref_form'] = 'no';
+                $settings['pref_general'] = ['prefix', 'first_name', 'last_name'];
+                $settings['pref_custom'] = [];
+            }
+
             return $settings;
         }
 
@@ -339,7 +369,12 @@ class Helper
             'from_name'         => '',
             'from_email'        => '',
             'emails_per_second' => 15,
-            'email_footer'      => $defaultFooter
+            'email_footer'      => $defaultFooter,
+            'pref_list_type'    => 'no',
+            'pref_list_items'   => [],
+            'pref_form'         => 'no',
+            'pref_general'      => ['prefix', 'first_name', 'last_name'],
+            'pref_custom'       => []
         ];
     }
 
@@ -375,100 +410,93 @@ class Helper
     {
         static $pref;
         if (!$pref) {
-            list($color_palette) = get_theme_support('editor-color-palette');
 
-            if (empty($color_palette) || !is_array($color_palette) || count($color_palette) < 2) {
-                $color_palette = [
-                    [
-                        "name"  => __("Black", "fluent-crm"),
-                        "slug"  => "black",
-                        "color" => "#000000"
-                    ],
-                    [
-                        "name"  => __("Cyan bluish gray", "fluent-crm"),
-                        "slug"  => "cyan-bluish-gray",
-                        "color" => "#abb8c3"
-                    ],
-                    [
-                        "name"  => __("White", "fluent-crm"),
-                        "slug"  => "white",
-                        "color" => "#ffffff"
-                    ],
-                    [
-                        "name"  => __("Pale pink", "fluent-crm"),
-                        "slug"  => "pale-pink",
-                        "color" => "#f78da7"
-                    ],
-                    [
-                        "name"  => __("Luminous vivid orange", "fluent-crm"),
-                        "slug"  => "luminous-vivid-orange",
-                        "color" => "#ff6900"
-                    ],
-                    [
-                        "name"  => __("Luminous vivid amber", "fluent-crm"),
-                        "slug"  => "luminous-vivid-amber",
-                        "color" => "#fcb900"
-                    ],
-                    [
-                        "name"  => __("Light green cyan", "fluent-crm"),
-                        "slug"  => "light-green-cyan",
-                        "color" => "#7bdcb5"
-                    ],
-                    [
-                        "name"  => __("Vivid green cyan", "fluent-crm"),
-                        "slug"  => "vivid-green-cyan",
-                        "color" => "#00d084"
-                    ],
-                    [
-                        "name"  => __("Pale cyan blue", "fluent-crm"),
-                        "slug"  => "pale-cyan-blue",
-                        "color" => "#8ed1fc"
-                    ],
-                    [
-                        "name"  => __("Vivid cyan blue", "fluent-crm"),
-                        "slug"  => "vivid-cyan-blue",
-                        "color" => "#0693e3"
-                    ],
-                    [
-                        "name"  => __("Vivid purple", "fluent-crm"),
-                        "slug"  => "vivid-purple",
-                        "color" => "#9b51e0"
-                    ]
-                ];
-            }
+            $color_palette = [
+                [
+                    "name"  => __("Black", "fluent-crm"),
+                    "slug"  => "black",
+                    "color" => "#000000"
+                ],
+                [
+                    "name"  => __("Cyan bluish gray", "fluent-crm"),
+                    "slug"  => "cyan-bluish-gray",
+                    "color" => "#abb8c3"
+                ],
+                [
+                    "name"  => __("White", "fluent-crm"),
+                    "slug"  => "white",
+                    "color" => "#ffffff"
+                ],
+                [
+                    "name"  => __("Pale pink", "fluent-crm"),
+                    "slug"  => "pale-pink",
+                    "color" => "#f78da7"
+                ],
+                [
+                    "name"  => __("Luminous vivid orange", "fluent-crm"),
+                    "slug"  => "luminous-vivid-orange",
+                    "color" => "#ff6900"
+                ],
+                [
+                    "name"  => __("Luminous vivid amber", "fluent-crm"),
+                    "slug"  => "luminous-vivid-amber",
+                    "color" => "#fcb900"
+                ],
+                [
+                    "name"  => __("Light green cyan", "fluent-crm"),
+                    "slug"  => "light-green-cyan",
+                    "color" => "#7bdcb5"
+                ],
+                [
+                    "name"  => __("Vivid green cyan", "fluent-crm"),
+                    "slug"  => "vivid-green-cyan",
+                    "color" => "#00d084"
+                ],
+                [
+                    "name"  => __("Pale cyan blue", "fluent-crm"),
+                    "slug"  => "pale-cyan-blue",
+                    "color" => "#8ed1fc"
+                ],
+                [
+                    "name"  => __("Vivid cyan blue", "fluent-crm"),
+                    "slug"  => "vivid-cyan-blue",
+                    "color" => "#0693e3"
+                ],
+                [
+                    "name"  => __("Vivid purple", "fluent-crm"),
+                    "slug"  => "vivid-purple",
+                    "color" => "#9b51e0"
+                ]
+            ];
 
-            list($font_sizes) = (array)get_theme_support('editor-font-sizes');
+            $font_sizes = [
+                [
+                    'name'      => __('Small', 'fluent-crm'),
+                    'shortName' => 'S',
+                    'size'      => 14,
+                    'slug'      => 'small'
+                ],
+                [
+                    'name'      => __('Medium', 'fluent-crm'),
+                    'shortName' => 'M',
+                    'size'      => 18,
+                    'slug'      => 'medium'
+                ],
+                [
+                    'name'      => __('Large', 'fluent-crm'),
+                    'shortName' => 'L',
+                    'size'      => 24,
+                    'slug'      => 'large'
+                ],
+                [
+                    'name'      => __('Larger', 'fluent-crm'),
+                    'shortName' => 'XL',
+                    'size'      => 32,
+                    'slug'      => 'larger'
+                ]
+            ];
 
-            if (empty($font_sizes)) {
-                $font_sizes = [
-                    [
-                        'name'      => __('Small', 'fluent-crm'),
-                        'shortName' => 'S',
-                        'size'      => 14,
-                        'slug'      => 'small'
-                    ],
-                    [
-                        'name'      => __('Medium', 'fluent-crm'),
-                        'shortName' => 'M',
-                        'size'      => 18,
-                        'slug'      => 'medium'
-                    ],
-                    [
-                        'name'      => __('Large', 'fluent-crm'),
-                        'shortName' => 'L',
-                        'size'      => 24,
-                        'slug'      => 'large'
-                    ],
-                    [
-                        'name'      => __('Larger', 'fluent-crm'),
-                        'shortName' => 'XL',
-                        'size'      => 32,
-                        'slug'      => 'larger'
-                    ]
-                ];
-            }
-
-            $pref = apply_filters('fluentcrm_theme_pref', [
+            $pref = apply_filters('fluent_crm/theme_pref', [
                 'colors'     => (array)$color_palette,
                 'font_sizes' => (array)$font_sizes
             ]);
@@ -530,7 +558,7 @@ class Helper
 
     public static function kebabCase($string)
     {
-        return implode('-', array_filter(preg_split('/(\d)/', strtolower(strval($string)), null, PREG_SPLIT_DELIM_CAPTURE)));
+        return implode('-', array_filter(preg_split('/(\d)/', strtolower(strval($string)), -1, PREG_SPLIT_DELIM_CAPTURE)));
     }
 
     public static function getMailHeadersFromSettings($emailSettings = [])
@@ -658,8 +686,8 @@ class Helper
             $subscriber['state'] = $state;
         }
 
-        if ($state = get_user_meta($user->ID, 'billing_phone', true)) {
-            $subscriber['phone'] = $state;
+        if ($phone = get_user_meta($user->ID, 'billing_phone', true)) {
+            $subscriber['phone'] = $phone;
         }
 
         $subscriber = apply_filters('fluentcrm_user_map_data', $subscriber, $user);
@@ -698,10 +726,29 @@ class Helper
         if (!$contactIds) {
             return false;
         }
+        if (!is_array($contactIds)) {
+            $contactIds = (array)$contactIds;
+        }
 
         do_action('fluentcrm_before_subscribers_deleted', $contactIds);
         Subscriber::whereIn('id', $contactIds)->delete();
         do_action('fluentcrm_after_subscribers_deleted', $contactIds);
+        return true;
+    }
+
+    public static function sendDoubleOptin($contactIds)
+    {
+        if (!$contactIds) {
+            return false;
+        }
+        if (!is_array($contactIds)) {
+            $contactIds = (array)$contactIds;
+        }
+
+        $subscribers = Subscriber::whereIn('id', $contactIds)->where('status', 'pending')->get();
+        foreach ($subscribers as $subscriber) {
+            $subscriber->sendDoubleOptinEmail();
+        }
         return true;
     }
 
@@ -715,7 +762,8 @@ class Helper
             '##crm.manage_subscription_url##',
             '##crm.unsubscribe_url##',
             '{{crm.unsubscribe_html',
-            '{{crm.manage_subscription_html'
+            '{{crm.manage_subscription_html',
+            '{{crm_global_email_footer}}'
         ];
 
         foreach ($lookUpTexts as $lookUpText) {
@@ -776,10 +824,12 @@ class Helper
                     [
                         'label' => __('First Name', 'fluent-crm'),
                         'value' => 'first_name',
+                        'type'  => 'nullable_text',
                     ],
                     [
                         'label' => __('Last Name', 'fluent-crm'),
                         'value' => 'last_name',
+                        'type'  => 'nullable_text',
                     ],
                     [
                         'label' => __('Email', 'fluent-crm'),
@@ -788,22 +838,27 @@ class Helper
                     [
                         'label' => __('Address Line 1', 'fluent-crm'),
                         'value' => 'address_line_1',
+                        'type'  => 'nullable_text',
                     ],
                     [
                         'label' => __('Address Line 2', 'fluent-crm'),
                         'value' => 'address_line_2',
+                        'type'  => 'nullable_text',
                     ],
                     [
                         'label' => __('City', 'fluent-crm'),
                         'value' => 'city',
+                        'type'  => 'nullable_text',
                     ],
                     [
                         'label' => __('State', 'fluent-crm'),
                         'value' => 'state',
+                        'type'  => 'nullable_text',
                     ],
                     [
                         'label' => __('Postal Code', 'fluent-crm'),
                         'value' => 'postal_code',
+                        'type'  => 'nullable_text',
                     ],
                     [
                         'label'             => __('Country', 'fluent-crm'),
@@ -817,6 +872,7 @@ class Helper
                     [
                         'label' => __('Phone', 'fluent-crm'),
                         'value' => 'phone',
+                        'type'  => 'nullable_text',
                     ],
                     [
                         'label' => __('WP User ID', 'fluent-crm'),
@@ -832,6 +888,10 @@ class Helper
                         'is_only_in'  => true
                     ],
                     [
+                        'label' => __('Source', 'fluent-crm'),
+                        'value' => 'source'
+                    ],
+                    [
                         'label' => __('Last Activity', 'fluent-crm'),
                         'value' => 'last_activity',
                         'type'  => 'dates',
@@ -839,6 +899,11 @@ class Helper
                     [
                         'label' => __('Created At', 'fluent-crm'),
                         'value' => 'created_at',
+                        'type'  => 'dates',
+                    ],
+                    [
+                        'label' => __('Date of Birth', 'fluent-crm'),
+                        'value' => 'date_of_birth',
                         'type'  => 'dates',
                     ],
                 ],
@@ -901,6 +966,59 @@ class Helper
                         'label' => __('Last Email Clicked', 'fluent-crm'),
                         'value' => 'email_link_clicked',
                         'type'  => 'dates',
+                    ],
+                    [
+                        'label'              => __('Campaign Email -', 'fluent-crm'),
+                        'value'              => 'campaign_email_activity',
+                        'type'               => 'selections',
+                        'component'          => 'ajax_selector',
+                        'option_key'         => 'campaigns',
+                        'is_multiple'        => false,
+                        'custom_operators'   => [
+                            'clicked'     => 'link clicked',
+                            'not_clicked' => 'did not click',
+                            'open'        => 'opened',
+                            'no_open'     => 'did not open yet',
+                            'in'          => 'in (email sent)',
+                            'not_in'      => 'not in (regardless of status)'
+                        ],
+                        'experimental_cache' => true,
+                        'help'               => 'This will get only the contacts who got email in the selected campaign and then filter by email open/link clicked or not. <br />Please note that, some email clients send false-positive for email open pixel tracking so it may not 100% correct.'
+                    ],
+                    [
+                        'label'              => __('Automation Activity -', 'fluent-crm'),
+                        'value'              => 'automation_activity',
+                        'type'               => 'selections',
+                        'component'          => 'ajax_selector',
+                        'option_key'         => 'funnels',
+                        'is_multiple'        => false,
+                        'custom_operators'   => [
+                            'completed' => 'status completed',
+                            'active'    => 'status active',
+                            'cancelled' => 'status cancelled',
+                            'waiting'   => 'status waiting',
+                            'in'        => 'in (regardless of status)',
+                            'not_in'    => 'not in (regardless of status)'
+                        ],
+                        'experimental_cache' => true,
+                        'help'               => 'You can filter your contacts based on activity in a specific automation funnel.'
+                    ],
+                    [
+                        'label'              => __('Email Sequence Activity -', 'fluent-crm'),
+                        'value'              => 'email_sequence_activity',
+                        'type'               => 'selections',
+                        'component'          => 'ajax_selector',
+                        'option_key'         => 'email_sequences',
+                        'is_multiple'        => false,
+                        'custom_operators'   => [
+                            'completed' => 'status completed',
+                            'active'    => 'status active',
+                            'cancelled' => 'status cancelled',
+                            'in'        => 'in (regardless of status)',
+                            'not_in'    => 'not in (regardless of status)'
+                        ],
+                        'experimental_cache' => true,
+                        'help'               => 'You can filter your contacts based on activity in a specific email sequences.'
                     ]
                 ]
             ]
@@ -920,6 +1038,13 @@ class Helper
                     $item['type'] = 'numeric';
                 } else if ($item['type'] == 'date') {
                     $item['type'] = 'dates';
+                    $item['date_type'] = 'date';
+                    $item['value_format'] = 'yyyy-MM-dd';
+                } else if($item['type'] == 'date_time') {
+                    $item['type'] = 'dates';
+                    $item['has_time'] = 'yes';
+                    $item['date_type'] = 'datetime';
+                    $item['value_format'] = 'yyyy-MM-dd HH:mm:ss';
                 } else if (isset($field['options'])) {
                     $item['type'] = 'selections';
                     $options = $field['options'];
@@ -988,6 +1113,19 @@ class Helper
                             'is_multiple' => true,
                             'disabled'    => true
                         ],
+                        [
+                            'value'             => 'commerce_exist',
+                            'label'             => 'Is a customer? (Pro Required)',
+                            'type'              => 'selections',
+                            'is_multiple'       => false,
+                            'disable_values'    => true,
+                            'value_description' => 'This filter will check if a contact has at least one shop order or not',
+                            'custom_operators'  => [
+                                'exist'     => 'Yes',
+                                'not_exist' => 'No',
+                            ],
+                            'disabled'          => true
+                        ]
                     ],
                 ];
             }
@@ -1219,4 +1357,115 @@ class Helper
 
         return array_values($groups);
     }
+
+    public static function getComplianceSettings()
+    {
+        $defaults = [
+            'anonymize_ip'           => 'no',
+            'delete_contact_on_user' => 'no',
+            'personal_data_export'   => 'yes'
+        ];
+
+        $settings = get_option('_fluentcrm_compliance_settings', []);
+
+        return wp_parse_args($settings, $defaults);
+    }
+
+    public static function getSiteUrl($path = '', $scheme = null)
+    {
+        return site_url($path, $scheme);
+    }
+
+    public static function isExperimentalEnabled($module)
+    {
+        $settings = self::getExperimentalSettings();
+        return Arr::get($settings, $module) === 'yes';
+    }
+
+    public static function getExperimentalSettings()
+    {
+        static $settings;
+        if ($settings) {
+            return $settings;
+        }
+
+        $defaults = [
+            'quick_contact_navigation' => 'no',
+            'campaign_archive'         => 'no',
+            'campaign_group_by_month'  => 'no',
+            'campaign_search'          => '',
+            'campaign_max_number'      => 50,
+            'classic_date_time'        => 'no'
+        ];
+
+        $settings = get_option('_fluentcrm_experimental_settings', []);
+        if (!$settings || !is_array($settings)) {
+            $settings = $defaults;
+            return $settings;
+        }
+
+        return wp_parse_args($settings, $defaults);
+    }
+
+    public static function sanitizeHtml($html)
+    {
+        if (!$html) {
+            return $html;
+        }
+
+        // Return $html if it's just a plain text
+        if (!preg_match('/<[^>]*>/', $html)) {
+            return $html;
+        }
+
+        $tags = wp_kses_allowed_html('post');
+        $tags['style'] = [
+            'types' => [],
+        ];
+        // iframe
+        $tags['iframe'] = [
+            'width'           => [],
+            'height'          => [],
+            'src'             => [],
+            'srcdoc'          => [],
+            'title'           => [],
+            'frameborder'     => [],
+            'allow'           => [],
+            'class'           => [],
+            'id'              => [],
+            'allowfullscreen' => [],
+            'style'           => [],
+        ];
+        //button
+        $tags['button']['onclick'] = [];
+
+        //svg
+        if (empty($tags['svg'])) {
+            $svg_args = [
+                'svg'   => [
+                    'class'           => true,
+                    'aria-hidden'     => true,
+                    'aria-labelledby' => true,
+                    'role'            => true,
+                    'xmlns'           => true,
+                    'width'           => true,
+                    'height'          => true,
+                    'viewbox'         => true,
+                ],
+                'g'     => ['fill' => true],
+                'title' => ['title' => true],
+                'path'  => [
+                    'd'         => true,
+                    'fill'      => true,
+                    'transform' => true,
+                ],
+            ];
+            $tags = array_merge($tags, $svg_args);
+        }
+
+        $tags = apply_filters('fluentcrm_allowed_html_tags', $tags);
+
+        return wp_kses($html, $tags);
+    }
+
 }

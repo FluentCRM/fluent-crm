@@ -25,8 +25,8 @@ class PurchaseHistoryController extends Controller
 
     public function getOrders()
     {
-        $provider = $this->request->get('provider');
-        $subscriberId = intval($this->request->get('id'));
+        $provider = $this->request->getSafe('provider');
+        $subscriberId = $this->request->getSafe('id', 'intval');
         $subscriber = Subscriber::where('id', $subscriberId)->first();
 
         $data = apply_filters('fluentcrm_get_purchase_history_'.$provider, [

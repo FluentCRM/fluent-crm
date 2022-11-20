@@ -116,6 +116,32 @@ class EmailDesignTemplates
         return $emogrifier->emogrify();
     }
 
+    public function addWebPreviewTemplate($emailBody, $templateData, $campaign)
+    {
+        $templateData = $this->filterTemplateData($templateData);
+
+        $configDefault = [
+            'content_width' => '',
+            'headings_font_family' => '',
+            'text_color' => '',
+            'headings_color' => '',
+            'link_color' => '',
+            'body_bg_color' => '',
+            'content_bg_color' => '',
+            'footer_text_color' => '',
+            'content_font_family' => "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+        ];
+
+        $templateData['config'] = wp_parse_args($templateData['config'], $configDefault);
+
+        $view = FluentCrm('view');
+        $emailBody = $view->make('emails.web_preview.Template', $templateData);
+        $emailBody = $emailBody->__toString();
+        $emogrifier = new Emogrifier($emailBody);
+        $emogrifier->disableInvisibleNodeRemoval();
+        return $emogrifier->emogrify();
+    }
+
     private function filterTemplateData($templateData)
     {
         if(Arr::get($templateData, 'config.disable_footer') == 'yes') {

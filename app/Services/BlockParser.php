@@ -14,12 +14,10 @@ class BlockParser
 
         BlockParserHelper::setSubscriber($subscriber);
 
-        if ($initiated) {
-            return $this;
+        if (!$initiated) {
+            $initiated = true;
+            add_filter('render_block', array($this, 'alterBlockContent'), 999, 2);
         }
-
-        $initiated = true;
-        add_filter('render_block', array($this, 'alterBlockContent'), 999, 2);
     }
 
 
@@ -140,12 +138,25 @@ class BlockParser
 
     private function getRowOpening($block)
     {
+        $isStackOnMobile = Arr::get($block, 'attrs.isStackedOnMobile', true);
+
         $background = Arr::get($block, 'attrs.style.color.background');
+        $defaultBackground = Arr::get($block, 'attrs.backgroundColor');
+
         $style = 'margin-bottom: 10px;';
         if ($background) {
             $style .= 'background-color:' . $background . ';';
+        } else if ($defaultBackground) {
+            $defaultBackground = 'has-' . Helper::kebabCase($defaultBackground) . '-background-color';
         }
-        return '<table class="fce_row" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;' . $style . '"><tbody><tr>';
+
+        $class = 'fce_row';
+
+        if ($isStackOnMobile) {
+            $class = 'fce_row fce_stacked';
+        }
+
+        return '<table class="' . esc_attr($class) . ' ' . esc_attr($defaultBackground) . '" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;' . $style . '"><tbody><tr>';
     }
 
     private function getRowClosing($block)
@@ -155,6 +166,7 @@ class BlockParser
 
     private function getColumnOpening($block)
     {
+
         $width = Arr::get($block, 'attrs.width');
         if (!$width) {
             $total = !empty($block['fc_total_blocks']) ? $block['fc_total_blocks'] : 1;
@@ -171,17 +183,18 @@ class BlockParser
 
     private function getButtonsOpening($block)
     {
+        $alignment = Arr::get($block, 'innerBlocks.0.attrs.align', '');
         $align = Arr::get($block, 'attrs.layout.justifyContent', 'left');
         $tableCssClass = 'fce_row fce_buttons_row';
 
         $width = 'auto';
-        if ($align == 'right') {
+        if ($align == 'right' || $alignment == 'center') {
             $width = '100%';
         } else if (Arr::get($block, 'innerBlocks.0.attrs.width') == 100) {
             $width = '100%';
         }
 
-        $tableCssClass .= ' tb_btn_' . $align;
+        $tableCssClass .= ' tb_btn_' . $alignment;
 
         if ($definedWidth = Arr::get($block, 'innerBlocks.0.attrs.width')) {
             $tableCssClass .= ' wp-block-button__width-' . $definedWidth;
@@ -249,9 +262,9 @@ class BlockParser
 
         $align = Arr::get($data, 'parent_attrs.parent_attrs.layout.justifyContent', 'center');
 
-        $alignment = $align=='center' ? 'text-align: -webkit-center' : ' ';
+        $alignment = $align == 'center' ? 'text-align: -webkit-center' : ' ';
 
-        return '<td style="padding-right: 10px;'.$alignment.'" align="' . $align . '" valign="middle" class="fce_column"><table border="0" cellspacing="0" cellpadding="0"><tr>' . $td . $content . '</td></tr></table></td>';
+        return '<td style="padding-right: 10px;' . $alignment . '" align="' . $align . '" valign="middle" class="fce_column"><table border="0" cellspacing="0" cellpadding="0"><tr>' . $td . $content . '</td></tr></table></td>';
     }
 
     private function getButtonsClosing($block)
@@ -264,7 +277,7 @@ class BlockParser
         $subscriber = BlockParserHelper::getSubscriber();
 
         if (!$subscriber) {
-            return '';
+            return $content;
         }
 
         $tagIds = Arr::get($data, 'attrs.tag_ids');
@@ -299,12 +312,13 @@ class BlockParser
             'wp-block-image size-' . Arr::get($block, 'attrs.sizeSlug'),
             'align' . Arr::get($block, 'attrs.align', 'left')
         ]));
+        $radius = Arr::get($block, 'attrs.style.border.radius', '0px');
 
 
         $content = $block['innerContent'][0];
         $html = strip_tags($content, '<a><figcaption><img>');
         $html = str_replace(['<figcaption', 'figcaption/>'], ['<p', '/p>'], $html);
-        $html = '<div class="' . $classNames . '">' . $html . '</div>';
+        $html = '<div class="' . $classNames .'" style="border-radius: ' . $radius . '">'. $html . '</div>';
         return $html;
     }
 

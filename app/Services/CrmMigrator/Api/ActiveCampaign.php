@@ -41,43 +41,30 @@ class ActiveCampaign
 
         /* Build request URL. */
         $request_url = untrailingslashit($this->apiUrl) . '/admin/api.php?' . $request_options;
-
+        $response = null;
         /* Execute request based on method. */
         switch ($method) {
 
             case 'POST':
-                $args = array('body' => $options);
+                $args = array(
+                    'body' => $options,
+                    'timeout' => 30
+                );
                 $response = wp_remote_post($request_url, $args);
                 break;
 
             case 'GET':
                 $response = wp_remote_get($request_url, [
-                    'timeout' => 10
+                    'timeout' => 30
                 ]);
                 break;
         }
 
-        /* If WP_Error, die. Otherwise, return decoded JSON. */
-        if (is_wp_error($response)) {
-            return $response;
-        } else {
-            $result = json_decode($response['body'], true);
-
-            if ($result && isset($result['result_code']) && $result['result_code'] == 0) {
-                $message = __('Invalid API', 'fluent-crm');
-
-                if (!empty($result['message'])) {
-                    $message = $result['message'];
-                } else if (!empty($result['error'])) {
-                    $message = $result['error'];
-                }
-                return new \WP_Error('API_Error', $message);
-            } else if(wp_remote_retrieve_response_code($response) > 300) {
-                return new \WP_Error('API_Error', 'ActiveCampaign API Resquest Failed');
-            }
-
-            return $result;
+        $error = $this->maybeError($response);
+        if ($error) {
+            return $error;
         }
+        return json_decode($response['body'], true);
     }
 
     /**
@@ -99,18 +86,9 @@ class ActiveCampaign
         /* Execute request. */
         $response = wp_remote_get($request_url);
 
-        /* If invalid content type, API URL is invalid. */
-        if (is_wp_error($response))
-            return $response;
-        if (strpos($response['headers']['content-type'], 'application/json') != 0 && strpos($response['headers']['content-type'], 'application/json') > 0) {
-            return new \WP_Error('error', 'Invalid API URL');
-        }
-
-        /* If result code is false, API key is invalid. */
-        $response['body'] = json_decode($response['body'], true);
-        if ($response['body']['result_code'] == 0) {
-            $message = 'Invalid API';
-            return new \WP_Error('API_Error', $message);
+        $error = $this->maybeError($response);
+        if ($error) {
+            return $error;
         }
 
         return true;
@@ -151,5 +129,27 @@ class ActiveCampaign
     public function getTags()
     {
         return $this->make_request('tags_list', array('ids' => 'all'));
+    }
+
+    public function maybeError($response)
+    {
+        /* If invalid content type, API URL is invalid. */
+        if (is_wp_error($response))
+            return $response;
+        if (strpos($response['headers']['content-type'], 'application/json') != 0 && strpos($response['headers']['content-type'], 'application/json') > 0) {
+            return new \WP_Error('error', 'Invalid API URL');
+        }
+
+        if ($response['response']['code'] > 300) {
+            return new \WP_Error('API_Error', $response['response']['message'], $response);
+        }
+
+        $body = json_decode($response['body'], true);
+        if (isset($body['result_code']) && $body['result_code'] == 0) {
+            $message = 'Invalid API';
+            return new \WP_Error('API_Error', $message, $response);
+        }
+
+        return null;
     }
 }

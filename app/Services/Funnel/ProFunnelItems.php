@@ -6,11 +6,19 @@ class ProFunnelItems
 {
     public function __construct()
     {
-        $this->initProTriggers();
-        $this->initBlocks();
+        add_filter('fluentcrm_funnel_triggers', function ($allTriggers) {
+            $triggers = $this->getProTriggers();
+            return array_merge($allTriggers, $triggers);
+        });
+
+        add_filter('fluentcrm_funnel_blocks', function ($funnelBlocks) {
+            $blocks = $this->getProBlocks();
+            return array_merge($funnelBlocks, $blocks);
+        }, 100);
+
     }
 
-    private function initProTriggers()
+    private function getProTriggers()
     {
         $triggers = $this->getCrmTriggers();
         if (defined('WC_PLUGIN_FILE')) {
@@ -41,7 +49,7 @@ class ProFunnelItems
             $triggers['woocommerce_order_status_changed'] = [
                 'category'    => __('WooCommerce', 'fluent-crm'),
                 'label'       => __('Order Status Changed', 'fluent-crm'),
-                'icon'        => 'fc-icon-woo_trigger',
+                'icon'        => 'fc-icon-woo',
                 'description' => __('This Funnel will start when a Order status will change from one state to another', 'fluent-crm'),
                 'disabled'    => true
             ];
@@ -89,7 +97,7 @@ class ProFunnelItems
             $triggers['pmpro_after_change_membership_level'] = [
                 'category'    => __('Paid Membership Pro', 'fluent-crm'),
                 'label'       => __('Membership Level assignment of a User', 'fluent-crm'),
-                'icon'        => 'fc-icon-paid_membership_pro',
+                'icon'        => 'fc-icon-paid_membership_pro_user_level',
                 'description' => __('This funnel will start when a user is assigned to specified membership levels', 'fluent-crm'),
                 'disabled'    => true
             ];
@@ -99,7 +107,7 @@ class ProFunnelItems
             $triggers['mepr-account-is-active'] = [
                 'category'    => __('MemberPress', 'fluent-crm'),
                 'label'       => __('A member added to a membership level', 'fluent-crm'),
-                'icon'        => 'fc-icon-membertress_membership',
+                'icon'        => 'fc-icon-memberpress_membership',
                 'description' => __('This funnel will start when a membership level get activated for a member', 'fluent-crm'),
                 'disabled'    => true
             ];
@@ -125,13 +133,6 @@ class ProFunnelItems
                 'label'       => __('Student completes a Lesson', 'fluent-crm'),
                 'icon'        => 'fc-icon-lifter_lms_complete_lession-t2',
                 'description' => __('This Funnel will start when a student completes a lesson', 'fluent-crm'),
-                'disabled'    => true
-            ];
-            $triggers['lifterlms_lesson_completed'] = [
-                'category'    => __('LifterLMS', 'fluent-crm'),
-                'label'       => __('Student completes a Course', 'fluent-crm'),
-                'icon'        => 'fc-icon-lifter_lms_complete_course',
-                'description' => __('This Funnel will start a student completes a Course', 'fluent-crm'),
                 'disabled'    => true
             ];
         }
@@ -182,6 +183,32 @@ class ProFunnelItems
                 'description' => __('This Funnel will start once new order will be added as successful payment', 'fluent-crm'),
                 'disabled'    => true
             ];
+
+            if (defined('EDD_SL_VERSION')) {
+                $triggers['edd_sl_post_set_status'] = [
+                    'category'    => __('Easy Digital Downloads', 'fluentcampaign-pro'),
+                    'label'       => __('License Expired', 'fluentcampaign-pro'),
+                    'description' => __('This Funnel will start a license status get marked as expired', 'fluentcampaign-pro'),
+                    'disabled'    => true
+                ];
+            }
+
+            if (defined('EDD_RECURRING_VERSION')) {
+                $triggers['edd_recurring_add_subscription_payment'] = [
+                    'category'    => __('Easy Digital Downloads', 'fluentcampaign-pro'),
+                    'label'       => __('Renewal Payment Received', 'fluentcampaign-pro'),
+                    'description' => __('This Funnel will start once a Renewal Payment received for an active subscription', 'fluentcampaign-pro'),
+                    'icon'        => 'fc-icon-edd_new_order_success',
+                    'disabled'    => true
+                ];
+                $triggers['edd_subscription_status_change'] = [
+                    'category'    => __('Easy Digital Downloads', 'fluentcampaign-pro'),
+                    'label'       => __('Recurring Subscription Expired', 'fluentcampaign-pro'),
+                    'description' => __('This Funnel will start once a Recurring Subscription status changed to expired', 'fluentcampaign-pro'),
+                    'icon'        => 'el-icon-circle-close',
+                    'disabled'    => true
+                ];
+            }
         }
 
         if (class_exists('\Affiliate_WP')) {
@@ -194,13 +221,11 @@ class ProFunnelItems
             ];
         }
 
-        add_filter('fluentcrm_funnel_triggers', function ($allTriggers) use ($triggers) {
-            return array_merge($allTriggers, $triggers);
-        });
+        return $triggers;
 
     }
 
-    private function initBlocks()
+    private function getProBlocks()
     {
         $blocks = [
             'fcrm_has_contact_list'           => [
@@ -238,7 +263,7 @@ class ProFunnelItems
                 'category'    => __('CRM', 'fluent-crm'),
                 'title'       => __('Cancel Automations', 'fluent-crm'),
                 'description' => __('Pause/Cancel another automation for contact', 'fluent-crm'),
-                'icon'        => 'fc-icon-cancel_automation',//fluentCrmMix('images/funnel_icons/cancel_automation.svg'),
+                'icon'        => 'fc-icon-cancel_automation',
             ],
             'remove_from_email_sequence'      => [
                 'is_pro'      => true,
@@ -264,6 +289,22 @@ class ProFunnelItems
                 'description' => __('Update custom fields or few main property of a contact', 'fluent-crm'),
                 'icon'        => 'fc-icon-wp_user_meta',
             ],
+            'add_contact_activity' => [
+                'is_pro'      => true,
+                'type'        => 'action',
+                'category' => __('CRM', 'fluent-crm'),
+                'title'       => __('Add Notes & Activity', 'fluent-crm'),
+                'description' => __('Add Notes or Activity to the Contact Profile', 'fluent-crm'),
+                'icon'        => 'fc-icon-writing'
+            ],
+            'outgoing_webhook' => [
+                'is_pro'      => true,
+                'type'        => 'action',
+                'category'    => __('CRM', 'fluent-crm'),
+                'title'       => __('Outgoing Webhook', 'fluent-crm'),
+                'description' => __('Send Data to external server via GET or POST Method', 'fluent-crm'),
+                'icon'        => 'fc-icon-webhooks',
+            ],
             'end_this_funnel'                 => [
                 'is_pro'      => true,
                 'type'        => 'action',
@@ -283,17 +324,32 @@ class ProFunnelItems
                 'is_pro'      => true,
                 'category'    => __('WordPress', 'fluent-crm'),
                 'type'        => 'action',
-                'title'       => __('Create WordPress User', 'fluentcampaign-pro'),
-                'description' => __('Create WP User with a role if user is not already registered with contact email', 'fluentcampaign-pro'),
+                'title'       => __('Create WordPress User', 'fluent-crm'),
+                'description' => __('Create WP User with a role if user is not already registered with contact email', 'fluent-crm'),
                 'icon'        => 'fc-icon-create_wp_user',//fluentCrmMix('images/funnel_icons/user_register.svg'),
-
             ],
+            'fcrm_update_user_meta' => [
+                'is_pro'      => true,
+                'type'        => 'action',
+                'category'    => __('WordPress', 'fluent-crm'),
+                'title'       => __('Update WP User Meta', 'fluent-crm'),
+                'description' => __('Update WordPress User Meta Data', 'fluent-crm'),
+                'icon'        => 'fc-icon-wp_user_meta',//fluentCrmMix('images/funnel_icons/wp_user_meta.svg'),
+            ],
+            'fcrm_change_user_role' => [
+                'is_pro'      => true,
+                'type'        => 'action',
+                'category'    => __('WordPress', 'fluent-crm'),
+                'title'       => __('Change WP User Role', 'fluent-crm'),
+                'description' => __('If user exist with the contact email then you can change user role', 'fluent-crm'),
+                'icon'        => 'fc-icon-wp_user_role',
+            ]
         ];
 
         if (class_exists('\Easy_Digital_Downloads')) {
             $blocks['edd_update_payment_status_benchmark'] = [
                 'is_pro'      => true,
-                'type'        => 'benchmark',
+                'type'        => 'conditional',
                 'title'       => __('New Order Success in EDD', 'fluent-crm'),
                 'description' => __('This will run once new order will be placed as processing in EDD', 'fluent-crm'),
                 'icon'        => 'fc-icon-edd_new_order_success',//fluentCrmMix('images/funnel_icons/new_order_edd.svg')
@@ -401,9 +457,7 @@ class ProFunnelItems
             ];
         }
 
-        add_filter('fluentcrm_funnel_blocks', function ($funnelBlocks) use ($blocks) {
-            return array_merge($funnelBlocks, $blocks);
-        }, 100);
+        return $blocks;
 
     }
 

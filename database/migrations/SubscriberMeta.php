@@ -35,6 +35,18 @@ class SubscriberMeta
             ) $charsetCollate;";
 
             dbDelta($sql);
+        } else {
+
+            $indexes = $wpdb->get_results("SHOW INDEX FROM $table");
+            $indexedColumns = [];
+            foreach ($indexes as $index) {
+                $indexedColumns[] = $index->Column_name;
+            }
+
+            if(!in_array('object_type', $indexedColumns)) {
+                $sql = "ALTER TABLE {$table} ADD INDEX `object_type` (`object_type`);";
+                $wpdb->query($sql);
+            }
         }
     }
 }

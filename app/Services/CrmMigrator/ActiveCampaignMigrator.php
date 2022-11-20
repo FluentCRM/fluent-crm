@@ -31,7 +31,7 @@ class ActiveCampaignMigrator extends BaseMigrator
                     'placeholder' => __('ActiveCampaign API Token', 'fluent-crm'),
                     'data_type'   => 'password',
                     'type'        => 'input-text',
-                    'inline_help' => __('You can find your API key at ActiveCampaign Profile -> User Info -> API Token', 'fluent-crm')
+                    'inline_help' => __('You can find your API key at ActiveCampaign Settings -> Developer', 'fluent-crm')
                 ],
                 'api_url' => [
                     'label'       => __('API Access URL', 'fluent-crm'),
@@ -90,6 +90,7 @@ class ActiveCampaignMigrator extends BaseMigrator
         $data['mapped_lists'] = $formattedLists;
 
         $tags = $api->getTags();
+
         if (is_wp_error($tags)) {
             return $tags;
         }
@@ -109,7 +110,7 @@ class ActiveCampaignMigrator extends BaseMigrator
         $mergeFields = $api->get_custom_fields();
 
         if (is_wp_error($mergeFields)) {
-            return $mergeFields;
+            $mergeFields = [];
         }
 
         $formattedContactFields = [];

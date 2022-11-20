@@ -18,9 +18,9 @@
 <?php include(FLUENTCRM_PLUGIN_PATH.'app/views/emails/common-style.php'); ?>
 </head>
 <body class="fc_plain_template" style="background: none no-repeat center/cover;height: 100%;margin: 0;padding: 0;width: 100%;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;background-image: none;background-repeat: no-repeat;background-position: center;background-size: cover;">
-<?php if ($preHeader): ?><span class="fcPreviewText" style="display:none; font-size:0px; line-height:0px; max-height:0px; max-width:0px; opacity:0; overflow:hidden; visibility:hidden; mso-hide:all;"><?php echo $preHeader; ?></span><?php endif; ?>
+<?php if ($preHeader): ?><span class="fcPreviewText" style="display:none; font-size:0px; line-height:0px; max-height:0px; max-width:0px; opacity:0; overflow:hidden; visibility:hidden; mso-hide:all;"><?php echo esc_attr($preHeader); ?></span><?php endif; ?>
 <center>
-<table<?php if(fluentcrm_is_rtl()) { echo ' dir="rtl"'; }  ?> align="center" border="0" cellpadding="0" cellspacing="0" height="100%" width="100%" id="bodyTable" style="border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;height: 100%;margin: 0;padding: 0;width: 100%;background-image: none;background-repeat: no-repeat;background-position: center;background-size: cover;color:inherit;">
+<table<?php if(fluentcrm_is_rtl()) { echo ' dir="rtl"'; }  ?> align="center" border="0" cellpadding="0" cellspacing="0" height="100%" width="100%" id="templateWrapper" style="border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;height: 100%;margin: 0;padding: 0;width: 100%;background-image: none;background-repeat: no-repeat;background-position: center;background-size: cover;color:inherit;">
 <tr>
 <td align="center" valign="top" id="bodyCell" style="mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;height: 100%;margin: 0;padding: 0px;width: 100%;border-top: 0;">
 <!-- BEGIN TEMPLATE // -->
@@ -51,7 +51,7 @@
 <tbody class="mcnTextBlockOuter">
 <tr>
 <td class="fc_email_body" align="left" valign="top" style="padding-top: 20px;padding-right: 20px;padding-bottom: 10px;padding-left: 20px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;word-break: break-word;font-size: 16px;line-height: 180%;text-align: left;color:inherit;">
-<?php echo $email_body; ?>
+<?php echo $email_body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 </td>
 </tr>
 </tbody>
@@ -88,7 +88,7 @@
 <table align="left" border="0" cellpadding="0" cellspacing="0" style="max-width: 100%;min-width: 100%;border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;color:inherit;" width="100%" class="fcTextContentContainer">
 <tbody><tr>
 <td valign="top" class="fcTextContent" style="padding-top: 0;padding-right: 18px;padding-bottom: 9px;padding-left: 18px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;word-break: break-word;font-size: 12px;line-height: 150%;text-align: left;">
-<?php echo $footer_text; ?>
+<?php echo $footer_text; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <?php if(!defined('FLUENTCAMPAIGN')): ?>
 <p><?php esc_html_e('Powered By', 'fluent-crm'); ?> <a href="http://fluentcrm.com/?utm_source=wp&utm_medium=wp_mail&utm_campaign=footer"><?php esc_html_e('FluentCRM', 'fluent-crm'); ?></a></p>
 <?php endif; ?>

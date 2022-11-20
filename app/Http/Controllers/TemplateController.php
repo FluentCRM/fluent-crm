@@ -20,17 +20,21 @@ class TemplateController extends Controller
 {
     public function templates(Request $request)
     {
-        $order = $request->get('order') ?: 'desc';
-        $orderBy = $request->get('orderBy') ?: 'ID';
+        $order = $request->getSafe('order', 'desc', 'sanitize_sql_orderby');
+        $orderBy = $request->get('orderBy', 'ID', 'sanitize_sql_orderby');
 
         $templates = Template::emailTemplates(
             $request->get('types', ['publish', 'draft'])
         );
         if (!empty($request->get('search'))) {
-            $templates = $templates->where('post_title', 'LIKE', '%' . $request->get('search') . '%');
+            $templates = $templates->where('post_title', 'LIKE', '%' . $request->getSafe('search') . '%');
         }
         $templates = $templates->orderBy($orderBy, $order)
             ->paginate();
+
+        foreach ($templates as $template) {
+            $template->design_template = get_post_meta($template->ID, '_design_template', true);
+        }
 
         return $this->sendSuccess([
             'templates' => $templates
@@ -46,6 +50,7 @@ class TemplateController extends Controller
             if (!$editType) {
                 $editType = 'html';
             }
+
             $templateData = [
                 'post_title'      => $template->post_title,
                 'post_content'    => $template->post_content,
@@ -57,6 +62,9 @@ class TemplateController extends Controller
                     'template_config' => get_post_meta($template->ID, '_template_config', true)
                 ]
             ];
+
+            $templateData = apply_filters('fluent_crm/editing_template_data', $templateData, $template);
+
         } else {
             $defaultTemplate = Helper::getDefaultEmailTemplate();
             $templateData = [
@@ -79,12 +87,25 @@ class TemplateController extends Controller
 
     public function create(Request $request)
     {
-        $template = wp_unslash($this->request->get('template'));
-        $postData = Arr::only($template, [
+        if($templateId = $request->get('template_id')) {
+            return $this->update($request, $templateId);
+        }
+
+        $templateData = wp_unslash($this->request->getJson('template'));
+
+        $postData = Arr::only($templateData, [
             'post_title',
             'post_content',
             'post_excerpt'
         ]);
+
+        if(empty($postData['post_title'])) {
+            $postData['post_title'] = 'Email Template @ '.current_time('mysql');
+        }
+
+        if(empty($postData['email_subject'])) {
+            $postData['email_subject'] =  $postData['post_title'];
+        }
 
         $postData['post_modified'] = current_time('mysql');
         $postData['post_modified_gmt'] = date('Y-m-d H:i:s');
@@ -94,15 +115,18 @@ class TemplateController extends Controller
 
         $templateId = wp_insert_post($postData);
 
-        $designTemplate = Arr::get($template, 'design_template');
+        $designTemplate = Arr::get($templateData, 'design_template');
         if (!$designTemplate) {
             $designTemplate = Helper::getDefaultEmailTemplate();
+            $templateData['design_template'] = $designTemplate;
         }
 
-        update_post_meta($templateId, '_email_subject', Arr::get($template, 'email_subject'));
-        update_post_meta($templateId, '_edit_type', Arr::get($template, 'edit_type'));
-        update_post_meta($templateId, '_template_config', Arr::get($template, 'settings.template_config'));
+        update_post_meta($templateId, '_email_subject', Arr::get($templateData, 'email_subject'));
+        update_post_meta($templateId, '_edit_type', Arr::get($templateData, 'edit_type'));
+        update_post_meta($templateId, '_template_config', Arr::get($templateData, 'settings.template_config'));
         update_post_meta($templateId, '_design_template', $designTemplate);
+
+        do_action('fluent_crm/email_template_created', $templateId, $templateData);
 
         return $this->sendSuccess([
             'message'     => __('Template successfully created', 'fluent-crm'),
@@ -133,6 +157,8 @@ class TemplateController extends Controller
         update_post_meta($newTemplateId, '_template_config', get_post_meta($templateId, '_template_config', true));
         update_post_meta($newTemplateId, '_design_template', get_post_meta($templateId, '_design_template', true));
 
+        do_action('fluent_crm/email_template_duplicated', $newTemplateId, $template);
+
         return $this->sendSuccess([
             'message'     => __('Template successfully duplicated', 'fluent-crm'),
             'template_id' => $newTemplateId
@@ -141,8 +167,19 @@ class TemplateController extends Controller
 
     public function update(Request $request, $id)
     {
-        $template = wp_unslash($this->request->get('template'));
-        $postData = Arr::only($template, [
+        $oldTemplate = Template::findOrFail($id);
+
+        $templateData = wp_unslash($this->request->getJson('template'));
+
+        if(empty($templateData['post_title'])) {
+            $templateData['post_title'] = 'Email template created at '.date('Y-m-d H:i');
+        }
+
+        if(empty($templateData['email_subject'])) {
+            $templateData['email_subject'] = 'Email template created at '.date('Y-m-d H:i');
+        }
+
+        $postData = Arr::only($templateData, [
             'post_title',
             'post_content',
             'post_excerpt'
@@ -151,10 +188,13 @@ class TemplateController extends Controller
         $postData['post_modified'] = current_time('mysql');
         $postData['post_modified_gmt'] = date('Y-m-d H:i:s');
         Template::where('ID', $id)->update($postData);
-        update_post_meta($id, '_email_subject', Arr::get($template, 'email_subject'));
-        update_post_meta($id, '_edit_type', Arr::get($template, 'edit_type'));
-        update_post_meta($id, '_design_template', Arr::get($template, 'design_template'));
-        update_post_meta($id, '_template_config', Arr::get($template, 'settings.template_config'));
+
+        do_action('fluent_crm/email_template_updated', $templateData, $oldTemplate);
+
+        update_post_meta($id, '_email_subject', Arr::get($templateData, 'email_subject'));
+        update_post_meta($id, '_edit_type', Arr::get($templateData, 'edit_type'));
+        update_post_meta($id, '_design_template', Arr::get($templateData, 'design_template'));
+        update_post_meta($id, '_template_config', Arr::get($templateData, 'settings.template_config'));
 
         return $this->sendSuccess([
             'message'     => __('Template successfully updated', 'fluent-crm'),
@@ -162,9 +202,56 @@ class TemplateController extends Controller
         ]);
     }
 
+    public function handleBulkAction(Request $request)
+    {
+        $actionName = sanitize_text_field($request->get('action_name', ''));
+
+        $templateIds = $request->getSafe('template_ids', [], 'intval');
+
+        $templateIds = array_filter($templateIds);
+        if ($actionName == 'change_template_status') {
+            $newStatus = sanitize_text_field($request->get('status', ''));
+            if (!$newStatus) {
+                return $this->sendError([
+                    'message' => __('Please select status', 'fluent-crm')
+                ]);
+            }
+
+            $templates = Template::whereIn('ID', $templateIds)->get();
+
+            foreach ($templates as $template) {
+                $oldStatus = $template->post_status;
+                if ($oldStatus != $newStatus) {
+                    $template->post_status = $newStatus;
+                    $template->save();
+                }
+            }
+
+            return [
+                'message' => __('Status has been changed for the selected templates', 'fluent-crm')
+            ];
+        } else if ($actionName == 'delete_templates') {
+            $templates = Template::whereIn('id', $templateIds)->get();
+
+            foreach ($templates as $template) {
+                wp_delete_post($template->ID, true);
+            }
+
+            return $this->sendSuccess([
+                'message' => __('Selected Templates has been deleted permanently', 'fluent-crm'),
+            ]);
+        }
+
+        return [
+            'message' => __('invalid bulk action', 'fluent-crm')
+        ];
+    }
+
     public function delete(Request $request, $id)
     {
-        Template::findOrFail($id)->delete();
+        $template = Template::findOrFail($id);
+
+        wp_delete_post($template->ID, true);
 
         return $this->sendSuccess([
             'message' => __('The template has been deleted successfully.', 'fluent-crm')
@@ -198,5 +285,20 @@ class TemplateController extends Controller
     protected function smartCodes()
     {
         return Helper::getGlobalSmartCodes();
+    }
+
+    public function setGlobalStyle(Request $request)
+    {
+        $settings = $request->get('config', []);
+
+        foreach ($settings as $settingKey => $setting) {
+            $settings[$settingKey] = sanitize_text_field($setting);
+        }
+
+        fluentcrm_update_option('global_email_style_config', $settings);
+
+        return [
+            'message' => 'Global style settings has been updated'
+        ];
     }
 }

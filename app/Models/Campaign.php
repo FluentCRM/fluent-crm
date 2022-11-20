@@ -131,6 +131,26 @@ class Campaign extends Model
         return $this->subjects();
     }
 
+    public function duplicateSubjects(Campaign $campaign)
+    {
+
+        $subjects = $campaign->subjects;
+        if(!$subjects) {
+            return;
+        }
+
+        $formattedSubjects = [];
+        foreach ($subjects as $subject) {
+            $formattedSubjects[] = [
+                'key' => $subject->key,
+                'value' => $subject['value']
+            ];
+        }
+        if($formattedSubjects) {
+            $this->syncSubjects($formattedSubjects);
+        }
+    }
+
     public function scopeOfType($query, $status)
     {
         return $query->where('status', $status);
@@ -192,136 +212,114 @@ class Campaign extends Model
      */
     public function subscribeBySegment($settings, $limit = false, $offset = 0)
     {
-        $data = $this->getSubscriberIdsBySegmentSettings($settings, $limit, $offset);
+        $model = $this->getSubscribersModel($settings);
 
-        $subscriberIds = $data['subscriber_ids'];
-        $totalItems = $data['total_count'];
+        $totalCount = $model->count();
 
-        if ($subscriberIds) {
-            $result = $this->subscribe($subscriberIds);
-        } else {
-            $result = 0;
+        if ($limit) {
+            $model->limit($limit);
         }
 
+        if ($offset) {
+            $model->offset($offset);
+        }
+
+        $result = $this->subscribe($model, [], true);
+
         return [
-            'result'           => $result,
-            'total_subscribed' => count($subscriberIds),
-            'total_items'      => $totalItems
+            'result'           => ($result) ? $result : 0,
+            'total_subscribed' => count($result),
+            'total_items'      => $totalCount
         ];
     }
 
-    public function getSubscriberIdsBySegmentSettings($settings, $limit = false, $offset = 0)
+    public function getSubscribersModel($settings = false)
     {
+        if (!$settings) {
+            $settings = $this->settings;
+        }
+
         $filterType = Arr::get($settings, 'sending_filter', 'list_tag');
 
-        $alreadySliced = false;
 
         if ($filterType == 'list_tag') {
-            $excludeSubscriberIds = [];
+            $subscriberModel = $this->getSubscribeIdsByListModel($settings['subscribers'], 'subscribed');
             if ($excludeItems = Arr::get($settings, 'excludedSubscribers')) {
-                $excludeSubscriberIds = $this->getSubscribeIdsByList($excludeItems, 'subscribed');
+                $excludedModel = $this->getSubscribeIdsByListModel($excludeItems, 'subscribed');
+                $excludedModel->select('id');
+                $subscriberModel->whereNotIn('id', $excludedModel->getQuery());
             }
 
-            if (!$excludeSubscriberIds) {
-                $alreadySliced = true;
-                $subscriberIds = $this->getSubscribeIdsByList($settings['subscribers'], 'subscribed', $limit, $offset);
-            } else {
-                $subscriberIds = $this->getSubscribeIdsByList($settings['subscribers'], 'subscribed');
-            }
+            return $subscriberModel;
+        }
 
-            if ($excludeSubscriberIds) {
-                $subscriberIds = array_diff($subscriberIds, $excludeSubscriberIds);
-            }
-
-            $totalItems = count($subscriberIds);
-            if ($limit && !$alreadySliced) {
-                $subscriberIds = array_slice($subscriberIds, $offset, $limit);
-            }
-
-            return [
-                'subscriber_ids' => $subscriberIds,
-                'total_count'    => $totalItems
-            ];
-
-        } else if ($filterType == 'dynamic_segment') {
+        if ($filterType == 'dynamic_segment') {
             $segmentSettings = Arr::get($settings, 'dynamic_segment', []);
-            $segmentSettings['offset'] = $offset;
-            $segmentSettings['limit'] = $limit;
-            $subscribersPaginate = apply_filters('fluentcrm_segment_paginate_contact_ids', [], $segmentSettings);
+            $segmentSettings['offset'] = 0;
+            $segmentSettings['limit'] = false;
 
-            $subscriberIds = $subscribersPaginate['subscriber_ids'];
-            $totalItems = $subscribersPaginate['total_count'];
-            if ($limit) {
-                $subscriberIds = array_slice($subscriberIds, 0, $limit);
+            $segmentDetails = apply_filters('fluentcrm_dynamic_segment_' . $segmentSettings['slug'], [], $segmentSettings['id'], [
+                'model' => true
+            ]);
+
+            if (!empty($segmentDetails['model'])) {
+                $model = $segmentDetails['model'];
+                $model->where('status', 'subscribed');
+                return $model;
             }
 
-            return [
-                'subscriber_ids' => $subscriberIds,
-                'total_count'    => $totalItems
-            ];
+            return null;
+        }
 
-        } else if ($filterType == 'advanced_filters') {
+        if ($filterType == 'advanced_filters') {
             $query = new ContactsQuery([
                 'with'               => [],
                 'filter_type'        => 'advanced',
                 'contact_status'     => 'subscribed',
-                'limit'              => $limit,
-                'offset'             => $offset,
                 'filters_groups_raw' => $settings['advanced_filters']
             ]);
 
-            $count = $query->getModel()->count();
-            $subscriberIds = $query->get()->pluck('id')->toArray();
+            return $query->getModel();
+        }
 
+        return null;
+    }
 
+    public function getSubscriberIdsBySegmentSettings($settings, $limit = false, $offset = 0)
+    {
+        $model = $this->getSubscribersModel($settings);
+
+        if (!$model) {
             return [
-                'subscriber_ids' => $subscriberIds,
-                'total_count'    => $count
+                'subscriber_ids' => [],
+                'total_count'    => 0
             ];
         }
 
+        $totalCount = $model->count();
+
+        if ($limit) {
+            $model->limit($limit);
+        }
+
+        if ($offset) {
+            $model->offset($offset);
+        }
+
         return [
-            'subscriber_ids' => [],
-            'total_count'    => 0
+            'subscriber_ids' => $model->get()->pluck('id')->toArray(),
+            'total_count'    => $totalCount
         ];
     }
 
     public function getSubscriberIdsCountBySegmentSettings($settings, $status = 'subscribed')
     {
-        $filterType = Arr::get($settings, 'sending_filter', 'list_tag');
-
-        if ($filterType == 'list_tag') {
-            $excludeSubscriberIds = [];
-            if ($excludeItems = Arr::get($settings, 'excludedSubscribers')) {
-                $excludeSubscriberIds = $this->getSubscribeIdsByList($excludeItems, $status);
-            }
-
-            if (!$excludeSubscriberIds) {
-                $model = $this->getSubscribeIdsByListModel($settings['subscribers'], $status);
-                return $model->count();
-            } else {
-                $subscriberIds = $this->getSubscribeIdsByList($settings['subscribers'], $status);
-                return count(array_diff($subscriberIds, $excludeSubscriberIds));
-            }
-        } else if ($filterType == 'dynamic_segment') {
-            $segmentSettings = Arr::get($settings, 'dynamic_segment', []);
-            $segmentSettings['offset'] = 0;
-            $segmentSettings['limit'] = 1;
-            $segmentSettings['status'] = $status;
-            $subscribersPaginate = apply_filters('fluentcrm_segment_paginate_contact_ids', [], $segmentSettings);
-            return $subscribersPaginate['total_count'];
-        } else if ($filterType == 'advanced_filters') {
-            $query = new ContactsQuery([
-                'with'               => [],
-                'filter_type'        => 'advanced',
-                'contact_status'     => $status,
-                'filters_groups_raw' => $settings['advanced_filters'],
-            ]);
-
-            return $query->getModel()->count();
-        } else {
-            return 0;
+        $model = $this->getSubscribersModel($settings);
+        if ($model) {
+            return $model->count();
         }
+
+        return 0;
     }
 
 
@@ -423,24 +421,26 @@ class Campaign extends Model
         if (!$willSkip && !$hasListFilter && $tagIds) {
             $query->filterByTags($tagIds);
         } else if (!$willSkip && $queryGroups) {
-            $type = 'where';
-            foreach ($queryGroups as $queryGroup) {
-                $query->{$type}(function ($q) use ($queryGroup, $query) {
-                    foreach ($queryGroup as $type => $id) {
-                        if ($type == 'tag_id') {
-                            $q->whereIn('id', function ($query) use ($id) {
-                                return $this->getSubQueryForLisTorTagFilter($query, [$id], 'tags', 'FluentCrm\App\Models\Tag');
-                            });
-                        } else if ($type == 'list_id') {
-                            $q->whereIn('id', function ($query) use ($id) {
-                                return $this->getSubQueryForLisTorTagFilter($query, [$id], 'lists', 'FluentCrm\App\Models\Lists');
-                            });
+            $query->where(function ($innerQuery) use ($queryGroups) {
+                $type = 'where';
+                foreach ($queryGroups as $queryGroup) {
+                    $innerQuery->{$type}(function ($q) use ($queryGroup, $innerQuery) {
+                        foreach ($queryGroup as $type => $id) {
+                            if ($type == 'tag_id') {
+                                $q->whereIn('id', function ($query) use ($id) {
+                                    return $this->getSubQueryForLisTorTagFilter($query, [$id], 'tags', 'FluentCrm\App\Models\Tag');
+                                });
+                            } else if ($type == 'list_id') {
+                                $q->whereIn('id', function ($query) use ($id) {
+                                    return $this->getSubQueryForLisTorTagFilter($query, [$id], 'lists', 'FluentCrm\App\Models\Lists');
+                                });
+                            }
                         }
-                    }
-                });
+                    });
 
-                $type = 'orWhere';
-            }
+                    $type = 'orWhere';
+                }
+            });
         }
 
         if ($limit) {
@@ -455,14 +455,14 @@ class Campaign extends Model
      * Add one or more subscribers to the campaign
      * @param array $subscriberIds
      * @param array $emailArgs extra campaign_email args
+     * @param bool $isModel if the $subscriberIds is collection or not
      * @return array
      */
     public function subscribe($subscriberIds, $emailArgs = [], $isModel = false)
     {
-        $campaignEmails = [];
         $updateIds = [];
 
-        $mailHeaders = Helper::getMailHeadersFromSettings(Arr::get($this->settings, 'mailer_settings'));
+        $mailHeaders = Helper::getMailHeadersFromSettings(Arr::get($this->settings, 'mailer_settings', []));
 
         if ($isModel) {
             $subscribers = $subscriberIds;
@@ -516,14 +516,13 @@ class Campaign extends Model
             $updateIds[] = $inserted->id;
         }
 
-        $result = $campaignEmails ? CampaignEmail::insert($campaignEmails) : [];
         $emailCount = $this->getEmailCount();
         if ($emailCount != $this->recipients_count) {
             $this->recipients_count = $emailCount;
             $this->save();
         }
 
-        return array_merge($result, $updateIds);
+        return $updateIds;
     }
 
     /**
@@ -693,6 +692,32 @@ class Campaign extends Model
             $this->recipients_count = $emailCount;
             $this->save();
         }
+
+        return $this;
+    }
+
+    public function getHash()
+    {
+        $hash = fluentcrm_get_campaign_meta($this->id, '_campaign_hash', true);
+
+        if ($hash) {
+            return $hash;
+        }
+        $hash = md5(mt_rand(100, 10000) . '_' . $this->id . '_' . $this->title . '_' . time());
+        $hash = str_replace('e', 'd', $hash);
+        fluentcrm_update_campaign_meta($this->id, '_campaign_hash', $hash);
+
+        return $hash;
+    }
+
+    public function deleteCampaignData()
+    {
+        CampaignEmail::where('campaign_id', $this->id)->delete();
+        CampaignUrlMetric::where('campaign_id', $this->id)->delete();
+
+        Meta::where('object_id', $this->id)
+            ->where('object_type', 'FluentCrm\App\Models\Campaign')
+            ->delete();
 
         return $this;
     }

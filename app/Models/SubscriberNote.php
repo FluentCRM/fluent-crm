@@ -25,13 +25,17 @@ class SubscriberNote extends Model
         'status',
         'type',
         'title',
-        'description'
+        'description',
+        'created_at'
     ];
 
     public static function boot()
     {
         static::creating(function ($model) {
-            $model->created_at = fluentCrmTimestamp();
+            if(empty($model->created_at)) {
+                $model->created_at = fluentCrmTimestamp();
+            }
+
             $model->updated_at = fluentCrmTimestamp();
             $model->created_by = $model->created_by ?: get_current_user_id();
         });

@@ -10,6 +10,10 @@ class WooProduct
 
     public static function renderProduct($buttonHtml, $data)
     {
+        if(!defined('WC_PLUGIN_FILE')) {
+            return '';
+        }
+
         $defaultAtts = [
             'productId'       => null,
             'showDescription' => true,
@@ -21,7 +25,7 @@ class WooProduct
             'template'        => 'left'
         ];
         $atts = wp_parse_args($data['attrs'], $defaultAtts);
-        $productId = intval($atts['productId']);
+        $productId = (int) $atts['productId'];
 
         if (!$productId) {
             return '';
@@ -111,12 +115,12 @@ class WooProduct
         ob_start();
         ?>
 
-        <table class="fce_row" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;margin-bottom: 20px; margin-top: 20px;<?php echo $tableStyle; ?>"><tbody><tr>
+        <table class="fce_row" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;margin-bottom: 20px; margin-top: 20px;<?php echo $tableStyle; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>"><tbody><tr>
                 <?php
                 if($imageTd) {
-                    echo $imageTd;
+                    echo $imageTd; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
                 }
-                echo self::getContentTd($contentHtml, $template, $contentStyle);
+                echo self::getContentTd($contentHtml, $template, $contentStyle); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
                 ?>
         </tr></tbody></table>
         <?php
@@ -125,11 +129,15 @@ class WooProduct
 
     private static function getContentTd($contentHtml, $template, $extraStyle = '')
     {
+        if(!defined('WC_PLUGIN_FILE')) {
+            return '';
+        }
+
         $width = '100';
         if($template == 'left') {
             $width = '50';
         }
-        return '<td align="center" valign="middle" width="' . $width . '%" class="fce_column"><table border="0" cellpadding="10" cellspacing="0" width="100%"><tr><td class="fc_column_content" style="padding: 10px;'. $extraStyle.'">'.$contentHtml.'</td></tr></table></td>';
+        return '<td align="center" valign="middle" width="' . $width . '%" class="fce_column"><table border="0" cellpadding="10" cellspacing="0" width="100%"><tr><td class="fc_column_content" style="padding: 10px;'. $extraStyle.'">'.$contentHtml.'</td></tr></table></td>'; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
     }
 
     /**
@@ -141,6 +149,10 @@ class WooProduct
      */
     public static function getImage($product, $size = 'full')
     {
+        if(!defined('WC_PLUGIN_FILE')) {
+            return '';
+        }
+
         static $imageCache = [];
 
         if(isset($imageCache[$product->get_id()])) {

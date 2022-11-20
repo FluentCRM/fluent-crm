@@ -147,7 +147,7 @@ class OptionsController extends Controller
             ->orderBy('id', 'DESC')->get();
 
         foreach ($funnels as $funnel) {
-            $funnel->title .= ' ('.$funnel->status.')';
+            $funnel->title .= ' (' . $funnel->status . ')';
         }
 
         return [
@@ -293,9 +293,9 @@ class OptionsController extends Controller
 
     public function getAjaxOptions(Request $request)
     {
-        $optionKey = $request->get('option_key');
-        $search = $request->get('search');
-        $includedIds = $request->get('values');
+        $optionKey = $request->getSafe('option_key');
+        $search = $request->getSafe('search');
+        $includedIds = $request->getSafe('values');
 
         $options = [];
 
@@ -386,6 +386,74 @@ class OptionsController extends Controller
         } else if ($optionKey == 'edd_products' || $optionKey == 'product_selector_edd') {
             if (class_exists('Easy_Digital_Downloads') && defined('FLUENTCAMPAIGN')) {
                 $options = \FluentCampaign\App\Services\Integrations\Edd\Helper::getProducts();
+            }
+        } else if ($optionKey == 'campaigns' || $optionKey == 'funnels' || $optionKey == 'email_sequences') {
+
+            if ($optionKey == 'campaigns') {
+                $objectModel = Campaign::select(['id', 'title', 'status'])->where('status', '!=', 'draft');
+            } else if ($optionKey == 'funnels') {
+                $objectModel = Funnel::select(['id', 'title', 'status']);
+            } else if ($optionKey == 'email_sequences') {
+                if (!defined('FLUENTCAMPAIGN')) {
+                    return [
+                        'options' => []
+                    ];
+                }
+                $objectModel = \FluentCampaign\App\Models\Sequence::select(['id', 'title', 'status']);
+            } else {
+                return [
+                    'options' => []
+                ];
+            }
+
+            $items = $objectModel
+                ->when($search, function ($query) use ($search) {
+                    return $query->where('title', 'LIKE', "%$search%");
+                })
+                ->limit(20)
+                ->orderBy('id', 'DESC')
+                ->get();
+
+            $pushedIds = [];
+
+            foreach ($items as $item) {
+                $options[] = [
+                    'id'    => $item->id,
+                    'title' => $item->title . ' - ' . $item->id
+                ];
+                $pushedIds[] = $item->id;
+            }
+
+            if (!$includedIds) {
+                return [
+                    'options' => $options
+                ];
+            }
+
+            $includedIds = (array)$includedIds;
+
+            $includedIds = array_diff($includedIds, $pushedIds);
+            if ($includedIds) {
+
+                if ($optionKey == 'campaigns') {
+                    $objectModel = Campaign::select(['id', 'title', 'status']);
+                } else if ($optionKey == 'funnels') {
+                    $objectModel = Funnel::select(['id', 'title', 'status']);
+                } else if ($optionKey == 'email_sequences') {
+                    $objectModel = \FluentCampaign\App\Models\Sequence::select(['id', 'title', 'status']);
+                } else {
+                    return [
+                        'options' => $options
+                    ];
+                }
+
+                $items = $objectModel->whereIn('id', $includedIds)->get();
+                foreach ($items as $item) {
+                    $options[] = [
+                        'id'    => $item->id,
+                        'title' => $item->title . ' - ' . $item->id
+                    ];
+                }
             }
         } else {
             $options = apply_filters('fluentcrm_ajax_options_' . $optionKey, [], $search, $includedIds);

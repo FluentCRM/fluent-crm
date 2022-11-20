@@ -28,10 +28,17 @@ class ActivationHandler
     public function registerWpCron()
     {
         add_filter('cron_schedules', function ($schedules) {
+
             $schedules['fluentcrm_every_minute'] = array(
                 'interval' => 60,
                 'display'  => esc_html__('Every Minute (FluentCRM)', 'fluentform'),
             );
+
+            $schedules['fluentcrm_scheduled_five_minute_tasks'] = array(
+                'interval' => 300,
+                'display'  => esc_html__('Every 5 Minutes (FluentCRM)', 'fluentform'),
+            );
+
             return $schedules;
         }, 10, 1);
 
@@ -39,6 +46,12 @@ class ActivationHandler
         if (!wp_next_scheduled($hookName)) {
             wp_schedule_event(time(), 'fluentcrm_every_minute', $hookName);
         }
+
+        $hookName = 'fluentcrm_scheduled_five_minute_tasks';
+        if (!wp_next_scheduled($hookName)) {
+            wp_schedule_event(time(), 'fluentcrm_scheduled_five_minute_tasks', $hookName);
+        }
+
 
         $dailyHook = 'fluentcrm_scheduled_hourly_tasks';
         if (!wp_next_scheduled($dailyHook)) {

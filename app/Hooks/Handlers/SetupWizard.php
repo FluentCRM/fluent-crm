@@ -85,7 +85,8 @@ class SetupWizard
                 'first_name' => $currentUser->first_name,
                 'last_name' => $currentUser->last_name,
                 'email' => $currentUser->user_email,
-                'avatar' => get_avatar($currentUser->user_email, 128)
+                'avatar' => get_avatar($currentUser->user_email, 128),
+                'user_id' => $currentUser->ID
             ],
         ]);
 

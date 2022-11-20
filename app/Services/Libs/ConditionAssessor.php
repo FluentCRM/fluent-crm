@@ -167,6 +167,10 @@ class ConditionAssessor
                     return strtotime($sourceValue) < strtotime("-{$dataValue} days", current_time('timestamp'));
                 case 'days_within':
                     return strtotime($sourceValue) > strtotime("-{$dataValue} days", current_time('timestamp'));
+                case 'is_null':
+                    return !$sourceValue;
+                case 'not_null':
+                    return !!$sourceValue;
             }
         }
 

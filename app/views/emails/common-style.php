@@ -9,7 +9,6 @@ $contentBg = $config['content_bg_color'];
 $footerColor = $config['footer_text_color'];
 $mainFont = $config['content_font_family'];
 
-
 $alignLeft = 'left';
 $alignRight = 'right';
 if(fluentcrm_is_rtl()) {
@@ -20,66 +19,74 @@ if(fluentcrm_is_rtl()) {
 ?>
 
 <style type="text/css">
-    <?php echo \FluentCrm\App\Services\Helper::generateThemePrefCss(); ?>
+    <?php echo \FluentCrm\App\Services\Helper::generateThemePrefCss(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 </style>
 
 <style type="text/css" rel="stylesheet" media="all">
     /* SettingsDefaults */
     body {
-        background: <?php echo $bodBgyColor; ?>;
-        background-color: <?php echo $bodBgyColor; ?>;
+        background: <?php echo esc_attr($bodBgyColor); ?>;
+        background-color: <?php echo esc_attr($bodBgyColor); ?>;
     }
     .templateContainer {
-        max-width: <?php echo $width; ?>px;
+        max-width: <?php echo esc_attr($width); ?>px;
     }
 
     #templateWrapper {
-        background: <?php echo $bodBgyColor; ?>;
-        background-color: <?php echo $bodBgyColor; ?>;
+        background: <?php echo esc_attr($bodBgyColor); ?>;
+        background-color: <?php echo esc_attr($bodBgyColor); ?>;
+    }
+
+    .fc_email_body {
+        background: <?php echo esc_attr($contentBg); ?>;
+        background-color: <?php echo esc_attr($contentBg); ?>;
+        <?php if($mainFont): ?>
+            font-family: <?php echo sanitize_text_field($mainFont); ?>;
+        <?php endif; ?>
     }
 
     #templateFooter .fcTextContent, #templateFooter .fcTextContent p {
         font-size: 12px;
         line-height: 170%;
         text-align: center;
-        color: <?php echo $footerColor; ?>;
+        color: <?php echo esc_attr($footerColor); ?>;
     }
 
     #templateFooter .fcTextContent a, #templateFooter .fcTextContent p a {
         font-weight: normal;
         text-decoration: underline;
-        color: <?php echo $footerColor; ?>;
+        color: <?php echo esc_attr($footerColor); ?>;
     }
 
     <?php if($linkColor): ?>
     a {
-        color: <?php echo $linkColor; ?>;
+        color: <?php echo esc_attr($linkColor); ?>;
     }
     <?php endif; ?>
 
     <?php if($mainFont): ?>
     #templateFooter {
-        font-family: <?php echo $mainFont; ?>;
+        font-family: <?php echo sanitize_text_field($mainFont); ?>;
     }
     <?php endif; ?>
 
     #templateBody .fcTextContentBody {
-        background: <?php echo $contentBg; ?> none no-repeat center/cover;
-        background-color: <?php echo $contentBg; ?>;
+        background: <?php echo esc_attr($contentBg); ?> none no-repeat center/cover;
+        background-color: <?php echo esc_attr($contentBg); ?>;
         <?php if($hColor) : ?>
-        color: <?php echo $mainColor; ?>;
+        color: <?php echo esc_attr($mainColor); ?>;
         <?php endif; ?>
         <?php if($mainFont): ?>
-        font-family: <?php echo $mainFont; ?>;
+        font-family: <?php echo sanitize_text_field($mainFont); ?>;
         <?php endif; ?>
     }
 
     .fcTextContentBody h1, .fcTextContentBody h2, .fcTextContentBody h3, .fcTextContentBody h4, .fcTextContentBody h5, .fcTextContentBody h6 {
         <?php if($hFont): ?>
-        font-family: <?php echo $hFont; ?>;
+        font-family: <?php echo sanitize_text_field($hFont); ?>;
         <?php endif; ?>
         <?php if($hColor): ?>
-        color: <?php echo $hColor; ?>;
+        color: <?php echo esc_html($hColor); ?>;
         <?php endif; ?>
     }
 
@@ -122,21 +129,21 @@ if(fluentcrm_is_rtl()) {
     }
 
     .has-text-align-right {
-        text-align: <?php echo $alignRight; ?> !important;
+        text-align: <?php echo esc_attr($alignRight); ?> !important;
     }
     .has-text-align-left {
-        text-align: <?php echo $alignLeft; ?> !important;
+        text-align: <?php echo esc_attr($alignLeft); ?> !important;
     }
     .has-text-align-center {
         text-align: center !important;
     }
 
     .alignleft {
-        text-align: <?php echo $alignLeft?> !important;
+        text-align: <?php echo esc_attr($alignLeft); ?> !important;
     }
 
     .alignright {
-        text-align: <?php echo $alignRight?> !important;
+        text-align: <?php echo esc_attr($alignRight); ?> !important;
     }
 
     figure.wp-block-media-text__media {
@@ -145,6 +152,10 @@ if(fluentcrm_is_rtl()) {
     }
     .has_bg_image figure.wp-block-media-text__media img {
         opacity: 0;
+    }
+
+    ol.has-background, ul.has-background {
+        padding: 20px 40px;
     }
 
     td.no_image_fill img {
@@ -185,7 +196,7 @@ if(fluentcrm_is_rtl()) {
 
     img, a img {
         border: 0;
-        height: auto;
+        border-radius: inherit;
         outline: none;
         text-decoration: none;
         max-width: 100%;
@@ -255,13 +266,6 @@ if(fluentcrm_is_rtl()) {
         height: auto !important;
     }
 
-    #bodyTable {
-        background-image: none;
-        background-repeat: no-repeat;
-        background-position: center;
-        background-size: cover;
-    }
-
     body {
         font-family: Helvetica;
     }
@@ -310,7 +314,7 @@ if(fluentcrm_is_rtl()) {
     #templateHeader .fcTextContent, #templateHeader .fcTextContent p {
         font-size: 16px;
         line-height: 180%;
-        text-align: <?php echo $alignLeft; ?>;
+        text-align: <?php echo esc_attr($alignLeft); ?>;
     }
 
     #templateHeader .fcTextContent a, #templateHeader .fcTextContent p a {
@@ -326,7 +330,7 @@ if(fluentcrm_is_rtl()) {
     #templateBody .fcTextContent, #templateBody .fcTextContent p {
         font-size: 16px;
         line-height: 180%;
-        text-align: <?php echo $alignLeft; ?>;
+        text-align: <?php echo esc_attr($alignLeft); ?>;
     }
 
     #templateBody .fcTextContent a, #templateBody .fcTextContent p a {
@@ -349,20 +353,39 @@ if(fluentcrm_is_rtl()) {
         font-weight: normal;
         text-decoration: underline;
     }
+    .wp-block-image.alignleft, .wp-block-image.alignright, .wp-block-image.aligncenter,
+    .wp-block-image .alignleft,
+    .wp-block-image .alignright,
+    .wp-block-image .aligncenter {
+        width: 100%;
+    }
     .aligncenter {
         text-align: center !important;
     }
     .alignright {
-        text-align: <?php echo $alignRight; ?> !important;
+        text-align: <?php echo esc_attr($alignRight); ?> !important;
+    }
+    .wp-block-image p {
+        text-align: inherit !important;
+    }
+    .fc_editor_body .alignright figcaption {
+        text-align: right;
     }
 
+    #templateBody h1, #templateBody h2 {
+        font-style: normal;
+        font-weight: 700;
+        letter-spacing: normal;
+        line-height: 125%;
+        padding: 15px 0;
+    }
     .fce_buttons_row.tb_btn_right {
-        margin-<?php echo $alignLeft; ?>: auto;
+        margin-<?php echo esc_attr($alignLeft); ?>: auto;
         width: auto !important;
     }
 
     .tb_btn_right .wp-block-button {
-        text-align: <?php echo $alignRight; ?>;
+        text-align: <?php echo esc_attr($alignRight); ?>;
     }
 
     .tb_btn_center {
@@ -424,7 +447,7 @@ if(fluentcrm_is_rtl()) {
         .fce_row {
             width:100% !important;
         }
-        .fce_column {
+        .fce_stacked .fce_column {
             display: block !important;
             width: 100% !important;
             padding-right: 0 !important;

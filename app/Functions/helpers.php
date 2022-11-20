@@ -39,7 +39,7 @@ if (!function_exists('dd')) {
     {
         foreach (func_get_args() as $arg) {
             echo "<pre>";
-            print_r($arg);
+            print_r($arg); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
             echo "</pre>";
         }
         die;
@@ -82,22 +82,6 @@ if (!function_exists('fluentCrmMix')) {
 function fluentCrmTimestamp($timestamp = null)
 {
     return current_time('mysql');
-}
-
-/**
- * Get Current Date time as UTC Format
- *
- * @return string Datetime in format Y-m-d H:i:s as UTC Format
- */
-function fluentCrmUTCTimestamp($timestamp = null)
-{
-    $timestamp = is_null($timestamp) ? time() : $timestamp;
-
-    $date = new \DateTime(
-        null, new \DateTimeZone('UTC')
-    );
-
-    return $date->setTimestamp($timestamp)->format('Y-m-d H:i:s');
 }
 
 /**
@@ -236,8 +220,15 @@ function fluentcrm_update_meta($objectId, $objectType, $key, $value)
  * @param string $key Key of the reference
  * @return boolean
  */
-function fluentcrm_delete_meta($objectId, $objectType, $key)
+function fluentcrm_delete_meta($objectId, $objectType, $key = '')
 {
+
+    if ($key === '') {
+        return Meta::where('object_id', $objectId)
+            ->where('object_type', $objectType)
+            ->delete();
+    }
+
     return Meta::where('object_id', $objectId)
         ->where('object_type', $objectType)
         ->where('key', $key)
@@ -289,6 +280,19 @@ function fluentcrm_update_option($optionName, $value)
 
 }
 
+
+/**
+ * Delete FluentCRM Option
+ * @param $optionName
+ * @return boolean
+ */
+function fluentcrm_delete_option($optionName)
+{
+    return Meta::where('key', $optionName)
+        ->where('object_type', 'option')
+        ->delete();
+}
+
 /**
  * Get Email Campaign meta value
  * @param int $campaignId ID of the campaign
@@ -327,7 +331,7 @@ function fluentcrm_update_campaign_meta($campaignId, $key, $value)
  * @param string $key Key of the meta
  * @return bool
  */
-function fluentcrm_delete_campaign_meta($campaignId, $key)
+function fluentcrm_delete_campaign_meta($campaignId, $key = '')
 {
     return fluentcrm_delete_meta($campaignId, 'FluentCrm\App\Models\Campaign', $key);
 }
@@ -620,7 +624,7 @@ function fluentcrmCsvMimes()
  * @param string $email
  * @return string
  */
-function fluentcrmGravatar($email)
+function fluentcrmGravatar($email, $name = '')
 {
     $hash = md5(strtolower(trim($email)));
 
@@ -629,8 +633,14 @@ function fluentcrmGravatar($email)
      *
      * @return string $gravatar url of the gravatar image
      */
+
+    $fallback = '';
+    if ($name) {
+        $fallback = '&d=https%3A%2F%2Fui-avatars.com%2Fapi%2F' . urlencode($name) . '/128';
+    }
+
     return apply_filters('fluentcrm_get_avatar',
-        "https://www.gravatar.com/avatar/${hash}?s=128",
+        "https://www.gravatar.com/avatar/${hash}?s=128" . $fallback,
         $email
     );
 }
@@ -856,30 +866,32 @@ function fluentcrm_get_crm_profile_html($userIdOrEmail, $checkPermission = true,
     ?>
     <div class="fc_profile_external">
         <div class="fluentcrm_profile-photo">
-            <a title="View Profile: <?php echo $profile->email; ?>" href="<?php echo $crmProfileUrl; ?>">
-                <img src="<?php echo $profile->photo; ?>"/>
+            <a title="View Profile: <?php echo esc_html($profile->email); ?>"
+               href="<?php echo esc_url($crmProfileUrl); ?>">
+                <img src="<?php echo esc_url($profile->photo); ?>"/>
             </a>
         </div>
         <div class="profile-info">
             <div class="profile_title">
                 <h3>
-                    <a title="View Profile: <?php echo $profile->email; ?>" href="<?php echo $crmProfileUrl; ?>">
-                        <?php echo $profile->full_name; ?>
+                    <a title="View Profile: <?php echo esc_html($profile->email); ?>"
+                       href="<?php echo esc_url($crmProfileUrl); ?>">
+                        <?php echo esc_html($profile->full_name); ?>
                     </a>
                 </h3>
-                <p><?php echo $profile->status; ?></p>
+                <p><?php echo esc_html($profile->status); ?></p>
             </div>
             <div class="fc_tag_lists">
                 <div class="fc_stats" style="text-align: center">
                     <?php foreach ($stats as $statKey => $stat): ?>
-                        <span><?php echo ucfirst($statKey); ?>: <?php echo $stat; ?></span>
+                        <span><?php echo esc_html(ucfirst($statKey)); ?>: <?php echo esc_html($stat); ?></span>
                     <?php endforeach; ?>
                 </div>
                 <?php if (!$lists->isEmpty()): ?>
                     <div class="fc_taggables">
                         <i class="dashicons dashicons-list-view"></i>
                         <?php foreach ($lists as $list): ?>
-                            <span><?php echo $list->title; ?></span>
+                            <span><?php echo esc_html($list->title); ?></span>
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
@@ -887,7 +899,7 @@ function fluentcrm_get_crm_profile_html($userIdOrEmail, $checkPermission = true,
                     <div class="fc_taggables">
                         <i class="dashicons dashicons-tag"></i>
                         <?php foreach ($tags as $tag): ?>
-                            <span><?php echo $tag->title; ?></span>
+                            <span><?php echo esc_html($tag->title); ?></span>
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
@@ -1067,12 +1079,17 @@ function fluentCrmDb()
     return fluentCrm('db');
 }
 
-function fluentCrmIsMemoryExceeded()
+function fluentCrmIsMemoryExceeded($percent = 75)
 {
-    $memory_limit = fluentCrmGetMemoryLimit() * 0.80;
+    $memory_limit = fluentCrmGetMemoryLimit() * ($percent / 100);
     $current_memory = memory_get_usage(true);
 
     return $current_memory >= $memory_limit;
+}
+
+function fluentCrmGetMemoryUsagePercentage()
+{
+    return number_format((memory_get_usage(true) / fluentCrmGetMemoryLimit()) * 100, 2);
 }
 
 function fluentCrmGetMemoryLimit()
@@ -1105,4 +1122,67 @@ function fluentCrmGetMemoryLimit()
     }
 
     return min($bytes, PHP_INT_MAX);
+}
+
+function fluentCrmWillAnonymizeIp()
+{
+    static $status;
+    if ($status) {
+        $bool = $status == 'yes';
+        return apply_filters('fluentcrm_anonymize_ip', $bool);
+    }
+
+    $settings = \FluentCrm\App\Services\Helper::getComplianceSettings();
+
+    $status = $settings['anonymize_ip'];
+
+    $bool = $status == 'yes';
+
+    return apply_filters('fluentcrm_anonymize_ip', $bool);
+}
+
+function fluentCrmGetContactSecureHash($contactId)
+{
+    if (!$contactId) {
+        return false;
+    }
+
+    $exist = SubscriberMeta::where('subscriber_id', $contactId)
+        ->where('key', '_secure_hash')
+        ->first();
+
+    if ($exist && $exist->value) {
+        return $exist->value;
+    }
+
+    $hash = md5(mt_rand(100, 10000) . '_' . $contactId . '_' . '_' . time());
+
+    $hash = str_replace('e', 'd', $hash);
+
+    SubscriberMeta::create([
+        'subscriber_id' => $contactId,
+        'created_by'    => 0,
+        'key'           => '_secure_hash',
+        'object_type'   => 'option',
+        'value'         => $hash
+    ]);
+
+    return $hash;
+}
+
+
+function fluentCrmGetFromCache($key, $callback = false, $expire = 600)
+{
+    if ($value = wp_cache_get($key, 'fluent_crm')) {
+        return $value;
+    }
+
+    if ($callback) {
+        $value = $callback();
+        if ($value) {
+            wp_cache_set($key, $value, 'fluent_crm', $expire);
+        }
+    }
+
+    return $value;
 }

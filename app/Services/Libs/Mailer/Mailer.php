@@ -8,14 +8,27 @@ class Mailer
 {
     public static function send($data)
     {
+
         $headers = static::buildHeaders($data);
 
         if (apply_filters('fluentcrm_is_simulated_mail', false, $data, $headers)) {
             return true;
         }
 
+        $to = $data['to']['email'];
+
+        if (!$to) {
+            return false;
+        }
+
+        if (self::willIncludeName()) {
+            if ($name = Arr::get($data, 'to.name')) {
+                $to = $name . ' <' . $to . '>';
+            }
+        }
+
         return wp_mail(
-            $data['to']['email'],
+            $to,
             $data['subject'],
             $data['body'],
             $headers
@@ -46,10 +59,20 @@ class Mailer
                     'route'     => 'unsubscribe',
                     'hash'      => md5($sendingEmail)
                 ], site_url('/'));
-                $headers[] ='List-Unsubscribe: <'.$unsubscribeUrl.'>';
+                $headers[] = 'List-Unsubscribe: <' . $unsubscribeUrl . '>';
             }
         }
 
         return apply_filters('fluentcrm_email_headers', $headers, $data);
+    }
+
+    private static function willIncludeName()
+    {
+        static $status = null;
+        if ($status !== null) {
+            return $status;
+        }
+        $status = apply_filters('fluent_crm/enable_mailer_to_name', true);
+        return $status;
     }
 }

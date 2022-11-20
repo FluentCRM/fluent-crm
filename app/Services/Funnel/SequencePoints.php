@@ -95,13 +95,9 @@ class SequencePoints
 
             if ($sequence->action_name == 'fluentcrm_wait_times' && !$inWaitTimes) {
                 $inWaitTimes = true;
-                if (Arr::get($sequence->settings, 'is_timestamp_wait') == 'yes') {
-                    $date = current_time('mysql');
-                    if(strtotime(Arr::get($sequence->settings, 'wait_date_time')) > strtotime($date)) {
-                        $date = Arr::get($sequence->settings, 'wait_date_time');
-                    }
-                    $this->nextSequenceExecutionTime = $date;
-                }
+
+                $seconds = FunnelHelper::getCurrentDelayInSeconds($sequence->settings);
+                $this->nextSequenceExecutionTime = date('Y-m-d H:i:s', current_time('timestamp') + $seconds);
             }
 
             /*
@@ -137,7 +133,7 @@ class SequencePoints
 
         $this->immediateSequences = $immediateSequences;
 
-        if (!$this->nextSequence && $isInChild) {
+        if (!$this->nextSequence && $isInChild && !$conditionalBlock) {
             // let's find the parent sequence
             $parentSequence = FunnelSequence::where('id', $this->lastSequence->id)->first();
             if ($parentSequence) {
@@ -157,6 +153,9 @@ class SequencePoints
                 if ($inWaitTimes) {
                     $this->hasNext = true;
                     $this->nextSequence = $sequences[0];
+                    if($this->nextSequenceExecutionTime) {
+                        $this->nextSequence->execution_date_time = $this->nextSequenceExecutionTime;
+                    }
                     return;
                 }
 
@@ -197,7 +196,7 @@ class SequencePoints
             }
         }
 
-        if($this->nextSequence && $this->nextSequenceExecutionTime) {
+        if ($this->nextSequence && $this->nextSequenceExecutionTime) {
             $this->nextSequence->execution_date_time = $this->nextSequenceExecutionTime;
         }
 

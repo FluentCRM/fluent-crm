@@ -167,8 +167,8 @@ class FormsController extends Controller
             'form_fields' => $template['form_fields']
         ];
 
-        $formId = fluentCrmDb()->table('fluentform_forms')->insert($formData);
-        $formId = fluentCrmDb()->lastInsertId('');
+        $formId = fluentCrmDb()->table('fluentform_forms')->insertGetId($formData);
+
         if ($template['custom_css']) {
             fluentCrmDb()->table('fluentform_form_meta')
                 ->insert([

@@ -20,7 +20,7 @@ class ApplyListAction extends BaseAction
         return [
             'category' => __('CRM', 'fluent-crm'),
             'title'       => __('Apply List', 'fluent-crm'),
-            'description' => __('Add this contact to the selected lists', 'fluent-crm'),
+            'description' => __('Add contact to the selected lists', 'fluent-crm'),
             'icon' => 'fc-icon-apply_list',//fluentCrmMix('images/funnel_icons/apply_list.svg'),
             'settings'    => [
                 'lists' => []

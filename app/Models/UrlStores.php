@@ -22,6 +22,7 @@ class UrlStores extends Model
     {
         $isExist = self::where('url', $longUrl)
             ->first();
+        
         if ($isExist) {
             return $isExist->short;
         }
@@ -70,6 +71,7 @@ class UrlStores extends Model
 
             $string = $chars[$mod] . $string;
         }
+
         return $chars[intval($num)] . $string;
     }
 
@@ -119,6 +121,6 @@ class UrlStores extends Model
     {
         $short = esc_sql($short);
         global $wpdb;
-        return $wpdb->get_row("SELECT * FROM ".$wpdb->prefix."fc_url_stores WHERE BINARY `short` = '".$short."' LIMIT 1");
+        return $wpdb->get_row("SELECT * FROM ".$wpdb->prefix."fc_url_stores WHERE BINARY `short` = '".$short."' ORDER BY `id` DESC LIMIT 1");
     }
 }

@@ -1066,6 +1066,20 @@ class Builder
     }
 
     /**
+     * Add a "where timestamp" statement to the query.
+     *
+     * @param  string  $column
+     * @param  string   $operator
+     * @param  int   $value
+     * @param  string   $boolean
+     * @return \FluentCrm\Framework\Database\Query\Builder|static
+     */
+    public function whereTimestamp($column, $operator, $value, $boolean = 'and')
+    {
+        return $this->addDateBasedWhere('TIMESTAMP', $column, $operator, $value, $boolean);
+    }
+
+    /**
      * Add an "or where date" statement to the query.
      *
      * @param  string  $column
@@ -1316,12 +1330,22 @@ class Builder
      */
     public function orderBy($column, $direction = 'asc')
     {
-        $this->{$this->unions ? 'unionOrders' : 'orders'}[] = [
-            'column' => $column,
-            'direction' => strtolower($direction) == 'asc' ? 'asc' : 'desc',
-        ];
+        if($column = $this->sanitizeOrderBy($column)) {
+            $this->{$this->unions ? 'unionOrders' : 'orders'}[] = [
+                'column' => $column,
+                'direction' => strtolower($direction) == 'asc' ? 'asc' : 'desc',
+            ];
+        }
 
         return $this;
+    }
+
+    private function sanitizeOrderBy($column)
+    {
+        if ( preg_match( '/^\s*(([a-z0-9_.]+|`[a-z0-9_.]+`)(\s+(ASC|DESC))?\s*(,\s*(?=[a-z0-9_.`])|$))+$/i', $column ) || preg_match( '/^\s*RAND\(\s*\)\s*$/i', $column ) ) {
+            return $column;
+        }
+        return false;
     }
 
     /**

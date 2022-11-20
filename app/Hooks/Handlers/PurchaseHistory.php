@@ -2,6 +2,9 @@
 
 namespace FluentCrm\App\Hooks\Handlers;
 
+
+use FluentCrm\App\Models\Subscriber;
+
 /**
  *  PurchaseHistory Class
  *
@@ -17,24 +20,36 @@ class PurchaseHistory
             return $data;
         }
 
+        $hasRecount = defined('FLUENTCAMPAIGN') && \FluentCampaign\App\Services\Commerce\Commerce::isEnabled('woo');
+
         $app = fluentCrm();
-        $page = intval($app->request->get('page', 1));
-        $per_page = intval($app->request->get('per_page', 10));
+
+        if ($hasRecount && $app->request->get('will_recount') == 'yes') {
+            (new \FluentCampaign\App\Services\Integrations\WooCommerce\DeepIntegration)->syncCustomerBySubscriber($subscriber);
+        }
+
+        $page = (int)$app->request->get('page', 1);
+        $per_page = (int)$app->request->get('per_page', 10);
 
         $args = array(
-            'billing_email' => $subscriber->email,
-            'limit'         => $per_page,
-            'offset'        => $per_page * ($page - 1),
-            'paginate'      => true
+            'limit'    => $per_page,
+            'offset'   => $per_page * ($page - 1),
+            'paginate' => true
         );
 
-
-        if ($userId = $subscriber->getWpUserId()) {
-            $args['customer_id'] = $userId;
-            unset($args['billing_email']);
+        if($subscriber->user_id) {
+            $args['customer_id'] = $subscriber->user_id;
+        } else {
+            $args['customer'] = $subscriber->email;
         }
 
         $customer_orders = wc_get_orders($args);
+
+        if(empty($customer_orders->orders) && empty($args['customer'])) {
+            $args['customer'] = $subscriber->email;
+            unset($args['customer_id']);
+            $customer_orders = wc_get_orders($args);
+        }
 
         $formattedOrders = [];
         $lastOrder = false;
@@ -110,7 +125,8 @@ class PurchaseHistory
         return [
             'data'         => $formattedOrders,
             'sidebar_html' => $sidebarHtml,
-            'total'        => $customer_orders->total
+            'total'        => $customer_orders->total,
+            'has_recount'  => $hasRecount
         ];
     }
 
@@ -121,27 +137,89 @@ class PurchaseHistory
         }
 
         $app = fluentCrm();
-        $page = intval($app->request->get('page', 1));
+        $page = (int)$app->request->get('page', 1);
         set_query_var('paged', $page);
 
-        $per_page = intval($app->request->get('per_page', 10));
+        $hasRecount = defined('FLUENTCAMPAIGN') && \FluentCampaign\App\Services\Commerce\Commerce::isEnabled('edd');
+
+        if ($hasRecount && $app->request->get('will_recount') == 'yes') {
+            (new \FluentCampaign\App\Services\Integrations\Edd\DeepIntegration)->syncCustomerBySubscriber($subscriber);
+        }
+
+        $per_page = (int)$app->request->get('per_page', 10);
         $customer = new \EDD_Customer($subscriber->email);
-        if (!$customer) {
+
+        if (!$customer || !$customer->id) {
             return $data;
         }
-        $orders = edd_get_users_purchases($subscriber->email, $per_page, true, 'any');
-        $formattedOrders = [];
-        if ($orders) {
+
+        $lasOrderData = '';
+
+        /*
+         * Handle for EDD3
+         */
+        if (function_exists('\edd_get_orders')) {
+            $totalCount = fluentCrmDb()->table('edd_orders')
+                ->where('customer_id', $customer->id)
+                ->count();
+
+            if (!$totalCount) {
+                return $data;
+            }
+
+            $orders = fluentCrmDb()->table('edd_orders')
+                ->where('customer_id', $customer->id)
+                ->orderBy('id', 'DESC')
+                ->limit($per_page)
+                ->offset(($page - 1) * $per_page)
+                ->get();
+
+            $formattedOrders = [];
+
             foreach ($orders as $order) {
-                $payment = new \EDD_Payment($order->ID);
-                $orderActionHtml = '<a target="_blank" href="' . add_query_arg('id', $payment->ID, admin_url('edit.php?post_type=download&page=edd-payment-history&view=view-order-details')) . '">' . __('View Order Details', 'fluent-crm') . '</a>';
+                $orderActionHtml = '<a target="_blank" href="' . add_query_arg('id', $order->id, admin_url('edit.php?post_type=download&page=edd-payment-history&view=view-order-details')) . '">' . __('View Order Details', 'fluent-crm') . '</a>';
                 $formattedOrders[] = [
-                    'order'  => '#' . $payment->number,
-                    'date'   => date_i18n(get_option('date_format'), strtotime($payment->date)),
-                    'status' => $payment->status_nicename,
-                    'total'  => edd_currency_filter(edd_format_amount($payment->total)),
+                    'order'  => '#' . $order->id,
+                    'date'   => date_i18n(get_option('date_format'), strtotime($order->date_created)),
+                    'status' => $order->status,
+                    'total'  => edd_currency_filter(edd_format_amount($order->total)),
                     'action' => $orderActionHtml
                 ];
+            }
+
+            if ($orders) {
+                $lasOrderData = date_i18n(get_option('date_format'), strtotime($orders[0]->date_created));
+            }
+
+        } else {
+            $totalCount = count($customer->get_payment_ids());
+            if (!$totalCount) {
+                return $data;
+            }
+
+            $payments = edd_get_payments([
+                'customer_id' => $customer->id,
+                'customer'    => $customer->id,
+                'number'      => $per_page,
+                'offset'      => ($page - 1) * $per_page
+            ]);
+
+            $formattedOrders = [];
+            if ($payments) {
+                foreach ($payments as $payment) {
+                    if (!$payment instanceof \EDD_Payment) {
+                        $payment = new \EDD_Payment($payment->ID);
+                    }
+                    $orderActionHtml = '<a target="_blank" href="' . add_query_arg('id', $payment->ID, admin_url('edit.php?post_type=download&page=edd-payment-history&view=view-order-details')) . '">' . __('View Order Details', 'fluent-crm') . '</a>';
+                    $formattedOrders[] = [
+                        'order'  => '#' . $payment->number,
+                        'date'   => date_i18n(get_option('date_format'), strtotime($payment->date)),
+                        'status' => $payment->status_nicename,
+                        'total'  => edd_currency_filter(edd_format_amount($payment->total)),
+                        'action' => $orderActionHtml
+                    ];
+                }
+                $lasOrderData = date_i18n(get_option('date_format'), strtotime($payments[0]->post_date));
             }
         }
 
@@ -151,20 +229,21 @@ class PurchaseHistory
             $summaryData = [
                 'order_count'     => $customer->purchase_count,
                 'lifetime_value'  => $customer->purchase_value,
-                'avg_value'       => round($customer->purchase_value / $customer->purchase_count, 2),
+                'avg_value'       => ($customer->purchase_count) ? round($customer->purchase_value / $customer->purchase_count, 2) : 'n/a',
                 'stat_avg_count'  => 0,
                 'stat_avg_spend'  => 0,
                 'stat_avg_value'  => 0,
                 'currency_sign'   => edd_currency_symbol(),
-                'last_order_date' => $orders[0]->post_date
+                'last_order_date' => $lasOrderData
             ];
             $beforeHtml = $this->formatSummaryData($summaryData);
         }
 
         return [
             'data'         => $formattedOrders,
-            'total'        => count($customer->get_payment_ids()),
-            'sidebar_html' => $beforeHtml
+            'total'        => $totalCount,
+            'sidebar_html' => $beforeHtml,
+            'has_recount'  => $hasRecount
         ];
     }
 

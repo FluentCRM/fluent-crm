@@ -81,6 +81,11 @@ class SettingsController extends Controller
         ];
 
         if (in_array('settings_fields', $request->get('with', []))) {
+
+            $designTemplates = Helper::getEmailDesignTemplates();
+
+            $designTemplates = Arr::only($designTemplates, ['simple', 'plain', 'classic', 'raw_classic']);
+
             $data['settings_fields'] = [
                 'email_subject'            => [
                     'type'        => 'input-text-popper',
@@ -99,7 +104,7 @@ class SettingsController extends Controller
                     'type'    => 'image-radio',
                     'label'   => __('Design Template', 'fluent-crm'),
                     'help'    => __('Email Design Template for this double-optin email', 'fluent-crm'),
-                    'options' => Helper::getEmailDesignTemplates()
+                    'options' => $designTemplates
                 ],
                 'confirmation_html_viewer' => [
                     'type'    => 'html-viewer',
@@ -224,7 +229,7 @@ class SettingsController extends Controller
         ];
 
         if (defined('FLUENTCAMPAIGN_PLUGIN_URL')) {
-            $databases[] = 'fc_sequence_tracker';
+            $tables[] = 'fc_sequence_tracker';
         }
 
         global $wpdb;
@@ -306,7 +311,7 @@ class SettingsController extends Controller
         ];
 
         $data = [
-            'bounce_settings' => $bounceSettings
+            'bounce_settings' => apply_filters('fluent_crm/bounce_handlers', $bounceSettings, $securityCode)
         ];
 
         if (defined('FLUENTMAIL')) {
@@ -388,8 +393,9 @@ class SettingsController extends Controller
     {
 
         $hookNames = [
-            'fluentcrm_scheduled_minute_tasks' => __('Scheduled Email Sending', 'fluent-crm'),
-            'fluentcrm_scheduled_hourly_tasks' => __('Scheduled Automation Tasks', 'fluent-crm')
+            'fluentcrm_scheduled_minute_tasks'      => __('Scheduled Email Sending', 'fluent-crm'),
+            'fluentcrm_scheduled_hourly_tasks'      => __('Scheduled Automation Tasks', 'fluent-crm'),
+            'fluentcrm_scheduled_five_minute_tasks' => __('Scheduled Email Processing', 'fluent-crm')
         ];
 
         $crons = _get_cron_array();
@@ -412,7 +418,11 @@ class SettingsController extends Controller
         }
 
         return [
-            'cron_events' => $events
+            'cron_events' => $events,
+            'server'      => [
+                'memory_limit'  => ini_get('memory_limit'),
+                'usage_percent' => fluentCrmGetMemoryUsagePercentage()
+            ]
         ];
     }
 
@@ -420,8 +430,9 @@ class SettingsController extends Controller
     {
         $hookName = $request->get('hook');
         $hookNames = [
-            'fluentcrm_scheduled_minute_tasks' => __('Scheduled Email Sending', 'fluent-crm'),
-            'fluentcrm_scheduled_hourly_tasks' => __('Scheduled Automation Tasks', 'fluent-crm')
+            'fluentcrm_scheduled_minute_tasks'      => __('Scheduled Email Sending', 'fluent-crm'),
+            'fluentcrm_scheduled_hourly_tasks'      => __('Scheduled Automation Tasks', 'fluent-crm'),
+            'fluentcrm_scheduled_five_minute_tasks' => __('Scheduled Email Processing', 'fluent-crm')
         ];
 
         if (!isset($hookNames[$hookName])) {
@@ -694,6 +705,52 @@ class SettingsController extends Controller
         return $this->sendError([
             'message' => __('Sorry, the provided provider does not exist', 'fluent-crm')
         ]);
+    }
+
+    public function getComplianceSettings(Request $request)
+    {
+        return [
+            'settings' => Helper::getComplianceSettings()
+        ];
+    }
+
+    public function updateComplianceSettings(Request $request)
+    {
+        $data = Arr::only($request->all(), array_keys(Helper::getComplianceSettings()));
+
+        foreach ($data as $key => $datum) {
+            $data[$key] = sanitize_text_field($datum);
+        }
+
+        update_option('_fluentcrm_compliance_settings', $data, 'no');
+
+        return [
+            'message'  => __('Settings has been successfully updated'),
+            'settings' => $data
+        ];
+    }
+
+    public function getExperimentalSettings(Request $request)
+    {
+        return [
+            'settings' => Helper::getExperimentalSettings()
+        ];
+    }
+
+    public function updateExperimentalSettings(Request $request)
+    {
+
+        $data = Arr::only($request->all(), array_keys(Helper::getExperimentalSettings()));
+
+        foreach ($data as $key => $datum) {
+            $data[$key] = sanitize_text_field($datum);
+        }
+
+        update_option('_fluentcrm_experimental_settings', $data, 'no');
+
+        return [
+            'message' => __('Experimental Settings has been updated', 'fluent-crm')
+        ];
     }
 
 }

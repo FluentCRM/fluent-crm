@@ -64,6 +64,10 @@ class FluentFormSubmissionTrigger extends BaseTrigger
             $subtitle .= ' Use shortcode <b> [fluentform id="' . $formId . '"] </b> to show the form in your WordPress page/posts. <a target="_blank" href="' . admin_url('admin.php?page=fluent_forms&route=editor&form_id=' . $formId) . '">Edit The Form</a>';
         }
 
+        $secondaryFields = apply_filters('fluentcrm_fluentform_other_map_fields',
+            FunnelHelper::getSecondaryContactFieldMaps()
+        );
+
         return [
             'title'     => __('New Fluent Forms Submission Funnel', 'fluent-crm'),
             'sub_title' => $subtitle,
@@ -89,9 +93,7 @@ class FluentFormSubmissionTrigger extends BaseTrigger
                     'remote_label'       => __('Select Form Field', 'fluent-crm'),
                     'local_placeholder'  => __('Select Contact Property', 'fluent-crm'),
                     'remote_placeholder' => __('Select Form Property', 'fluent-crm'),
-                    'fields'             => apply_filters('fluentcrm_fluentform_other_map_fields',
-                        FunnelHelper::getSecondaryContactFieldMaps()
-                    )
+                    'fields'             => $secondaryFields
                 ],
                 'subscription_status'      => [
                     'type'        => 'option_selectors',
@@ -218,10 +220,9 @@ class FluentFormSubmissionTrigger extends BaseTrigger
         }
 
         if (!empty($subscriberData['country'])) {
-            $countries = getFluentFormCountryList();
-            $countries = array_flip($countries);
-            if (isset($countries[$subscriberData['country']])) {
-                $subscriberData['country'] = $countries[$subscriberData['country']];
+            $country = FunnelHelper::getCountryShortName($subscriberData['country']);
+            if ($country) {
+                $subscriberData['country'] = $country;
             } else {
                 unset($subscriberData['country']);
             }
@@ -236,15 +237,18 @@ class FluentFormSubmissionTrigger extends BaseTrigger
 
     private function isProcessable($funnel, $subscriberData)
     {
-        $conditions = $funnel->conditions;
-        // check update_type
-        $isOnlyOne = Arr::get($conditions, 'run_only_one') != 'no';
-
         $subscriber = FunnelHelper::getSubscriber($subscriberData['email']);
+        if ($subscriber && FunnelHelper::ifAlreadyInFunnel($funnel->id, $subscriber->id)) {
+            $conditions = $funnel->conditions;
+            // check update_type
+            $runMultiple = Arr::get($conditions, 'run_only_one') == 'no';
 
-        // check run_only_one
-        if ($isOnlyOne && $subscriber && FunnelHelper::ifAlreadyInFunnel($funnel->id, $subscriber->id)) {
-            FunnelHelper::removeSubscribersFromFunnel($funnel->id, [$subscriber->id]);
+            // if run multiple then delete
+            if ($runMultiple) {
+                FunnelHelper::removeSubscribersFromFunnel($funnel->id, [$subscriber->id]);
+            }
+
+            return $runMultiple;
         }
 
         return true;

@@ -27,20 +27,18 @@ class ShortcodeParser
         return $result;
     }
 
-    public function parseShortcode($string, $data)
+    public function parseCrmValue($templateString, $subscriber)
     {
-        return preg_replace_callback('/({{|##)+(.*?)(}}|##)/', function ($matches) use ($data) {
-            return $this->replace($matches, $data);
-        }, $string);
+        return preg_replace_callback('/({{|##)+(.*?)(}}|##)/', function ($matches) use ($subscriber) {
+            return $this->replaceExtendedCrmValue($matches, $subscriber);
+        }, $templateString);
     }
 
-    protected function replace($matches, $subscriber)
+    public function replaceExtendedCrmValue($matches, $subscriber)
     {
-
         if (empty($matches[2])) {
             return apply_filters('fluentcrm_smartcode_fallback', $matches[0], $subscriber);
         }
-
 
         $matches[2] = trim($matches[2]);
 
@@ -62,22 +60,128 @@ class ShortcodeParser
 
         $valueKey = $valueKeys[0];
         $defaultValue = '';
-        if (isset($valueKeys[1])) {
+
+        $valueCounts = count($valueKeys);
+
+        if ($valueCounts >= 3) {
+            $defaultValue = trim($valueKeys[1]);
+        } else if ($valueCounts === 2) {
             $defaultValue = trim($valueKeys[1]);
         }
 
+        return $this->getCrmValue($valueKey, $defaultValue, $subscriber);
+    }
+
+    public function parseShortcode($string, $data)
+    {
+        return preg_replace_callback('/({{|##)+(.*?)(}}|##)/', function ($matches) use ($data) {
+            return $this->replace($matches, $data);
+        }, $string);
+    }
+
+    protected function replace($matches, $subscriber)
+    {
+        if (empty($matches[2])) {
+            return apply_filters('fluentcrm_smartcode_fallback', $matches[0], $subscriber);
+        }
+
+        $matches[2] = trim($matches[2]);
+
+        $matched = explode('.', $matches[2]);
+
+        if (count($matched) <= 1) {
+            return apply_filters('fluentcrm_smartcode_fallback', $matches[0], $subscriber);
+        }
+
+        $dataKey = trim(array_shift($matched));
+
+        $valueKey = trim(implode('.', $matched));
+
+        if (!$valueKey) {
+            return apply_filters('fluentcrm_smartcode_fallback', $matches[0], $subscriber);
+        }
+
+        $valueKeys = explode('|', $valueKey);
+
+        $valueKey = $valueKeys[0];
+        $defaultValue = '';
+        $transformer = '';
+
+        $valueCounts = count($valueKeys);
+
+        if ($valueCounts >= 3) {
+            $defaultValue = trim($valueKeys[1]);
+            $transformer = trim($valueKeys[2]);
+        } else if ($valueCounts === 2) {
+            $defaultValue = trim($valueKeys[1]);
+        }
+
+        $value = '';
+
         switch ($dataKey) {
             case 'contact':
-                return $this->getSubscriberValue($subscriber, $valueKey, $defaultValue);
+                $value = $this->getSubscriberValue($subscriber, $valueKey, $defaultValue);
+                break;
             case 'wp':
-                return $this->getWpValue($valueKey, $defaultValue, $subscriber);
+                $value = $this->getWpValue($valueKey, $defaultValue, $subscriber);
+                break;
             case 'crm':
-                return $this->getCrmValue($valueKey, $defaultValue, $subscriber);
+                $urlKeys = [
+                    'unsubscribe_url',
+                    'manage_subscription_url',
+                    'unsubscribe_html',
+                    'manage_subscription_html'
+                ];
+
+                if (in_array($valueKey, $urlKeys)) {
+                    return $matches[0]; //  we will replace these later.
+                }
+
+                $value = $this->getCrmValue($valueKey, $defaultValue, $subscriber);
+                break;
             case 'user':
-                return $this->getUserValue($valueKey, $defaultValue, $subscriber);
+                $value = $this->getUserValue($valueKey, $defaultValue, $subscriber);
+                break;
+            case 'other':
+                $value = $this->parseOtherValue($valueKey, $defaultValue, $subscriber);
+                break;
             default:
-                return apply_filters('fluentcrm_smartcode_fallback_callback_' . $dataKey, $matches[0], $valueKey, $defaultValue, $subscriber);
+                $value = apply_filters('fluentcrm_smartcode_fallback_callback_' . $dataKey, $matches[0], $valueKey, $defaultValue, $subscriber);
         }
+
+        if ($transformer && is_string($transformer) && $value) {
+            switch ($transformer) {
+                case 'trim':
+                    return trim($value);
+                case 'ucfirst':
+                    return ucfirst($value);
+                case 'strtolower':
+                    return strtolower($value);
+                case 'strtoupper':
+                    return strtoupper($value);
+                case 'ucwords':
+                    return ucwords($value);
+                case 'concat_first': // usage: {{contact.first_name||concat_first|Hi
+                    if (isset($valueKeys[3])) {
+                        $value = trim($valueKeys[3] . ' ' . $value);
+                    }
+                    return $value;
+                case 'concat_last': // usage: {{contact.first_name||concat_last|, => FIRST_NAME,
+                    if (isset($valueKeys[3])) {
+                        $value = trim($value . '' . $valueKeys[3]);
+                    }
+                    return $value;
+                case 'show_if': // usage {{contact.first_name||show_if|First name exist
+                    if (isset($valueKeys[3])) {
+                        $value = $valueKeys[3];
+                    }
+                    return $value;
+                default:
+                    return $value;
+            }
+        }
+
+        return $value;
 
     }
 
@@ -95,17 +199,17 @@ class ShortcodeParser
         switch ($valueKey) {
             case "unsubscribe_url":
                 return add_query_arg(array_filter([
-                    'fluentcrm' => 1,
-                    'route'     => 'unsubscribe',
-                    'ce_id'     => $subscriber->email_id,
-                    'hash'      => $subscriber->hash
+                    'fluentcrm'   => 1,
+                    'route'       => 'unsubscribe',
+                    'ce_id'       => $subscriber->email_id,
+                    'secure_hash' => fluentCrmGetContactSecureHash($subscriber->id)
                 ]), site_url('/'));
             case "manage_subscription_url":
                 return add_query_arg(array_filter([
-                    'fluentcrm' => 1,
-                    'route'     => 'manage_subscription',
-                    'ce_id'     => $subscriber->id,
-                    'hash'      => $subscriber->hash
+                    'fluentcrm'   => 1,
+                    'route'       => 'manage_subscription',
+                    'ce_id'       => $subscriber->id,
+                    'secure_hash' => fluentCrmGetContactSecureHash($subscriber->id)
                 ]), site_url('/'));
             case "unsubscribe_html":
                 if ($defaultValue) {
@@ -113,10 +217,10 @@ class ShortcodeParser
                 }
 
                 $url = add_query_arg(array_filter([
-                    'fluentcrm' => 1,
-                    'route'     => 'unsubscribe',
-                    'ce_id'     => $subscriber->email_id,
-                    'hash'      => $subscriber->hash
+                    'fluentcrm'   => 1,
+                    'route'       => 'unsubscribe',
+                    'ce_id'       => $subscriber->email_id,
+                    'secure_hash' => fluentCrmGetContactSecureHash($subscriber->id)
                 ]), site_url('/'));
 
                 return '<a class="fc_unsub_url" href="' . $url . '">' . $defaultValue . '</a>';
@@ -126,10 +230,10 @@ class ShortcodeParser
                 }
 
                 $url = add_query_arg(array_filter([
-                    'fluentcrm' => 1,
-                    'route'     => 'manage_subscription',
-                    'ce_id'     => $subscriber->id,
-                    'hash'      => $subscriber->hash
+                    'fluentcrm'   => 1,
+                    'route'       => 'manage_subscription',
+                    'ce_id'       => $subscriber->id,
+                    'secure_hash' => fluentCrmGetContactSecureHash($subscriber->id)
                 ]), site_url('/'));
 
                 return '<a class="fc_msub_url" href="' . $url . '">' . $defaultValue . '</a>';
@@ -138,7 +242,12 @@ class ShortcodeParser
                     $defaultValue = __('Confirm Subscription', 'fluent-crm');
                 }
                 $data = $subscriber->toArray();
-                $url = site_url('?fluentcrm=1&route=confirmation&s_id=' . $data['id'] . '&hash=' . $data['hash']);
+                $url = add_query_arg(array_filter([
+                    'fluentcrm'   => 1,
+                    'route'       => 'confirmation',
+                    's_id'        => $data['id'],
+                    'secure_hash' => fluentCrmGetContactSecureHash($subscriber->id)
+                ]), site_url('/'));
                 return '<a style="color: #ffffff; background-color: #454545; font-size: 16px; border-radius: 5px; text-decoration: none; font-weight: normal; font-style: normal; padding: 0.8rem 1rem; border-color: #0072ff;" href="' . $url . '">' . $defaultValue . '</a>';
             case "business_name":
                 $business = fluentcrmGetGlobalSettings('business_settings', []);
@@ -195,9 +304,7 @@ class ShortcodeParser
             if ($tagsArray) {
                 return implode(', ', $tagsArray);
             }
-        }
-
-        if ($customKey == 'lists') {
+        } else if ($customKey == 'lists') {
             $tagsArray = [];
             foreach ($subscriber->lists as $tag) {
                 $tagsArray[] = $tag->{$customProperty};
@@ -205,6 +312,10 @@ class ShortcodeParser
 
             if ($tagsArray) {
                 return implode(', ', $tagsArray);
+            }
+        } else if ($customKey == 'meta') {
+            if ($customProperty == '_secure_hash') {
+                return fluentCrmGetContactSecureHash($subscriber->id);
             }
         }
 
@@ -242,7 +353,12 @@ class ShortcodeParser
             if (!$value) {
                 return $defaultValue;
             }
-            return $value;
+
+            if (!is_array($value) || !is_object($value)) {
+                return $value;
+            }
+
+            return $defaultValue;
         }
 
         $customKey = $valueKeys[0];
@@ -262,5 +378,27 @@ class ShortcodeParser
         }
 
         return $defaultValue;
+    }
+
+    protected function parseOtherValue($valueKey, $defaultValue, $subscriber)
+    {
+        $valueKeys = explode('.', $valueKey);
+        if (count($valueKeys) == 1) {
+            return $defaultValue;
+        }
+
+        $key = $valueKeys[0];
+        $otherKey = $valueKeys[1];
+
+        if (!$otherKey) {
+            return $defaultValue;
+        }
+
+        if ($key == 'date') {
+            return date_i18n(get_option('date_format'), strtotime($otherKey));
+        }
+
+        return $defaultValue;
+
     }
 }

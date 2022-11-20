@@ -41,7 +41,10 @@ class FunnelSequences
                 `created_at` TIMESTAMP NULL,
                 `updated_at` TIMESTAMP NULL,
                 INDEX `{$indexPrefix}_fs_idx` (`status` ASC),
-                INDEX `{$indexPrefix}_fid_idx` (`funnel_id` ASC)
+                INDEX `{$indexPrefix}_fid_idx` (`funnel_id` ASC),
+                KEY `c_delay` (`c_delay`),
+                KEY `sequence` (`sequence`),
+                KEY `action_name` (`action_name`)
             ) $charsetCollate;";
 
             dbDelta($sql);
@@ -50,6 +53,20 @@ class FunnelSequences
             $isMigrated = $wpdb->get_col($wpdb->prepare("SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND COLUMN_NAME='parent_id' AND TABLE_NAME=%s", $sequenceTable));
             if(!$isMigrated) {
                 $wpdb->query("ALTER TABLE {$sequenceTable} ADD COLUMN `parent_id` bigint NOT NULL DEFAULT '0', ADD `condition_type` varchar(192) NULL AFTER `parent_id`");
+            }
+
+            $indexes = $wpdb->get_results("SHOW INDEX FROM $table");
+            $indexedColumns = [];
+            foreach ($indexes as $index) {
+                $indexedColumns[] = $index->Column_name;
+            }
+
+            if(!in_array('action_name', $indexedColumns)) {
+                $indexSql = "ALTER TABLE {$table} ADD INDEX `c_delay` (`c_delay`),
+                        ADD INDEX `sequence` (`sequence`),
+                        ADD INDEX `action_name` (`action_name`);";
+
+                $wpdb->query($indexSql);
             }
         }
     }

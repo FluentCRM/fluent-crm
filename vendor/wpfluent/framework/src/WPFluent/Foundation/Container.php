@@ -187,7 +187,7 @@ class Container implements ArrayAccess, ContainerContract
         // abstract type. This will allow concrete type to be registered as shared
         // without being forced to state their classes in both of the parameter.
         $this->dropStaleInstances($abstract);
-        
+
         if (is_null($concrete)) {
             $concrete = $abstract;
         }
@@ -200,7 +200,7 @@ class Container implements ArrayAccess, ContainerContract
         }
 
         $this->bindings[$abstract] = compact('concrete', 'shared');
-        
+
         // If the abstract type was already resolved in this container we'll fire the
         // rebound listener so that any objects which have already gotten resolved
         // can have their copy of the object updated via the listener callbacks.
@@ -276,7 +276,7 @@ class Container implements ArrayAccess, ContainerContract
             // not been set we will execute the given Closures to resolve this value
             // and return it back to these consumers of the method as an instance.
             static $object;
-            
+
             if (is_null($object)) {
                 $object = $closure($container);
             }
@@ -339,7 +339,7 @@ class Container implements ArrayAccess, ContainerContract
         // we will fire the rebound callbacks registered with the container and it
         // can be updated with consuming classes that have gotten resolved here.
         $bound = $this->bound($abstract);
-        
+
         $this->instances[$abstract] = $instance;
 
         if ($bound) {
@@ -357,7 +357,7 @@ class Container implements ArrayAccess, ContainerContract
     public function tag($abstracts, $tags)
     {
         $tags = is_array($tags) ? $tags : array_slice(func_get_args(), 1);
-        
+
         foreach ($tags as $tag) {
 
             if (!isset($this->tags[$tag])) {
@@ -422,7 +422,7 @@ class Container implements ArrayAccess, ContainerContract
     public function rebinding($abstract, Closure $callback)
     {
         $this->reboundCallbacks[$abstract][] = $callback;
-        
+
         if ($this->bound($abstract)) {
             return $this->make($abstract);
         }
@@ -502,7 +502,7 @@ class Container implements ArrayAccess, ContainerContract
         }
 
         $dependencies = $this->getMethodDependencies($callback, $parameters);
-        
+
         return call_user_func_array($callback, $dependencies);
     }
 
@@ -531,11 +531,11 @@ class Container implements ArrayAccess, ContainerContract
     protected function getMethodDependencies($callback, $parameters = [])
     {
         $dependencies = [];
-        
+
         foreach ($this->getCallReflector($callback)->getParameters() as $key => $parameter) {
             $this->addDependencyForCallParameter($parameter, $parameters, $dependencies);
         }
-        
+
         return array_values(
             array_filter(
                 array_merge($dependencies, $parameters)
@@ -628,7 +628,7 @@ class Container implements ArrayAccess, ContainerContract
         // the class name from the handle method name. This allows for handlers
         // to run multiple handler methods in a single class for convenience.
         $method = count($segments) == 2 ? $segments[1] : $defaultMethod;
-        
+
         if (is_null($method)) {
             throw new InvalidArgumentException("Method not provided.");
         }
@@ -655,7 +655,7 @@ class Container implements ArrayAccess, ContainerContract
         }
 
         $concrete = $this->getConcrete($abstract);
-        
+
         // We're ready to instantiate an instance of the concrete type registered for
         // the binding. This will instantiate the types, as well as resolve any of
         // its "nested" dependencies recursively until all have gotten resolved.
@@ -680,9 +680,9 @@ class Container implements ArrayAccess, ContainerContract
         }
 
         $this->fireResolvingCallbacks($abstract, $object);
-        
+
         $this->resolved[$abstract] = true;
-        
+
         return $object;
     }
 
@@ -796,9 +796,9 @@ class Container implements ArrayAccess, ContainerContract
         // dependency instances and then use the reflection instances to make a
         // new instance of this class, injecting the created dependencies in.
         $parameters = $this->keyParametersByArgument($dependencies, $parameters);
-        
+
         $instances = $this->getDependencies($dependencies, $parameters);
-        
+
         array_pop($this->buildStack);
 
         return $reflector->newInstanceArgs($instances);
@@ -814,11 +814,11 @@ class Container implements ArrayAccess, ContainerContract
     protected function getDependencies($parameters, array $primitives = [])
     {
         $dependencies = [];
-        
+
         $types = ['bool', 'int', 'float', 'string', 'array', 'resource'];
 
         foreach ($parameters as $parameter) {
-            
+
             if ($dependency = $this->getParameterType($parameter)) {
                 $dependency = $dependency->getName();
                 if ($dependency && in_array($dependency, $types)) {
@@ -854,9 +854,9 @@ class Container implements ArrayAccess, ContainerContract
         if ($parameter->isDefaultValueAvailable()) {
             return $parameter->getDefaultValue();
         }
-        
+
         $message = "Unresolvable dependency resolving [{$parameter}] in class {$parameter->getDeclaringClass()->getName()}";
-        
+
         throw new BindingResolutionException($message);
     }
 
@@ -941,7 +941,7 @@ class Container implements ArrayAccess, ContainerContract
     protected function resolvingCallback(Closure $callback)
     {
         $abstract = $this->getFunctionHint($callback);
-        
+
         if ($abstract) {
             $this->resolvingCallbacks[$abstract][] = $callback;
         } else {
@@ -958,7 +958,7 @@ class Container implements ArrayAccess, ContainerContract
     protected function afterResolvingCallback(Closure $callback)
     {
         $abstract = $this->getFunctionHint($callback);
-        
+
         if ($abstract) {
             $this->afterResolvingCallbacks[$abstract][] = $callback;
         } else {
@@ -975,13 +975,13 @@ class Container implements ArrayAccess, ContainerContract
     protected function getFunctionHint(Closure $callback)
     {
         $function = new ReflectionFunction($callback);
-        
+
         if ($function->getNumberOfParameters() == 0) {
             return;
         }
 
         $expected = $function->getParameters()[0];
-        
+
         if (!$expected->getClass()) {
             return;
         }
@@ -1160,7 +1160,9 @@ class Container implements ArrayAccess, ContainerContract
      *
      * @param  string  $key
      * @return bool
+     *
      */
+    #[\ReturnTypeWillChange]
     public function offsetExists($key)
     {
         return isset($this->bindings[$key]);
@@ -1172,6 +1174,7 @@ class Container implements ArrayAccess, ContainerContract
      * @param  string  $key
      * @return mixed
      */
+    #[\ReturnTypeWillChange]
     public function offsetGet($key)
     {
         return $this->make($key);
@@ -1184,6 +1187,7 @@ class Container implements ArrayAccess, ContainerContract
      * @param  mixed   $value
      * @return void
      */
+    #[\ReturnTypeWillChange]
     public function offsetSet($key, $value)
     {
         // If the value is not a Closure, we will make it one. This simply gives
@@ -1204,6 +1208,7 @@ class Container implements ArrayAccess, ContainerContract
      * @param  string  $key
      * @return void
      */
+    #[\ReturnTypeWillChange]
     public function offsetUnset($key)
     {
         unset($this->bindings[$key], $this->instances[$key], $this->resolved[$key]);
