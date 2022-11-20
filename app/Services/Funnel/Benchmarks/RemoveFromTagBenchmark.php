@@ -22,11 +22,12 @@ class RemoveFromTagBenchmark extends BaseBenchMark
         return [
             'title'       => __('Tag Removed', 'fluent-crm'),
             'description' => __('This will run when selected Tags have been removed from a contact', 'fluent-crm'),
-            'icon' => 'fc-icon-tag_removed',//fluentCrmMix('images/funnel_icons/tag_removed.svg'),
+            'icon'        => 'fc-icon-tag_removed',//fluentCrmMix('images/funnel_icons/tag_removed.svg'),
             'settings'    => [
                 'tags'        => [],
                 'select_type' => 'any',
-                'type'        => 'optional'
+                'type'        => 'optional',
+                'can_enter'   => 'yes'
             ]
         ];
     }
@@ -36,7 +37,8 @@ class RemoveFromTagBenchmark extends BaseBenchMark
         return [
             'tags'        => [],
             'select_type' => 'any',
-            'type'        => 'optional'
+            'type'        => 'optional',
+            'can_enter'   => 'yes'
         ];
     }
 
@@ -72,7 +74,8 @@ class RemoveFromTagBenchmark extends BaseBenchMark
                         'value'      => []
                     ]
                 ],
-                'type'        => $this->benchmarkTypeField()
+                'type'        => $this->benchmarkTypeField(),
+                'can_enter'   => $this->canEnterField()
             ]
         ];
     }

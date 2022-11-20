@@ -493,6 +493,10 @@ class CountryNames
                 'title' => __('Kuwait', 'fluent-crm')
             ],
             [
+                'code'  => 'XK',
+                'title' => __('Kosovo', 'fluent-crm')
+            ],
+            [
                 'code'  => 'KG',
                 'title' => __('Kyrgyzstan', 'fluent-crm')
             ],

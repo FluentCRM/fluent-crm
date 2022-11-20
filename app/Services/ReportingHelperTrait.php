@@ -33,9 +33,9 @@ trait ReportingHelperTrait
     {
         $numDays = $to->diff($from)->format("%a");
 
-        if ($numDays > 62 && $numDays <= 181) {
+        if ($numDays > 62 && $numDays <= 92) {
             return static::$weekly;
-        } else if ($numDays > 181) {
+        } else if ($numDays > 92) {
             return static::$monthly;
         }
 

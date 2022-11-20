@@ -26,27 +26,19 @@ return function ($file) {
         $app = new Application($file);
         require_once FLUENTCRM_PLUGIN_PATH . 'app/Functions/helpers.php';
 
-        if (defined('FLUENTCAMPAIGN') && !defined('FLUENTCAMPAIGN_FRAMEWORK_VERSION')) {
-            add_action('admin_notices', function () {
-                echo '<div class="error"><p>FluentCRM Pro requires to update to the latest version. <a href="' . admin_url('plugins.php?s=fluentcampaign-pro&plugin_status=all') . '">Please update FluentCRM Pro</a>. Otherwise, it will not work properly.</p></div>';
-            });
-
+        if (defined('FLUENTCAMPAIGN')) {
             add_filter('fluentcrm_dashboard_notices', function ($notices) {
-                $notices[] = '<div class="error"><p>FluentCRM Pro requires to update to the latest version. <a href="' . admin_url('plugins.php?s=fluentcampaign-pro&plugin_status=all') . '">Please update FluentCRM Pro</a>. Otherwise, it will not work properly.</p></div>';
+                if (version_compare(FLUENTCRM_MIN_PRO_VERSION, FLUENTCAMPAIGN_PLUGIN_VERSION, '>')) {
+                    $updateUrl = admin_url('plugins.php?s=fluentcampaign-pro&plugin_status=all&fluentcrm_pro_check_update=' . time());
+                    $notices[] = '<div style="padding: 15px 10px;" class="updated"><b>Heads UP: </b> FluentCRM Pro needs to be updated to the latest version. <a href="' . esc_url($updateUrl) . '">Click here to update</a></div>';
+                }
                 return $notices;
             });
-        } else {
-            do_action('fluentcrm_loaded', $app);
-            do_action('fluentcrm_addons_loaded', $app);
         }
-    });
 
-    add_action('admin_init', function () {
-        if (defined('FLUENTCAMPAIGN') && !defined('FLUENTCAMPAIGN_FRAMEWORK_VERSION') && class_exists('\FluentCampaign\App\Services\PluginManager\LicenseManager')) {
-            $licenseManager = new \FluentCampaign\App\Services\PluginManager\LicenseManager();
-            $licenseManager->initUpdater();
-        }
-    }, 0);
+        do_action('fluentcrm_loaded', $app);
+        do_action('fluentcrm_addons_loaded', $app);
+    });
 
     add_filter('cron_schedules', function ($schedules) {
         if (!is_array($schedules)) {
@@ -56,6 +48,11 @@ return function ($file) {
             $schedules['fluentcrm_every_minute'] = array(
                 'interval' => 60,
                 'display'  => esc_html__('Every Minute (FluentCRM)', 'fluentform'),
+            );
+
+            $schedules['fluentcrm_scheduled_five_minute_tasks'] = array(
+                'interval' => 300,
+                'display'  => esc_html__('Every 5 Minutes (FluentCRM)', 'fluentform'),
             );
         }
 
@@ -71,6 +68,11 @@ return function ($file) {
         $dailyHook = 'fluentcrm_scheduled_hourly_tasks';
         if (!wp_next_scheduled($dailyHook)) {
             wp_schedule_event(time(), 'hourly', $dailyHook);
+        }
+
+        $hookName = 'fluentcrm_scheduled_five_minute_tasks';
+        if (!wp_next_scheduled($hookName)) {
+            wp_schedule_event(time(), 'fluentcrm_scheduled_five_minute_tasks', $hookName);
         }
 
         $weeklyHook = 'fluentcrm_scheduled_weekly_tasks';

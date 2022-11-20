@@ -9,15 +9,17 @@ $content_font_family = $config['content_font_family'];
 ?>
 <style type="text/css">
     body {
-        font-family: <?php echo $content_font_family; ?>;
+        font-family: <?php echo esc_html($content_font_family); ?>;
         line-height: 150%;
     }
     p {
-        font-family: <?php echo $content_font_family; ?>;        line-height: 150%;
+        font-family: <?php echo esc_html($content_font_family); ?>;
+        line-height: 150%;
         font-size: 16px;
     }
     li, ol {
-        font-family: <?php echo $content_font_family; ?>;        line-height: 120%;
+        font-family: <?php echo esc_html($content_font_family); ?>;
+        line-height: 120%;
         font-size: 16px;
         margin-bottom: 5px;
         padding-bottom: 0px;
@@ -29,25 +31,25 @@ $content_font_family = $config['content_font_family'];
 
     h1, h2, h3, h4 {
         line-height: 120%;
-        font-family: <?php echo $content_font_family; ?>;
+        font-family: <?php echo esc_html($content_font_family); ?>;
     }
 
     .has-text-align-right {
-        text-align: <?php echo $alignRight; ?> !important;
+        text-align: <?php echo esc_attr($alignRight); ?> !important;
     }
     .has-text-align-left {
-        text-align: <?php echo $alignLeft; ?> !important;
+        text-align: <?php echo esc_attr($alignLeft); ?> !important;
     }
     .has-text-align-center {
         text-align: center !important;
     }
 
     .alignleft {
-        text-align: <?php echo $alignLeft?> !important;
+        text-align: <?php echo esc_attr($alignLeft);?> !important;
     }
 
     .alignright {
-        text-align: <?php echo $alignRight?> !important;
+        text-align: <?php echo esc_attr($alignRight);?> !important;
     }
 
     p {
@@ -155,7 +157,7 @@ $content_font_family = $config['content_font_family'];
         text-align: center !important;
     }
     .alignright {
-        text-align: <?php echo $alignRight; ?> !important;
+        text-align: <?php echo esc_attr($alignRight); ?> !important;
     }
     /*
     * Classic Editor

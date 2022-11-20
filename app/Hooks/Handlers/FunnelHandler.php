@@ -2,7 +2,9 @@
 
 namespace FluentCrm\App\Hooks\Handlers;
 
+use FluentCrm\App\Models\Campaign;
 use FluentCrm\App\Models\Funnel;
+use FluentCrm\App\Models\FunnelCampaign;
 use FluentCrm\App\Models\FunnelSequence;
 use FluentCrm\App\Models\FunnelSubscriber;
 use FluentCrm\App\Services\Funnel\Actions\ApplyListAction;
@@ -21,6 +23,7 @@ use FluentCrm\App\Services\Funnel\SequencePoints;
 use FluentCrm\App\Services\Funnel\Triggers\FluentFormSubmissionTrigger;
 use FluentCrm\App\Services\Funnel\Triggers\UserRegistrationTrigger;
 use FluentCrm\App\Services\PermissionManager;
+use FluentCrm\App\Services\Sanitize;
 use FluentCrm\Framework\Support\Arr;
 
 /**
@@ -35,6 +38,8 @@ use FluentCrm\Framework\Support\Arr;
 class FunnelHandler
 {
     private $settingsKey = 'fluentcrm_funnel_settings';
+
+    protected $funnelFired = false;
 
     public function handle()
     {
@@ -51,7 +56,21 @@ class FunnelHandler
         $triggers = array_unique($triggers);
 
         if ($triggers) {
+
+            // Maybe trigger name changed
+            $migrationMaps = [
+                'recurring-transaction-expired' => 'mepr-event-transaction-expired'
+            ];
+
             foreach ($triggers as $triggerName) {
+
+                /*
+                 * For MemberPress migration. We will remove after October 2022
+                 */
+                if (defined('MEPR_PLUGIN_SLUG') && isset($migrationMaps[$triggerName])) {
+                    $triggerName = $migrationMaps[$triggerName];
+                }
+
                 $argNum = apply_filters('fluentcrm_funnel_arg_num_' . $triggerName, 1);
                 add_action($triggerName, function () use ($triggerName, $argNum) {
                     $this->mapTriggers($triggerName, func_get_args(), $argNum);
@@ -67,7 +86,20 @@ class FunnelHandler
         }
 
         add_action('fluentcrm_process_scheduled_tasks_init', function () {
+            if($this->funnelFired) {
+                return;
+            }
+
+            $this->funnelFired = true;
+            $lastProcessor = get_option('_fc_last_funnel_processor');
+            if($lastProcessor && (time() - $lastProcessor) < 60 ) {
+                return; // We want to run the processor only once per 60 seconds
+            }
+
+            update_option('_fc_last_funnel_processor', time(), 'no');
             (new FunnelProcessor())->followUpSequenceActions();
+            update_option('_fc_last_funnel_processor', false, 'no');
+
         });
     }
 
@@ -227,7 +259,125 @@ class FunnelHandler
 
         header('Content-disposition: attachment; filename=' . sanitize_title($funnel->title, 'funnel', 'display') . '-' . $funnelId . '.json');
         header('Content-type: application/json');
-        echo json_encode($funnel);
+        echo json_encode($funnel); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         exit();
+    }
+
+    public function saveEmailAction()
+    {
+        $hasPermission = PermissionManager::currentUserCan('fcrm_write_funnels');
+
+        if (!$hasPermission) {
+            wp_send_json([
+                'message' => __('Sorry, You do not have permission to do this action', 'fluent-crm')
+            ], 423);
+        }
+
+        $request = FluentCrm('request');
+        $funnelId = $request->get('funnel_id');
+        $funnel = Funnel::findOrFail($funnelId);
+
+        $settings = json_decode(wp_unslash($request->getJson('action_data')), true);
+
+        $settings['action_name'] = 'send_custom_email';
+
+        $funnelCampaign = Arr::get($settings, 'campaign', []);
+
+        $funnelCampaignId = Arr::get($funnelCampaign, 'id');
+
+        $data = Arr::only($funnelCampaign, array_keys(FunnelCampaign::getMock()));
+        $data['settings']['mailer_settings'] = Arr::get($settings, 'mailer_settings', []);
+
+        $type = 'created';
+
+        if ($funnelCampaignId && $funnel->id == Arr::get($data, 'parent_id')) {
+            // We have this campaign
+            $data['settings'] = \maybe_serialize($data['settings']);
+            $data['type'] = 'funnel_email_campaign';
+            $data['title'] = $funnel->title . ' (' . $funnel->id . ')';
+            FunnelCampaign::where('id', $funnelCampaignId)->update($data);
+            $type = 'updated';
+        } else {
+            $data['parent_id'] = $funnel->id;
+            $data['type'] = 'funnel_email_campaign';
+            $data['title'] = $funnel->title . ' (' . $funnel->id . ')';
+            $campaign = FunnelCampaign::create($data);
+            $funnelCampaignId = $campaign->id;
+        }
+
+        if(Arr::get($funnelCampaign, 'design_template') == 'visual_builder') {
+            $design = Arr::get($funnelCampaign, '_visual_builder_design', []);
+            fluentcrm_update_campaign_meta($funnelCampaignId, '_visual_builder_design', $design);
+        } else {
+            fluentcrm_delete_campaign_meta($funnelCampaignId, '_visual_builder_design');
+        }
+
+        $refCampaign = FunnelCampaign::find($funnelCampaignId);
+
+        wp_send_json([
+            'type'               => $type,
+            'reference_campaign' => $funnelCampaignId,
+            'campaign'           => Arr::only($refCampaign->toArray(), array_keys(FunnelCampaign::getMock()))
+        ], 200);
+    }
+
+    public function saveCampaignEmail()
+    {
+        $hasPermission = PermissionManager::currentUserCan('fcrm_manage_emails');
+
+        if (!$hasPermission) {
+            wp_send_json([
+                'message' => __('Sorry, You do not have permission to do this action', 'fluent-crm')
+            ], 423);
+        }
+
+        $request = FluentCrm('request');
+        $id = $request->get('campaign_id');
+
+        $data = json_decode(wp_unslash($request->getJson('action_data')), true);
+
+        if (empty($data)) {
+            wp_send_json([
+                'message' => __('Invalid Data', 'fluent-crm')
+            ], 423);
+        }
+
+        $updateData = Arr::only($data, [
+            'title',
+            'slug',
+            'template_id',
+            'email_subject',
+            'email_pre_header',
+            'email_body',
+            'utm_status',
+            'utm_source',
+            'utm_medium',
+            'utm_campaign',
+            'utm_term',
+            'utm_content',
+            'scheduled_at',
+            'design_template'
+        ]);
+
+        if (!empty($data['settings'])) {
+            $updateData['settings'] = $data['settings'];
+        }
+
+        $updateData = Sanitize::campaign($updateData);
+
+        $campaign = Campaign::findOrFail($id);
+
+        $campaign->fill($updateData)->save();
+
+        $nextStep = Arr::get($data, 'next_step');
+
+        if($nextStep) {
+            do_action('fluent_crm/update_campaign_compose', $data, $campaign);
+            fluentcrm_update_campaign_meta($id, '_next_config_step', $nextStep);
+        }
+
+        wp_send_json([
+            'campaign' => $campaign
+        ], 200);
     }
 }

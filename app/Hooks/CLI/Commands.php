@@ -10,6 +10,7 @@ use FluentCrm\App\Hooks\Handlers\ActivationHandler;
 use FluentCrm\App\Models\Campaign;
 use FluentCrm\App\Models\CampaignEmail;
 use FluentCrm\App\Models\Funnel;
+use FluentCrm\App\Models\Lists;
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\Tag;
 
@@ -73,14 +74,31 @@ class Commands
         }
 
         $formattedTags = [];
-        $formattedLists = [];
+        $formattedTagNames = [];
 
         if ($tags) {
-            $formattedTags = array_unique(array_filter(array_filter(explode(',', $tags), 'trim'), 'absint'));
+            $tags = array_unique(array_filter(array_filter(explode(',', $tags), 'trim'), 'absint'));
+            if ($tags) {
+                $allTags = Tag::whereIn('id', $tags)->get();
+                foreach ($allTags as $tag) {
+                    $formattedTagNames[] = $tag->title . ' (' . $tag->id . ')';
+                    $formattedTags[] = $tag->id;
+                }
+            }
         }
 
-        if ($lists) {
-            $formattedLists = array_unique(array_filter(array_filter(explode(',', $lists), 'trim'), 'absint'));
+        $formattedListNames = [];
+        $formattedLists = [];
+
+        if (trim($lists)) {
+            $lists = array_unique(array_filter(array_filter(explode(',', $lists), 'trim'), 'absint'));
+            if (count($lists)) {
+                $allLists = Lists::whereIn('id', $lists)->get();
+                foreach ($allLists as $list) {
+                    $formattedListNames[] = $list->title . ' (' . $list->id . ')';
+                    $formattedLists[] = $list->id;
+                }
+            }
         }
 
         if (!defined('FLUENTCAMPAIGN')) {
@@ -95,6 +113,7 @@ class Commands
             \WP_CLI::line('Initial Database Migration done. Going to next step...');
         } else {
             \WP_CLI::line('Initial Database exist. Going to next step...');
+            Commerce::resetModuleData('edd');
         }
 
         $customersTotal = fluentCrmDb()->table('edd_customers')->count();
@@ -126,11 +145,11 @@ class Commands
         \WP_CLI\Utils\format_items('yaml', [
             [
                 'type'  => __('Tags', 'fluent-crm'),
-                'Value' => $formattedTags
+                'Value' => $formattedTagNames
             ],
             [
                 'type'  => __('Lists', 'fluent-crm'),
-                'Value' => $formattedLists
+                'Value' => $formattedListNames
             ],
             [
                 'type'  => __('Status', 'fluent-crm'),
@@ -147,7 +166,7 @@ class Commands
 
         \WP_CLI::line('Nice! Starting data syncing');
 
-        $limit = 10;
+        $limit = 30;
         $offset = 0;
         $processingStatus = true;
 
@@ -167,7 +186,7 @@ class Commands
                 ->offset($offset)
                 ->get();
 
-            $offset += 10;
+            $offset += $limit;
 
             if (!$customers) {
                 $processingStatus = false;
@@ -219,6 +238,30 @@ class Commands
 
     }
 
+    public function disable_edd_sync()
+    {
+        $module = 'edd';
+        Commerce::disableModule($module);
+        ContactRelationModel::provider($module)->delete();
+        ContactRelationItemsModel::provider($module)->delete();
+
+        if(!ContactRelationModel::first()) {
+            global $wpdb;
+            $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}fc_contact_relations");
+            $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}fc_contact_relation_items");
+        }
+
+        fluentcrm_update_option('_'.$module.'_customer_sync_count', 0);
+        fluentcrm_delete_option('_'.$module.'_store_average');
+        \WP_CLI::line('EDD Data with FluentCRM has been removed');
+    }
+
+    /*
+     * Usage: wp fluent_crm sync_woo_customers --tags=TAG_IDS --lists=LISTS_IDS
+     * tags and lists needs to be comma separated values
+     * If you just want to sync just run:
+     * wp fluent_crm sync_woo_customers
+     */
     public function sync_woo_customers($args, $assoc_args)
     {
         if (!defined('WC_PLUGIN_FILE')) {
@@ -237,12 +280,29 @@ class Commands
         $formattedTags = [];
         $formattedLists = [];
 
+        $formattedTagNames = [];
+        $formattedListNames = [];
+
         if ($tags) {
-            $formattedTags = array_unique(array_filter(array_filter(explode(',', $tags), 'trim'), 'absint'));
+            $tags = array_unique(array_filter(array_filter(explode(',', $tags), 'trim'), 'absint'));
+            if ($tags) {
+                $allTags = Tag::whereIn('id', $tags)->get();
+                foreach ($allTags as $tag) {
+                    $formattedTagNames[] = $tag->title . ' (' . $tag->id . ')';
+                    $formattedTags[] = $tag->id;
+                }
+            }
         }
 
         if ($lists) {
-            $formattedLists = array_unique(array_filter(array_filter(explode(',', $lists), 'trim'), 'absint'));
+            $lists = array_unique(array_filter(array_filter(explode(',', $lists), 'trim'), 'absint'));
+            if ($lists) {
+                $allLists = Lists::whereIn('id', $lists)->get();
+                foreach ($allLists as $list) {
+                    $formattedListNames[] = $list->title . ' (' . $list->id . ')';
+                    $formattedLists[] = $list->id;
+                }
+            }
         }
 
         if (!defined('FLUENTCAMPAIGN')) {
@@ -257,6 +317,7 @@ class Commands
             \WP_CLI::line('Initial Database Migration done. Going to next step...');
         } else {
             \WP_CLI::line('Initial Database exist. Going to next step...');
+            Commerce::resetModuleData('woo');
         }
 
         $customersTotal = fluentCrmDb()->table('wc_customer_lookup')->count();
@@ -278,11 +339,11 @@ class Commands
         \WP_CLI\Utils\format_items('yaml', [
             [
                 'type'  => __('Tags', 'fluent-crm'),
-                'Value' => $formattedTags
+                'Value' => $formattedTagNames
             ],
             [
                 'type'  => __('Lists', 'fluent-crm'),
-                'Value' => $formattedLists
+                'Value' => $formattedListNames
             ],
             [
                 'type'  => __('Status', 'fluent-crm'),
@@ -309,10 +370,13 @@ class Commands
             }
         }
 
+        Commerce::resetModuleData('woo');
+
         $skippedContacts = [];
         $resultItems = [];
         $progress = \WP_CLI\Utils\make_progress_bar('Synced Customers', $customersTotal);
 
+        $processedOrdersCount = 0;
         while ($processingStatus) {
             $customers = fluentCrmDb()->table('wc_customer_lookup')
                 ->orderBy('customer_id', 'ASC')
@@ -328,6 +392,7 @@ class Commands
                 foreach ($customers as $customer) {
                     $result = \FluentCampaign\App\Services\Integrations\WooCommerce\WooSyncHelper::syncCommerceCustomer($customer, $contactStatus, $statuses, $formattedTags, $formattedLists);
                     if ($result) {
+                        $processedOrdersCount += $result['orders_count'];
                         $progress->tick();
                         $resultItems[] = [
                             'contact_id'     => $result['relation']->subscriber_id,
@@ -351,6 +416,7 @@ class Commands
 
         $relationCount = ContactRelationModel::provider('woo')->count();
         \WP_CLI::line(sprintf('Awesome! %d customers has been synced', $relationCount));
+        \WP_CLI::line(sprintf('%d orders has been synced', $processedOrdersCount));
 
         if ($skippedContacts) {
             \WP_CLI::line(sprintf('%d contacts has been skipped', count($skippedContacts)));
@@ -368,7 +434,24 @@ class Commands
         }
 
         \WP_CLI::line('Nice. All Done');
+    }
 
+    public function disable_woo_sync()
+    {
+        $module = 'woo';
+        Commerce::disableModule($module);
+        ContactRelationModel::provider($module)->delete();
+        ContactRelationItemsModel::provider($module)->delete();
+
+        if(!ContactRelationModel::first()) {
+            global $wpdb;
+            $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}fc_contact_relations");
+            $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}fc_contact_relation_items");
+        }
+
+        fluentcrm_update_option('_'.$module.'_customer_sync_count', 0);
+        fluentcrm_delete_option('_'.$module.'_store_average');
+        \WP_CLI::line('WooCommerce Data with FluentCRM has been removed');
     }
 
     public function edd_stats($args, $assoc_args)
@@ -466,7 +549,7 @@ class Commands
     public function reset_db()
     {
 
-        if(!defined('WP_DEBUG') || !WP_DEBUG) {
+        if (!defined('WP_DEBUG') || !WP_DEBUG) {
             \WP_CLI::error('WP_DEBUG must be enabled');
             return;
         }
@@ -659,6 +742,9 @@ class Commands
         \WP_CLI::line('Total Done: ' . $completedCount);
     }
 
+    /*
+     * wp fluent_crm activate_license --key=YOUR_LICENSE_KEY
+     */
     public function activate_license($args, $assoc_args)
     {
         if (empty($assoc_args['key'])) {
@@ -668,7 +754,7 @@ class Commands
 
         $licenseKey = trim(sanitize_text_field($assoc_args['key']));
 
-        if(!class_exists('\FluentCampaign\App\Services\PluginManager\LicenseManager')) {
+        if (!class_exists('\FluentCampaign\App\Services\PluginManager\LicenseManager')) {
             \WP_CLI::line('FluentCRM Pro is required');
             return;
         }
@@ -678,21 +764,21 @@ class Commands
         $licenseManager = new \FluentCampaign\App\Services\PluginManager\LicenseManager();
         $response = $licenseManager->activateLicense($licenseKey);
 
-        if(is_wp_error($response)) {
+        if (is_wp_error($response)) {
             \WP_CLI::error($response->get_error_message());
             return;
         }
 
         \WP_CLI::line('Your license key has been successfully updated');
-        \WP_CLI::line('Your License Status: '.  $response['status']);
-        \WP_CLI::line('Expire Date: '. $response['expires']);
+        \WP_CLI::line('Your License Status: ' . $response['status']);
+        \WP_CLI::line('Expire Date: ' . $response['expires']);
         return;
     }
 
     public function license_status()
     {
 
-        if(!class_exists('\FluentCampaign\App\Services\PluginManager\LicenseManager')) {
+        if (!class_exists('\FluentCampaign\App\Services\PluginManager\LicenseManager')) {
             \WP_CLI::line('FluentCRM Pro is required');
             return;
         }
@@ -703,8 +789,8 @@ class Commands
         $licenseManager->verifyRemoteLicense(true);
         $response = $licenseManager->getLicenseDetails();
 
-        \WP_CLI::line('Your License Status: '.  $response['status']);
-        \WP_CLI::line('Expires: '.  $response['expires']);
+        \WP_CLI::line('Your License Status: ' . $response['status']);
+        \WP_CLI::line('Expires: ' . $response['expires']);
         return;
     }
 }

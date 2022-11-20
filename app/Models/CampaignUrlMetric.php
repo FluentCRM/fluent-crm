@@ -101,7 +101,7 @@ class CampaignUrlMetric extends Model
                 'icon_class' => 'el-icon el-icon-chat-dot-square'
             ];
         }
-
+        
         $revenue = fluentcrm_get_campaign_meta($campaignId, '_campaign_revenue');
 
         if($revenue && $revenue->value) {

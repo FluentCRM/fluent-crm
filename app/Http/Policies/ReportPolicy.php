@@ -23,4 +23,14 @@ class ReportPolicy extends BasePolicy
     {
         return $this->currentUserCan('fcrm_view_dashboard');
     }
+
+    public function getEmails(Request $request)
+    {
+        return $this->currentUserCan('fcrm_read_emails');
+    }
+
+    public function deleteEmails(Request $request)
+    {
+        return $this->currentUserCan('fcrm_manage_email_delete');
+    }
 }

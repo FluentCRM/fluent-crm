@@ -21,7 +21,7 @@ class WebhookController extends Controller
     public function index(Request $request, Webhook $webhook)
     {
         $fields = $webhook->getFields();
-        $search = $request->get('search', '');
+        $search = $request->getSafe('search', '');
 
         $webhooks = $webhook->latest()->get()->toArray();
 
@@ -64,6 +64,7 @@ class WebhookController extends Controller
         );
         return [
             'id' => $webhook->id,
+            'webhook' => $webhook->value,
             'webhooks' => $webhook->latest()->get(),
             'message' => __('Successfully created the WebHook', 'fluent-crm')
         ];

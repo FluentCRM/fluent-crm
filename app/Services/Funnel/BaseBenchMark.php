@@ -24,13 +24,13 @@ abstract class BaseBenchMark
         add_action('fluentcrm_funnel_benchmark_start_' . $this->triggerName, array($this, 'handle'), $this->priority, 2);
 
         add_filter('fluentcrm_funnel_arg_num_' . $this->triggerName, function ($num) {
-            if($num >= $this->actionArgNum) {
+            if ($num >= $this->actionArgNum) {
                 return $num;
             }
             return $this->actionArgNum;
         });
 
-        apply_filters('fluentcrm_funnel_sequence_saving_'.$this->triggerName, function ($sequence) {
+        apply_filters('fluentcrm_funnel_sequence_saving_' . $this->triggerName, function ($sequence) {
             $sequence['type'] = 'benchmark';
             return $sequence;
         });
@@ -39,7 +39,7 @@ abstract class BaseBenchMark
     public function addBenchmark($benchMarks)
     {
         $benchMark = $this->getBlock();
-        if($benchMark) {
+        if ($benchMark) {
             $benchMark['type'] = 'benchmark';
             $benchMarks[$this->triggerName] = $benchMark;
         }
@@ -79,6 +79,14 @@ abstract class BaseBenchMark
                 ]
             ],
             'inline_help' => __('If you select [Optional Point] it will work as an Optional Trigger otherwise, it will wait for full-fill this action', 'fluent-crm')
+        ];
+    }
+
+    public function canEnterField()
+    {
+        return [
+            'type'        => 'yes_no_check',
+            'check_label' => __('Contacts can enter directly to this sequence point. If you enable this then any contact meet with goal will enter in this goal point.', 'fluent-crm')
         ];
     }
 

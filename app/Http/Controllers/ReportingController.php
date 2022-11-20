@@ -77,5 +77,5 @@ class ReportingController extends Controller
         return [
             'providers' => apply_filters('fluentcrm_advanced_report_providers', [])
         ];
-    }
+    } 
 }

@@ -22,11 +22,12 @@ class RemoveFromListBenchmark extends BaseBenchMark
         return [
             'title'       => __('List Removed', 'fluent-crm'),
             'description' => __('This will run when selected lists have been removed from a contact', 'fluent-crm'),
-            'icon' => 'fc-icon-list_removed',//fluentCrmMix('images/funnel_icons/list_removed.svg'),
+            'icon'        => 'fc-icon-list_removed',//fluentCrmMix('images/funnel_icons/list_removed.svg'),
             'settings'    => [
                 'lists'       => [],
                 'select_type' => 'any',
-                'type'        => 'optional'
+                'type'        => 'optional',
+                'can_enter'   => 'yes'
             ]
         ];
     }
@@ -36,7 +37,8 @@ class RemoveFromListBenchmark extends BaseBenchMark
         return [
             'lists'       => [],
             'select_type' => 'any',
-            'type'        => 'optional'
+            'type'        => 'optional',
+            'can_enter'   => 'yes'
         ];
     }
 
@@ -72,21 +74,8 @@ class RemoveFromListBenchmark extends BaseBenchMark
                         'value'      => []
                     ]
                 ],
-                'type'        => [
-                    'label'       => __('Benchmark type', 'fluent-crm'),
-                    'type'        => 'radio',
-                    'options'     => [
-                        [
-                            'id'    => 'optional',
-                            'title' => __('[Optional Point] This is an optional trigger point', 'fluent-crm')
-                        ],
-                        [
-                            'id'    => 'required',
-                            'title' => __('[Essential Point] Select IF this step is required for processing further actions', 'fluent-crm')
-                        ]
-                    ],
-                    'inline_help' => __('If you select [Optional Point] it will work as an Optional Trigger otherwise, it will wait for full-fill this action', 'fluent-crm')
-                ]
+                'type'        => $this->benchmarkTypeField(),
+                'can_enter'   => $this->canEnterField()
             ]
         ];
     }

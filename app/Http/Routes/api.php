@@ -16,6 +16,7 @@ $router->prefix('tags')->withPolicy('TagPolicy')->group(function ($router) {
     $router->get('{id}', 'TagsController@find')->int('id');
     $router->put('{id}', 'TagsController@store')->int('id');
     $router->delete('{id}', 'TagsController@remove')->int('id');
+    $router->post('do-bulk-action', 'TagsController@handleBulkAction');
 
     $router->post('/bulk', 'TagsController@storeBulk');
 
@@ -32,6 +33,7 @@ $router->prefix('lists')->withPolicy('ListPolicy')->group(function ($router) {
     $router->get('{id}', 'ListsController@find')->int('id');
     $router->put('{id}', 'ListsController@update')->int('id');
     $router->delete('/{id}', 'ListsController@remove')->int('id');
+    $router->post('do-bulk-action', 'ListsController@handleBulkAction');
 
     $router->post('/bulk', 'ListsController@storeBulk');
 
@@ -48,8 +50,11 @@ $router->prefix('subscribers')->withPolicy('SubscriberPolicy')->group(function (
     $router->delete('/', 'SubscriberController@deleteSubscribers');
     $router->post('sync-segments', 'SubscriberController@tagger');
     $router->post('do-bulk-action', 'SubscriberController@handleBulkActions');
+    $router->get('prev-next-ids', 'SubscriberController@getPrevNextIds');
 
     $router->get('{id}', 'SubscriberController@show')->int('id');
+    $router->delete('{id}', 'SubscriberController@deleteSubscriber')->int('id');
+
     $router->put('{id}', 'SubscriberController@updateSubscriber')->int('id');
     $router->get('{id}/emails', 'SubscriberController@emails')->int('id');
     $router->get('{id}/emails/template-mock', 'SubscriberController@getTemplateMock')->int('id');
@@ -97,11 +102,17 @@ $router->prefix('campaigns')->withPolicy('CampaignPolicy')->group(function ($rou
     $router->put('{id}/title', 'CampaignController@updateCampaignTitle')->int('id');
     $router->delete('{id}', 'CampaignController@delete')->int('id');
 
+    $router->post('do-bulk-action', 'CampaignController@handleBulkAction')->int('id');
+
     $router->post('{id}/subscribe', 'CampaignController@subscribe')->int('id');
+    $router->post('{id}/draft-recipients', 'CampaignController@draftRecipients')->int('id');
+    $router->get('{id}/estimated-recipients-count', 'CampaignController@recipientsCount')->int('id');
+
     $router->get('{id}/emails', 'CampaignController@campaignEmails')->int('id');
     $router->delete('{id}/emails', 'CampaignController@deleteCampaignEmails')->int('id');
     $router->post('{id}/schedule', 'CampaignController@schedule')->int('id');
     $router->post('{id}/un-schedule', 'CampaignController@unSchedule')->int('id');
+    $router->get('{id}/processing-stat', 'CampaignController@processingStat')->int('id');
 
 
     $router->get('{id}/status', 'CampaignController@getCampaignStatus')->int('id');
@@ -109,6 +120,7 @@ $router->prefix('campaigns')->withPolicy('CampaignPolicy')->group(function ($rou
     $router->get('{id}/revenues', 'CampaignAnalyticsController@getRevenueReport')->int('id');
     $router->get('{id}/unsubscribers', 'CampaignAnalyticsController@getUnsubscribers')->int('id');
 
+    $router->get('{id}/contacts-by-segment', 'CampaignAnalyticsController@getSegmentedContacts')->int('id');
 });
 
 $router->prefix('templates')->withPolicy('TemplatePolicy')->group(function ($router) {
@@ -122,6 +134,9 @@ $router->prefix('templates')->withPolicy('TemplatePolicy')->group(function ($rou
     $router->put('{id}', 'TemplateController@update')->int('id');
     $router->post('/duplicate/{id}', 'TemplateController@duplicate')->int('id');
     $router->delete('{id}', 'TemplateController@delete')->int('id');
+    $router->post('do-bulk-action', 'TemplateController@handleBulkAction');
+
+    $router->post('set-global-style', 'TemplateController@setGlobalStyle');
 
 });
 
@@ -136,17 +151,22 @@ $router->prefix('funnels')->withPolicy('FunnelPolicy')->group(function ($router)
     $router->post('import', 'FunnelController@importFunnel');
 
     $router->get('triggers', 'FunnelController@getTriggersRest');
-    $router->put('{id}/change-trigger', 'FunnelController@changeTrigger')->int('id');
 
     $router->get('subscriber/{subscriber_id}/automations', 'FunnelController@subscriberAutomations');
 
     $router->get('{id}', 'FunnelController@getFunnel')->int('id');
     $router->post('{id}/clone', 'FunnelController@cloneFunnel')->int('id');
+    $router->put('{id}', 'FunnelController@updateFunnelProperty')->int('id');
+    $router->put('{id}/change-trigger', 'FunnelController@changeTrigger')->int('id');
     $router->post('{id}/sequences', 'FunnelController@saveSequences')->int('id');
+
+    $router->post('{id}/sequences/save-email-action', 'FunnelController@saveEmailAction')->int('id');
+
     $router->get('{id}/subscribers', 'FunnelController@getSubscribers')->int('id');
     $router->delete('{id}/subscribers', 'FunnelController@deleteSubscribers')->int('id');
     $router->delete('{id}', 'FunnelController@delete')->int('id');
     $router->get('{id}/report', 'FunnelController@report')->int('id');
+    $router->post('do-bulk-action', 'FunnelController@handleBulkAction');
 
 
     $router->get('{id}/email_reports', 'FunnelController@getEmailReports')->int('id');
@@ -190,6 +210,7 @@ $router->prefix('setting')->withPolicy('SettingsPolicy')->group(function ($route
     $router->post('install-fluentform', 'SetupController@handleFluentFormInstall');
     $router->post('install-fluentsmtp', 'SetupController@handleFluentSmtpInstall');
     $router->post('install-fluentconnect', 'SetupController@handleFluentConnectInstall');
+    $router->post('install-fluent-support', 'SetupController@handleFluentSupportInstall');
 
     $router->get('bounce_configs', 'SettingsController@getBounceConfigs');
 
@@ -213,6 +234,12 @@ $router->prefix('setting')->withPolicy('SettingsPolicy')->group(function ($route
 
     $router->get('integrations', 'SettingsController@getIntegrations');
     $router->post('integrations', 'SettingsController@saveIntegration');
+
+    $router->get('compliance', 'SettingsController@getComplianceSettings');
+    $router->post('compliance', 'SettingsController@updateComplianceSettings');
+
+    $router->get('experiments', 'SettingsController@getExperimentalSettings');
+    $router->post('experiments', 'SettingsController@updateExperimentalSettings');
 
 });
 
@@ -265,8 +292,9 @@ $router->prefix('forms')->withPolicy('FormsPolicy')->group(function ($router) {
 /*
  * Fluent Forms Wrapper
  */
-$router->prefix('docs')->withPolicy('SettingsPolicy')->group(function ($router) {
+$router->prefix('docs')->withPolicy('ReportPolicy')->group(function ($router) {
     $router->get('/', 'DocsController@index');
+    $router->get('/{doc_id}', 'DocsController@getDoc')->int('doc_id');
     $router->get('/addons', 'DocsController@getAddons');
 });
 

@@ -4,7 +4,6 @@ namespace FluentCrmMigrations;
 
 class Meta
 {
-
     /**
      * Migrate the table.
      *
@@ -29,10 +28,21 @@ class Meta
                 `created_at` TIMESTAMP NULL,
                 `updated_at` TIMESTAMP NULL,
                  INDEX `{$indexPrefix}_mt_idx` (`object_type` ASC),
-                 INDEX `{$indexPrefix}_mto_id_idx` (`object_id` ASC)
+                 INDEX `{$indexPrefix}_mto_id_idx` (`object_id` ASC),
+                 INDEX `{$indexPrefix}_mto_id_key` (`key` )
             ) $charsetCollate;";
-
             dbDelta($sql);
+        } else {
+            $indexes = $wpdb->get_results("SHOW INDEX FROM $table");
+            $indexedColumns = [];
+            foreach ($indexes as $index) {
+                $indexedColumns[] = $index->Column_name;
+            }
+
+            if(!in_array('key', $indexedColumns)) {
+                $sql = "ALTER TABLE {$table} ADD INDEX `{$indexPrefix}_mto_id_key` (`key`);";
+                $wpdb->query($sql);
+            }
         }
     }
 }

@@ -49,7 +49,7 @@ class Application extends Container
         $this->handlerNamespace = $psr4['app/'] . 'Hooks\Handlers';
 
         $this->policyNamespace = $psr4['app/'] . 'Http\Policies';
-        
+
         $this->controllerNamespace = $psr4['app/'] . 'Http\Controllers';
     }
 
@@ -120,7 +120,7 @@ class Application extends Container
     {
         $this->addAction('init', function() {
             load_plugin_textdomain(
-                $this->config->get('app.text_domain'), false, $this->config->get('app.domain_path')
+                $this->config->get('app.text_domain'), false, $this->config->get('app.slug') . $this->config->get('app.domain_path')
             );
         });
     }

@@ -22,11 +22,12 @@ class TagAppliedBenchmark extends BaseBenchMark
         return [
             'title'       => __('Tag Applied', 'fluent-crm'),
             'description' => __('This will run when selected Tags have been applied to a contact', 'fluent-crm'),
-            'icon' => 'fc-icon-tag_applied',//fluentCrmMix('images/funnel_icons/tag-applied.svg'),
+            'icon'        => 'fc-icon-tag_applied',//fluentCrmMix('images/funnel_icons/tag-applied.svg'),
             'settings'    => [
                 'tags'        => [],
                 'select_type' => 'any',
-                'type'        => 'optional'
+                'type'        => 'optional',
+                'can_enter'   => 'yes'
             ]
         ];
     }
@@ -36,7 +37,8 @@ class TagAppliedBenchmark extends BaseBenchMark
         return [
             'tags'        => [],
             'select_type' => 'any',
-            'type'        => 'optional'
+            'type'        => 'optional',
+            'can_enter'   => 'yes'
         ];
     }
 
@@ -73,7 +75,8 @@ class TagAppliedBenchmark extends BaseBenchMark
                         'value'      => []
                     ]
                 ],
-                'type'        => $this->benchmarkTypeField()
+                'type'        => $this->benchmarkTypeField(),
+                'can_enter'   => $this->canEnterField()
             ]
         ];
     }

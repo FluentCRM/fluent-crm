@@ -25,12 +25,12 @@ class TagsController extends Controller
     public function index(Request $request)
     {
         $order = [
-            'by'    => $request->get('sort_by', 'id'),
-            'order' => $request->get('sort_order', 'DESC')
+            'by'    => $request->getSafe('sort_by', 'id', 'sanitize_sql_orderby'),
+            'order' => $request->getSafe('sort_order', 'DESC', 'sanitize_sql_orderby')
         ];
 
         $tags = Tag::orderBy($order['by'], $order['order'])
-            ->searchBy($request->get('search'))
+            ->searchBy($request->getSafe('search'))
             ->paginate();
 
         if (!$request->get('exclude_counts')) {
@@ -78,21 +78,21 @@ class TagsController extends Controller
     {
         $allData = $request->all();
 
-        if (empty($data['slug'])) {
-            $data['slug'] = sanitize_title($allData['title'], 'display');
+        if (empty($allData['slug'])) {
+            $allData['slug'] = sanitize_title($allData['title'], 'display');
         } else {
-            $data['slug'] = sanitize_title($data['slug'], 'display');
+            $allData['slug'] = sanitize_title($allData['slug'], 'display');
         }
 
-        $this->validate($request->except('action'), [
+        $allData = $this->validate($allData, [
             'title' => 'required',
             'slug'  => "required|unique:fc_tags,slug"
         ]);
 
         $tag = Tag::create([
-            'title' => $allData['title'],
-            'slug'  => $data['slug'],
-            'description' => sanitize_text_field(Arr::get($allData, 'description'))
+            'title' => sanitize_text_field($allData['title']),
+            'slug'  => $allData['slug'],
+            'description' => sanitize_textarea_field(Arr::get($allData, 'description'))
         ]);
 
         do_action('fluentcrm_tag_created', $tag->id);
@@ -111,14 +111,40 @@ class TagsController extends Controller
      */
     public function store(Request $request, $id)
     {
-        $allData = $request->all();
-        $this->validate($allData, [
+        $allData = $this->validate($request->all(), [
             'title' => 'required'
         ]);
 
+        if(!empty($allData['slug'])) {
+            $allData['slug'] = sanitize_title($allData['slug'], 'display');
+        }
+
+        if ($id == 0 && $request->get('update_by') == 'slug' && !empty($allData['slug'])) {
+
+            $tag = Tag::where('slug', $allData['slug'])->first();
+            if (!$tag) {
+                return $this->sendError([
+                    'message' => 'Tag could not be found'
+                ]);
+            }
+            $id = $tag->id;
+        } else {
+            $tag = Tag::findOrFail($id);
+            if(empty($allData['slug'])) {
+                $allData['slug'] = $tag->slug;
+            }
+        }
+
+        if (Tag::where('slug', $allData['slug'])->where('id', '!=', $id)->first()) {
+            return $this->sendError([
+                'message' => 'Provided slug already exist in another tag'
+            ]);
+        }
+
         $tag = Tag::where('id', $id)->update([
-            'title' => $allData['title'],
-            'description' => sanitize_text_field(Arr::get($allData, 'description'))
+            'title'       => sanitize_text_field($allData['title']),
+            'slug'        => $allData['slug'],
+            'description' => sanitize_textarea_field(Arr::get($allData, 'description')),
         ]);
 
         do_action('fluentcrm_tag_updated', $id);
@@ -135,6 +161,7 @@ class TagsController extends Controller
     public function storeBulk()
     {
         $tags = $this->request->get('tags', []);
+
         if(!$tags) {
             $tags = $this->request->get('items', []);
         }
@@ -147,12 +174,12 @@ class TagsController extends Controller
             }
 
             if(empty($tag['slug'])) {
-                $tag['slug'] = sanitize_title($tag['title']);
+                $tag['slug'] = sanitize_title($tag['title'], 'display');
             }
 
             $tag = Tag::updateOrCreate(
                 ['slug' => sanitize_title($tag['slug'], 'display')],
-                ['title' => $tag['title']]
+                ['title' => sanitize_text_field($tag['title'])]
             );
 
             $createdIds[] = $tag->id;
@@ -181,5 +208,25 @@ class TagsController extends Controller
         return $this->sendSuccess([
             'message' => __('Successfully removed the tag.', 'fluent-crm')
         ]);
+    }
+
+
+    public function handleBulkAction(Request $request)
+    {
+        $tagIds = $request->getSafe('tagIds', [], 'intval');
+
+        $tagIds = array_filter($tagIds);
+
+        if($tagIds) {
+            foreach ($tagIds as $tagId) {
+                Tag::where('id', $tagId)->delete();
+                do_action('fluentcrm_tag_deleted', $tagId);
+            }
+        }
+
+        return $this->sendSuccess([
+            'message' => __('Selected Tags has been removed permanently', 'fluent-crm'),
+        ]);
+
     }
 }

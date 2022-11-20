@@ -40,6 +40,8 @@ class MailerLite
 
         if ($options && $method == 'POST') {
             $args['body'] = \json_encode($options);
+        } else if($method == 'GET' && $options) {
+            $endpointUrl = add_query_arg($options, $endpointUrl);
         }
 
         /* Execute request based on method. */

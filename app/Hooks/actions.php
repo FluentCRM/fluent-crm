@@ -9,7 +9,6 @@
  * as the controller name then it will become FluentCrm\App\Hooks\Handlers\MyClass.
  */
 
-
 $app->addAction('fluentcrm_contacts_filter_subscriber', function ($query, $filters) {
     return (new \FluentCrm\App\Models\Subscriber)->buildGeneralPropertiesFilterQuery($query, $filters);
 }, 10, 2);
@@ -28,6 +27,7 @@ $app->addAction('fluentcrm_contacts_filter_activities', function ($query, $filte
 
 $app->addAction('fluentcrm_scheduled_minute_tasks', 'Scheduler@process');
 $app->addAction('fluentcrm_scheduled_hourly_tasks', 'Scheduler@processHourly');
+$app->addAction('fluentcrm_scheduled_five_minute_tasks', 'Scheduler@processFiveMinutes');
 $app->addAction('fluentcrm_process_contact_jobs', 'Scheduler@processForSubscriber', 999, 1);
 $app->addAction('fluentcrm_scheduled_weekly_tasks', 'Scheduler@processWeekly');
 
@@ -35,9 +35,11 @@ $app->addAction('fluentcrm_scheduled_weekly_tasks', 'Scheduler@processWeekly');
 
 $app->addAction('wp_loaded', 'AdminMenu@init');
 
-$app->addAction('fluentcrm_campaign_status_active', 'CampaignGuard@checkIsActive');
-
-$app->addAction('fluentcrm_campaign_status_working', 'CampaignGuard@checkIsWorking');
+/*
+ * We don't need this
+ */
+//$app->addAction('fluentcrm_campaign_status_active', 'CampaignGuard@checkIsActive');
+//$app->addAction('fluentcrm_campaign_status_working', 'CampaignGuard@checkIsWorking');
 
 $app->addAction('init', 'ExternalPages@route', 99);
 
@@ -50,11 +52,15 @@ $app->addAction('wp_ajax_nopriv_fluentcrm_manage_preferences_ajax', 'ExternalPag
 $app->addAction('wp_ajax_fluentcrm_callback_for_background', 'ExternalPages@handleBackgroundProcessCallback');
 $app->addAction('wp_ajax_nopriv_fluentcrm_callback_for_background', 'ExternalPages@handleBackgroundProcessCallback');
 
-// Fallback for funnel sequence save ajax
+$app->addAction('wp_ajax_fluent_crm_account_form', 'PrefFormHandler@handleAjax');
+$app->addAction('wp_ajax_nopriv_fluent_crm_account_form', 'PrefFormHandler@handleAjax');
 
+
+// Fallback for funnel sequence save ajax
 $app->addAction('wp_ajax_fluentcrm_save_funnel_sequence_ajax', 'FunnelHandler@saveSequences');
 $app->addAction('wp_ajax_fluentcrm_export_funnel', 'FunnelHandler@exportFunnel');
-
+$app->addAction('wp_ajax_fluentcrm_save_funnel_email_action', 'FunnelHandler@saveEmailAction');
+$app->addAction('wp_ajax_fluentcrm_save_campaign_email_body', 'FunnelHandler@saveCampaignEmail');
 
 /*
  * Integrations
@@ -81,6 +87,7 @@ $app->addAction('fluentcrm_subscriber_status_to_bounced', 'Cleanup@handleUnsubsc
 $app->addAction('fluentcrm_subscriber_status_to_complained', 'Cleanup@handleUnsubscribe');
 
 $app->addAction('fluentcrm_contact_email_changed', 'Cleanup@handleContactEmailChanged');
+$app->addAction('delete_user', 'Cleanup@handleUserDelete', 10, 3);
 
 /*
  * Admin Bar
@@ -102,6 +109,15 @@ add_action('wp_ajax_nopriv_fluentcrm-post-campaigns-send-now', function () use (
             'timestamp' => time()
         ]);
     }
+});
+
+add_action('wp_ajax_nopriv_fluentcrm-post-campaigns-emails-processing', function () use ($app) {
+    \FluentCrm\App\Hooks\Handlers\Scheduler::processFiveMinutes();
+
+    wp_send_json_success([
+        'message' => 'success',
+        'time'    => time()
+    ]);
 });
 
 /*
@@ -129,7 +145,6 @@ add_action('init', function () {
 /*
  * Setup-wizard
  */
-
 if (!empty($_GET['page']) && 'fluentcrm-setup' == $_GET['page']) {
     add_action('admin_menu', function () {
         add_dashboard_page('FluentCRM Setup', 'FluentCRM Setup', 'manage_options', 'fluentcrm-setup', function () {
@@ -142,13 +157,15 @@ if (!empty($_GET['page']) && 'fluentcrm-setup' == $_GET['page']) {
     }, 999);
 }
 
-
 $app->addAction('user_register', 'AutoSubscribeHandler@userRegistrationHandler', 99, 1);
 $app->addAction('comment_post', 'AutoSubscribeHandler@handleCommentPost', 99, 3);
 
 $app->addAction('profile_update', 'AutoSubscribeHandler@syncUserUpdate', 10, 2);
 $app->addAction('delete_user', 'AutoSubscribeHandler@maybeDeleteContact', 10, 3);
 
+add_shortcode('fluentcrm_pref', function ($atts, $content) {
+    return (new \FluentCrm\App\Hooks\Handlers\PrefFormHandler())->handleShortCode($atts, $content);
+});
 
 // require the CLI
 if (defined('WP_CLI') && WP_CLI) {

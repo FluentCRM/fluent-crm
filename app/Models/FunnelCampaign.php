@@ -40,7 +40,14 @@ class FunnelCampaign extends Campaign
             'utm_content'      => '',
             'design_template'  => $defaultTemplate,
             'settings'         => (object)[
-                'template_config' => Helper::getTemplateConfig($defaultTemplate)
+                'template_config' => Helper::getTemplateConfig($defaultTemplate),
+                'mailer_settings' =>  [
+                    'from_name'      => '',
+                    'from_email'     => '',
+                    'reply_to_name'  => '',
+                    'reply_to_email' => '',
+                    'is_custom'      => 'no'
+                ]
             ]
         ];
     }
@@ -108,10 +115,10 @@ class FunnelCampaign extends Campaign
         }
 
         // We have to handle manually
-        $emailBody = (new BlockParser($this->subscriber))->parse($this->email_body);
-        $args['email_body'] = apply_filters('fluentcrm_parse_campaign_email_text', $emailBody, $subscriber);
-        $args['email_subject'] = apply_filters('fluentcrm_parse_campaign_email_text', $this->email_subject, $subscriber);;
-        $args['is_parsed'] = 1;
+     //   $emailBody = (new BlockParser($this->subscriber))->parse($this->email_body);
+       // $args['email_body'] = apply_filters('fluentcrm_parse_campaign_email_text', $emailBody, $subscriber);
+      //  $args['email_subject'] = apply_filters('fluentcrm_parse_campaign_email_text', $this->email_subject, $subscriber);;
+       // $args['is_parsed'] = 1;
 
         return $this->subscribe([$subscriber], $args, true);
     }

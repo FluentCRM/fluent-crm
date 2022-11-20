@@ -13,7 +13,6 @@ use FluentCrm\App\Models\Subscriber;
  *
  * @version 1.0.0
  */
-
 class ContactActivityLogger
 {
     public function register()
@@ -48,8 +47,8 @@ class ContactActivityLogger
 
         $subscriber->last_activity = current_time('mysql');
         if (!$subscriber->ip && fluentCrmWillTrackIp()) {
-            $ip = FluentCrm('request')->getIp();
-            if($ip != '127.0.0.1') {
+            $ip = FluentCrm('request')->getIp(fluentCrmWillAnonymizeIp());
+            if ($ip != '127.0.0.1') {
                 $subscriber->ip = $ip;
             }
         }
@@ -60,16 +59,19 @@ class ContactActivityLogger
     public function trackActivityBySubscriber($subscriber)
     {
         if (is_numeric($subscriber)) {
-            $subscriber = Subscriber::where('id', $subscriber)->first();
+            $subscriber = fluentCrmGetFromCache('subscriber_' . $subscriber, function () use ($subscriber) {
+                return Subscriber::where('id', $subscriber)->first();
+            });
         }
+
         if (!$subscriber) {
             return;
         }
 
         $subscriber->last_activity = current_time('mysql');
         if (!$subscriber->ip && fluentCrmWillTrackIp()) {
-            $ip = FluentCrm('request')->getIp();
-            if($ip != '127.0.0.1') {
+            $ip = FluentCrm('request')->getIp(fluentCrmWillAnonymizeIp());
+            if ($ip != '127.0.0.1') {
                 $subscriber->ip = $ip;
             }
         }

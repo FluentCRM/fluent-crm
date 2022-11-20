@@ -461,6 +461,18 @@ class Grammar extends BaseGrammar
     }
 
     /**
+     * Compile a "where timestamp" clause.
+     *
+     * @param  \FluentCrm\Framework\Database\Query\Builder  $query
+     * @param  array  $where
+     * @return string
+     */
+    protected function whereTimestamp(Builder $query, $where)
+    {
+        return $this->dateBasedWhere('timestamp', $query, $where);
+    }
+
+    /**
      * Compile a "where time" clause.
      *
      * @param  \FluentCrm\Framework\Database\Query\Builder  $query

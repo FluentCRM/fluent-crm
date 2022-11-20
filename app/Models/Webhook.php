@@ -65,7 +65,7 @@ class Webhook extends Meta
             'object_type' => 'webhook',
             'key' => $key = wp_generate_uuid4(),
             'value' => array_merge($data, [
-                'url' => admin_url("?fluentcrm=1&route=contact&hash={$key}")
+                'url' => site_url("?fluentcrm=1&route=contact&hash={$key}")
             ]),
         ]);
     }

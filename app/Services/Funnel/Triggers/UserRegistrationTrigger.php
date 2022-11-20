@@ -133,7 +133,8 @@ class UserRegistrationTrigger extends BaseTrigger
 
         // check user roles
         if ($roles = Arr::get($conditions, 'user_roles', [])) {
-            return !!array_intersect($user->roles, $roles);
+            $userRoles = array_values($user->roles);
+            return !!array_intersect($userRoles, $roles);
         }
 
         return true;

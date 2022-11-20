@@ -50,69 +50,71 @@ class Integrations
             FLUENTCRM_PLUGIN_VERSION
         );
 
-        register_block_type(
-            'fluent-crm/conditional-content',
-            array(
-                'editor_script'   => 'fluentcrm-blocks-block-editor',
-                'editor_style'    => 'fluentcrm-blocks-block-editor',
-                'attributes'      => array(
-                    'condition_type' => [
-                        'type'    => 'string',
-                        'default' => 'show_if_tag_exist'
-                    ],
-                    'tag_ids'        => [
-                        'type'    => 'array',
-                        'default' => []
-                    ]
-                ),
-                'render_callback' => function ($data, $content) {
-                    $checkType = Arr::get($data, 'condition_type', 'show_if_tag_exist');
-                    if ($checkType == 'show_if_logged_in') {
-                        if (get_current_user_id()) {
-                            return $content;
-                        }
-                        return '';
-                    }
-
-                    if ($checkType == 'show_if_public_users') {
-                        if (!get_current_user_id()) {
-                            return $content;
-                        }
-                        return '';
-                    }
-
-                    $tagIds = Arr::get($data, 'tag_ids', []);
-                    if (!$tagIds) {
-                        return '';
-                    }
-
-                    $subscriber = fluentcrm_get_current_contact();
-                    if ($checkType == 'show_if_tag_not_exist') {
-                        if (!$subscriber) {
-                            return $content;
-                        }
-                        $tagMatched = $subscriber->hasAnyTagId($tagIds);
-                        if ($tagMatched) {
+        if (function_exists('\register_block_type')) {
+            \register_block_type(
+                'fluent-crm/conditional-content',
+                array(
+                    'editor_script'   => 'fluentcrm-blocks-block-editor',
+                    'editor_style'    => 'fluentcrm-blocks-block-editor',
+                    'attributes'      => array(
+                        'condition_type' => [
+                            'type'    => 'string',
+                            'default' => 'show_if_tag_exist'
+                        ],
+                        'tag_ids'        => [
+                            'type'    => 'array',
+                            'default' => []
+                        ]
+                    ),
+                    'render_callback' => function ($data, $content) {
+                        $checkType = Arr::get($data, 'condition_type', 'show_if_tag_exist');
+                        if ($checkType == 'show_if_logged_in') {
+                            if (get_current_user_id()) {
+                                return $content;
+                            }
                             return '';
-                        };
+                        }
 
-                        return $content;
-                    }
+                        if ($checkType == 'show_if_public_users') {
+                            if (!get_current_user_id()) {
+                                return $content;
+                            }
+                            return '';
+                        }
 
-                    if (!$subscriber) {
-                        return '';
-                    }
+                        $tagIds = Arr::get($data, 'tag_ids', []);
+                        if (!$tagIds) {
+                            return '';
+                        }
 
-                    $tagMatched = $subscriber->hasAnyTagId($tagIds);
+                        $subscriber = fluentcrm_get_current_contact();
+                        if ($checkType == 'show_if_tag_not_exist') {
+                            if (!$subscriber) {
+                                return $content;
+                            }
+                            $tagMatched = $subscriber->hasAnyTagId($tagIds);
+                            if ($tagMatched) {
+                                return '';
+                            };
 
-                    if ($checkType == 'show_if_tag_exist') {
-                        if ($tagMatched) {
                             return $content;
-                        };
-                        return '';
+                        }
+
+                        if (!$subscriber) {
+                            return '';
+                        }
+
+                        $tagMatched = $subscriber->hasAnyTagId($tagIds);
+
+                        if ($checkType == 'show_if_tag_exist') {
+                            if ($tagMatched) {
+                                return $content;
+                            };
+                            return '';
+                        }
                     }
-                }
-            )
-        );
+                )
+            );
+        }
     }
 }

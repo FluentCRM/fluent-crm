@@ -6,9 +6,11 @@ use FluentCrm\App\Models\CampaignEmail;
 use FluentCrm\App\Models\CampaignUrlMetric;
 use FluentCrm\App\Models\FunnelMetric;
 use FluentCrm\App\Models\FunnelSubscriber;
+use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\SubscriberMeta;
 use FluentCrm\App\Models\SubscriberNote;
 use FluentCrm\App\Models\SubscriberPivot;
+use FluentCrm\App\Services\Helper;
 
 /**
  *  Cleanup Class
@@ -80,7 +82,7 @@ class Cleanup
     public function handleUnsubscribe($subscriber)
     {
         CampaignEmail::where('subscriber_id', $subscriber->id)
-            ->whereIn('status', ['pending', 'scheduled', 'draft'])
+            ->whereIn('status', ['pending', 'scheduled', 'draft', 'processing', 'scheduling'])
             ->update([
                 'status' => 'cancelled'
             ]);
@@ -112,5 +114,95 @@ class Cleanup
             ->update([
                 'email_address' => $subscriber->email
             ]);
+    }
+
+
+    /**
+     * @param $userId int
+     * @param $resign int|null
+     * @param $deletedUser \WP_User
+     * @return bool
+     */
+    public function handleUserDelete($userId, $resign, $deletedUser)
+    {
+        $settings = Helper::getComplianceSettings();
+        if ($settings['delete_contact_on_user'] !== 'yes') {
+            return false;
+        }
+
+        $subscriber = Subscriber::where('user_id', $userId)->first();
+
+        if(!$subscriber && $deletedUser) {
+            $subscriber = Subscriber::where('email', $deletedUser->user_email)->first();
+        }
+
+        if (!$subscriber) {
+            return false;
+        }
+
+        // delete the subscriber now;
+        Helper::deleteContacts([$subscriber->id]);
+
+        return true;
+    }
+
+    public function attachCrmExporter($exporters)
+    {
+        $settings = Helper::getComplianceSettings();
+        if ($settings['personal_data_export'] !== 'yes') {
+            return $exporters;
+        }
+
+        $exporters['fluent-crm'] = [
+            'exporter_friendly_name' => __('FluentCRM Data', 'fluent-crm'),
+            'callback'               => [$this, 'exportPersonalDataWP'],
+        ];
+
+        return $exporters;
+
+    }
+
+    public function exportPersonalDataWP($user_email, $page = 1)
+    {
+        $subscriber = Subscriber::where('email', $user_email)->first();
+
+        if (!$subscriber) {
+            return [
+                'data' => [],
+                'done' => true
+            ];
+        }
+
+        $customerFields = $subscriber->custom_fields();
+        $mainFields = $subscriber->toArray();
+
+        $data = [
+            'group_id'    => 'fluent-crm-contact',
+            'group_label' => __('Fluent CRM Data', 'fluent-crm'),
+            'item_id'     => 'crm-contact',
+            'data'        => []
+        ];
+
+        foreach ($mainFields as $fieldKey => $fieldValue) {
+            if($fieldValue) {
+                $data['data'][] = [
+                    'name'  => $fieldKey,
+                    'value' => $fieldValue
+                ];
+            }
+        }
+
+        foreach ($customerFields as $fieldKey => $customerField) {
+            $data['data'][] = [
+                'name'  => $fieldKey,
+                'value' => $customerField
+            ];
+        }
+
+        return [
+            'data' => [$data],
+            'done' => true,
+        ];
+
     }
 }

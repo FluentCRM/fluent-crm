@@ -2,6 +2,7 @@
 
 namespace FluentCrm\App\Http\Controllers;
 
+use FluentCrm\App\Models\Campaign;
 use FluentCrm\App\Models\CampaignUrlMetric;
 use FluentCrm\Framework\Request\Request;
 
@@ -14,13 +15,12 @@ use FluentCrm\Framework\Request\Request;
  *
  * @version 1.0.0
  */
-
 class CampaignAnalyticsController extends Controller
 {
     public function getLinksReport(CampaignUrlMetric $campaignUrlMetric, $campaignId)
     {
         return $this->sendSuccess([
-            'links' => $campaignUrlMetric->getLinksReport($campaignId)
+            'links' =>  $campaignUrlMetric->getLinksReport($campaignId)
         ]);
     }
 
@@ -43,7 +43,7 @@ class CampaignAnalyticsController extends Controller
             $orders = [];
             foreach ($orderMetas as $orderMeta) {
                 $order = wc_get_order($orderMeta->post_id);
-                if(!$order || !$order->get_id()) {
+                if (!$order || !$order->get_id()) {
                     continue;
                 }
 
@@ -75,13 +75,13 @@ class CampaignAnalyticsController extends Controller
             return [
                 'orders' => $orders,
                 'labels' => [
-                    'id' => __('ID', 'fluent-crm'),
-                    'title' => __('Title', 'fluent-crm'),
+                    'id'     => __('ID', 'fluent-crm'),
+                    'title'  => __('Title', 'fluent-crm'),
                     'status' => __('Status', 'fluent-crm'),
-                    'date' => __('Date', 'fluent-crm'),
-                    'total' => __('Total', 'fluent-crm')
+                    'date'   => __('Date', 'fluent-crm'),
+                    'total'  => __('Total', 'fluent-crm')
                 ],
-                'total' => fluentCrmDb()->table('postmeta')
+                'total'  => fluentCrmDb()->table('postmeta')
                     ->select('post_id')
                     ->where('meta_key', '_fc_cid')
                     ->where('meta_value', $campaignId)
@@ -90,43 +90,43 @@ class CampaignAnalyticsController extends Controller
         } else if (class_exists('\Easy_Digital_Downloads')) {
             foreach ($orderMetas as $orderMeta) {
                 $payment = new \EDD_Payment($orderMeta->post_id);
-                if(!$payment || !$payment->ID) {
+                if (!$payment || !$payment->ID) {
                     continue;
                 }
                 $orderActionHtml = '<a href="' . add_query_arg('id', $payment->ID, admin_url('edit.php?post_type=download&page=edd-payment-history&view=view-order-details')) . '">' . __('View Order Details', 'fluent-crm') . '</a>';
-                $amount  = $payment->total;
-                $amount  = ! empty( $amount ) ? $amount : 0;
+                $amount = $payment->total;
+                $amount = !empty($amount) ? $amount : 0;
 
-                $customer_id = edd_get_payment_customer_id( $payment->ID );
+                $customer_id = edd_get_payment_customer_id($payment->ID);
 
-                if( ! empty( $customer_id ) ) {
-                    $customer    = new \EDD_Customer( $customer_id );
-                    $customerName = '<a href="' . esc_url( admin_url( "edit.php?post_type=download&page=edd-customers&view=overview&id=$customer_id" ) ) . '">' . $customer->name . '</a>';
+                if (!empty($customer_id)) {
+                    $customer = new \EDD_Customer($customer_id);
+                    $customerName = '<a href="' . esc_url(admin_url("edit.php?post_type=download&page=edd-customers&view=overview&id=$customer_id")) . '">' . $customer->name . '</a>';
                 } else {
-                    $email = edd_get_payment_user_email( $payment->ID );
-                    $customerName = '<a href="' . esc_url( admin_url( "edit.php?post_type=download&page=edd-payment-history&s=$email" ) ) . '">' . __( '(customer missing)', 'easy-digital-downloads' ) . '</a>';
+                    $email = edd_get_payment_user_email($payment->ID);
+                    $customerName = '<a href="' . esc_url(admin_url("edit.php?post_type=download&page=edd-payment-history&s=$email")) . '">' . __('(customer missing)', 'easy-digital-downloads') . '</a>';
                 }
 
                 $formattedOrders[] = [
                     'order'  => '#' . $payment->number,
-                    'title' => $customerName,
+                    'title'  => $customerName,
                     'date'   => date_i18n(get_option('date_format'), strtotime($payment->date)),
                     'status' => $payment->status_nicename,
-                    'total'  => edd_currency_filter( edd_format_amount( $amount ), edd_get_payment_currency_code( $payment->ID ) ),
+                    'total'  => edd_currency_filter(edd_format_amount($amount), edd_get_payment_currency_code($payment->ID)),
                     'action' => $orderActionHtml
                 ];
             }
             return [
                 'orders' => $formattedOrders,
                 'labels' => [
-                    'order' => '#',
-                    'title' => __('Customer', 'fluent-crm'),
+                    'order'  => '#',
+                    'title'  => __('Customer', 'fluent-crm'),
                     'status' => __('Status', 'fluent-crm'),
-                    'date' => __('Date', 'fluent-crm'),
-                    'total' => __('Total', 'fluent-crm'),
+                    'date'   => __('Date', 'fluent-crm'),
+                    'total'  => __('Total', 'fluent-crm'),
                     'action' => __('View', 'fluent-crm')
                 ],
-                'total' => fluentCrmDb()->table('postmeta')
+                'total'  => fluentCrmDb()->table('postmeta')
                     ->select('post_id')
                     ->where('meta_key', '_fc_cid')
                     ->where('meta_value', $campaignId)
@@ -137,13 +137,13 @@ class CampaignAnalyticsController extends Controller
         return [
             'orders' => [],
             'labels' => [
-                'order' => '#',
-                'title' => __('Customer', 'fluent-crm'),
+                'order'  => '#',
+                'title'  => __('Customer', 'fluent-crm'),
                 'status' => __('Status', 'fluent-crm'),
-                'date' => __('Date', 'fluent-crm'),
-                'total' => __('Total', 'fluent-crm')
+                'date'   => __('Date', 'fluent-crm'),
+                'total'  => __('Total', 'fluent-crm')
             ],
-            'total' => 0
+            'total'  => 0
         ];
     }
 
@@ -160,6 +160,29 @@ class CampaignAnalyticsController extends Controller
 
         return [
             'unsubscribes' => $unsubscribes
+        ];
+    }
+
+    public function getSegmentedContacts(Request $request, $campaignId)
+    {
+        $campaign = Campaign::findOrFail($campaignId);
+        $contactsModel = $campaign->getSubscribersModel();
+
+        $search = $request->getSafe('search');
+
+        if ($search) {
+            $contactsModel->searchBy($search);
+        }
+
+        if ($orderBy = $request->getSafe('sort_by', 'id', 'sanitize_sql_orderby')) {
+            $orderType = $request->getSafe('sort_type', 'desc', 'sanitize_sql_orderby');
+            $contactsModel->orderBy($orderBy, $orderType);
+        }
+
+        $contacts = $contactsModel->with(['lists', 'tags'])->paginate();
+
+        return [
+            'subscribers' => $contacts
         ];
     }
 }

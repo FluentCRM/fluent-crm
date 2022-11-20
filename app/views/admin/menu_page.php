@@ -1,8 +1,15 @@
+<?php
+/**
+ * @var $base_url string
+ * @var $logo string
+ * @var $menuItems array
+ */
+?>
 <div class="fluentcrm_app_wrapper">
     <div class="fluentcrm_main_menu_items">
         <div class="fluentcrm_menu_logo_holder">
-            <a href="<?php echo $base_url; ?>">
-                <img style="height: 36px;" src="<?php echo $logo; ?>" />
+            <a href="<?php echo esc_url($base_url); ?>">
+                <img style="height: 36px;" src="<?php echo esc_url($logo); ?>" />
                 <?php if(defined('FLUENTCAMPAIGN_PLUGIN_PATH')): ?>
                     <span><?php esc_html_e('Pro', 'fluent-crm'); ?></span>
                 <?php endif; ?>
@@ -12,16 +19,16 @@
         <ul class="fluentcrm_menu">
             <?php foreach ($menuItems as $item): ?>
             <?php $hasSubMenu = !empty($item['sub_items']); ?>
-            <li data-key="<?php echo $item['key']; ?>" class="fluentcrm_menu_item <?php echo ($hasSubMenu) ? 'fluentcrm_has_sub_items' : ''; ?> fluentcrm_item_<?php echo $item['key']; ?>">
-                <a class="fluentcrm_menu_primary" href="<?php echo $item['permalink']; ?>">
-                    <?php echo $item['label']; ?>
+            <li data-key="<?php echo esc_attr($item['key']); ?>" class="fluentcrm_menu_item <?php echo ($hasSubMenu) ? 'fluentcrm_has_sub_items' : ''; ?> fluentcrm_item_<?php echo esc_attr($item['key']); ?>">
+                <a class="fluentcrm_menu_primary" href="<?php echo esc_url($item['permalink']); ?>">
+                    <?php echo esc_attr($item['label']); ?>
                     <?php if($hasSubMenu){ ?>
-                        <span class="dashicons dashicons-arrow-down-alt2"></span>
+                        <span class="fc_submenu_handler dashicons dashicons-arrow-down-alt2"></span>
                     <?php } ?></a>
                 <?php if($hasSubMenu): ?>
                 <div class="fluentcrm_submenu_items">
                     <?php foreach ($item['sub_items'] as $sub_item): ?>
-                    <a href="<?php echo $sub_item['permalink']; ?>"><?php echo $sub_item['label']; ?></a>
+                    <a href="<?php echo esc_url($sub_item['permalink']); ?>"><?php echo esc_html($sub_item['label']); ?></a>
                     <?php endforeach; ?>
                 </div>
                 <?php endif; ?>
@@ -31,4 +38,5 @@
     </div>
 
     <div id='fluentcrm_app'></div>
+    <?php do_action('fluent_crm/admin_app'); ?>
 </div>

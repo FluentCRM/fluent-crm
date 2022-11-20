@@ -1,10 +1,12 @@
 <?php
+
 namespace FluentCrm\App\Api\Classes;
 
-defined( 'ABSPATH' ) || exit;
+defined('ABSPATH') || exit;
 
 use FluentCrm\App\Models\CustomContactField;
 use FluentCrm\App\Models\Subscriber;
+use FluentCrm\App\Models\SubscriberMeta;
 use FluentCrm\App\Services\ContactsQuery;
 use FluentCrm\Framework\Support\Arr;
 
@@ -18,7 +20,6 @@ use FluentCrm\Framework\Support\Arr;
  *
  * @version 1.0.0
  */
-
 class Contacts
 {
     private $instance = null;
@@ -158,9 +159,9 @@ class Contacts
      * Use
      * <pre>FluentCrmApi('contacts')->getCurrentContact()</pre>
      *
-     *  @return false|Subscriber
+     * @return false|Subscriber
      */
-    public function getCurrentContact($cached = true)
+    public function getCurrentContact($cached = true, $useSecureCookie = false)
     {
         static $currentContact;
 
@@ -169,14 +170,36 @@ class Contacts
         }
 
         $userId = get_current_user_id();
-        if (!$userId) {
-            return false;
+        if ($userId) {
+            $user = get_user_by('ID', $userId);
+            $currentContact = $this->instance->where('user_id', $user->ID)->orWhere('email', $user->user_email)->first();
         }
 
-        $user = get_user_by('ID', $userId);
-        $currentContact = $this->instance->where('user_id', $user->ID)->orWhere('email', $user->user_email)->first();
+        if (!$currentContact && $useSecureCookie) {
+            $fcSubscriberHash = \FluentCrm\Framework\Support\Arr::get($_COOKIE, 'fc_hash_secure');
+            if ($fcSubscriberHash) {
+                $secureMeta = SubscriberMeta::where('value', $fcSubscriberHash)->where('key', '_secure_hash')
+                    ->first();
+
+                if ($secureMeta) {
+                    $currentContact = $this->instance->where('id', $secureMeta->subscriber_id)->first();
+                }
+            }
+        }
 
         return $currentContact;
+    }
+
+    public function getContactBySecureHash($hash)
+    {
+        $secureMeta = SubscriberMeta::where('value', $hash)->where('key', '_secure_hash')
+            ->first();
+
+        if ($secureMeta) {
+            return $this->instance->where('id', $secureMeta->subscriber_id)->first();
+        }
+
+        return false;
     }
 
     /**

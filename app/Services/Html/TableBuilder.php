@@ -27,9 +27,9 @@ class TableBuilder
         if(!$this->header) {
             return '';
         }
-        $table = '<table class="'.$this->tableClass.'"><thead><tr>';
+        $table = '<table class="'.esc_html($this->tableClass).'"><thead><tr>';
         foreach ($this->header as $key => $heading) {
-            $table .= '<th class="fc_head_'.$key.'">'.$heading.'</th>';
+            $table .= '<th class="fc_head_'.esc_attr($key).'">'.wp_kses_post($heading).'</th>';
         }
         $table .= '</tr></thead><tbody>';
 
@@ -48,7 +48,7 @@ class TableBuilder
 
     public function printHtml()
     {
-        echo $this->getHtml();
+        echo $this->getHtml(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
     }
 
     public function reset()

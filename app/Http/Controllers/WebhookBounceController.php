@@ -20,7 +20,19 @@ class WebhookBounceController extends Controller
 
     public function handleBounce(Request $request, $serviceName, $securityCode)
     {
-        if ($securityCode != $this->getSecurityCode() || !in_array($serviceName, $this->validServices)) {
+        
+        if (!in_array($serviceName, $this->validServices)) {
+            // This is a custom bounce handler
+            return apply_filters('fluent_crm_handle_bounce_' . $serviceName, [
+                'success' => 0,
+                'message' => '',
+                'service' => $serviceName,
+                'result'  => '',
+                'time'    => time()
+            ], $request, $securityCode);
+        }
+
+        if ($securityCode != $this->getSecurityCode()) {
             return $this->getError();
         }
 
@@ -30,7 +42,8 @@ class WebhookBounceController extends Controller
             'success' => 1,
             'message' => 'recorded',
             'service' => $serviceName,
-            'result' => $result
+            'result'  => $result,
+            'time'    => time()
         ];
 
     }
@@ -38,6 +51,7 @@ class WebhookBounceController extends Controller
     private function getSecurityCode()
     {
         $code = fluentcrm_get_option('_fc_bounce_key');
+
         if (!$code) {
             $code = 'fcrm_' . substr(md5(wp_generate_uuid4()), 0, 14);
             fluentcrm_update_option('_fc_bounce_key', $code);

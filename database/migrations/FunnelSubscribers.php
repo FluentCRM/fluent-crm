@@ -40,9 +40,30 @@ class FunnelSubscribers
                 `created_at` TIMESTAMP NULL,
                 `updated_at` TIMESTAMP NULL,
                 INDEX `{$indexPrefix}_fidx` (`funnel_id` ASC),
-                INDEX `{$indexPrefix}_fsq_idx` (`subscriber_id` ASC)
+                INDEX `{$indexPrefix}_fsq_idx` (`subscriber_id` ASC),
+                KEY `status` (`status`),
+                KEY `type` (`type`),
+                KEY `next_execution_time` (`next_execution_time`),
+                KEY `next_sequence` (`next_sequence`)
             ) $charsetCollate;";
             dbDelta($sql);
+        } else {
+
+            $indexes = $wpdb->get_results("SHOW INDEX FROM $table");
+            $indexedColumns = [];
+            foreach ($indexes as $index) {
+                $indexedColumns[] = $index->Column_name;
+            }
+
+            if(!in_array('status', $indexedColumns)) {
+                $sql = "ALTER TABLE {$table} ADD INDEX `status` (`status`),
+                        ADD INDEX `type` (`type`),
+                        ADD INDEX `next_execution_time` (`next_execution_time`),
+                        ADD INDEX `next_sequence` (`next_sequence`);";
+
+                $wpdb->query($sql);
+            }
+
         }
     }
 }

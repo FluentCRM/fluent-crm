@@ -1,3 +1,14 @@
+<?php
+/*
+ * @var \FluentCrm\App\Models\Subscriber $subscriber
+ * @var \FluentCrm\App\Models\CampaignEmail $campaign_email
+ * @var array $texts
+ * @var array $business
+ * @var string $combined_hash
+ * @var array $reasons
+ * @var string $secure_hash
+ */
+?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" <?php language_attributes(); ?>>
@@ -11,38 +22,39 @@
         do_action('fluentcrm_unsubscribe_head', $subscriber, $campaign_email);
     ?>
 </head>
-<body>
+<body class="fc_unsub">
 <div class="fluentcrm_unsubscribe_wrapper">
     <?php do_action('fluentcrm_before_unsubscribe_content', $subscriber, $campaign_email); ?>
     <div class="fluentcrm_un_title">
         <?php if (!empty($business['logo'])): ?>
             <div class="fluentcrm_un_logo_wrapper">
-                <img src="<?php echo $business['logo']; ?>" alt="<?php echo $business['business_name']; ?>"/>
+                <img src="<?php echo esc_url($business['logo']); ?>" alt="<?php echo (isset($business['business_name'])) ? esc_html($business['business_name']) : ''; ?>"/>
             </div>
-        <?php else: ?>
-        <h3><?php echo $business['business_name']; ?></h3>
+        <?php elseif(!empty($business['business_name'])): ?>
+        <h3><?php echo esc_html($business['business_name']); ?></h3>
         <?php endif; ?>
     </div>
     <div class="fluentcrm_un_form_wrapper">
-        <h3><?php echo $texts['heading']; ?></h3>
-        <p><?php echo $texts['heading_description']; ?></p>
+        <h3><?php echo esc_html($texts['heading']); ?></h3>
+        <p><?php echo esc_html($texts['heading_description']); ?></p>
         <?php do_action('fluentcrm_before_unsubscribe_form', $subscriber, $campaign_email); ?>
         <form id="fluentcrm_unsubscribe_form" class="fluentcrm_public_pref_form">
-            <input type="hidden" name="_e_id" value="<?php echo $campaign_email->id; ?>" />
+            <input type="hidden" name="_e_id" value="<?php echo esc_attr($campaign_email->id); ?>" />
             <input type="hidden" name="action" value="fluentcrm_unsubscribe_ajax" />
-            <input type="hidden" name="combined_hash" value="<?php echo $combined_hash; ?>" />
-            <input type="hidden" name="sub_hash" value="<?php echo $subscriber->hash; ?>" />
+            <input type="hidden" name="combined_hash" value="<?php echo esc_attr($combined_hash); ?>" />
+            <input type="hidden" name="sub_hash" value="<?php echo esc_attr($subscriber->hash); ?>" />
+            <input type="hidden" name="secure_hash" value="<?php echo esc_attr($secure_hash); ?>" />
             <div class="fluentcrm_form_item">
-                <label><?php echo $texts['email_label']; ?></label>
-                <input readonly="true" value="<?php echo $mask_email; ?>" class="fluentcrm_form_control" type="text" name="email_address" />
+                <label><?php echo esc_html($texts['email_label']); ?></label>
+                <input readonly="true" value="<?php echo esc_html($mask_email); ?>" class="fluentcrm_form_control" type="text" name="email_address" />
             </div>
             <?php if($reasons): ?>
             <div class="fluentcrm_form_item">
-                <label><?php echo $texts['reason_label']; ?></label>
+                <label><?php echo esc_html($texts['reason_label']); ?></label>
                 <div class="fluentcrm_radio_group">
                     <?php foreach ($reasons as $reasonKey => $reason): ?>
                     <label>
-                        <input type="radio" name="reason" value="<?php echo $reasonKey; ?>"></input> <?php echo $reason; ?>
+                        <input type="radio" name="reason" value="<?php echo esc_attr($reasonKey); ?>"></input> <?php echo esc_html($reason); ?>
                     </label>
                     <?php endforeach; ?>
                 </div>
@@ -53,7 +65,7 @@
             <?php endif; ?>
             <?php do_action('fluentcrm_before_unsubscribe_submit', $campaign_email); ?>
             <div class="fluentcrm_form_item">
-                <input id="fluentcrm_unsubscribe_submit" type="submit" value="<?php echo $texts['button_text']; ?>"></input>
+                <input id="fluentcrm_unsubscribe_submit" type="submit" value="<?php echo esc_html($texts['button_text']); ?>"></input>
             </div>
         </form>
         <div class="fluentcrm_form_responses"></div>

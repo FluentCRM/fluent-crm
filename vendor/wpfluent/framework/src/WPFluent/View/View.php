@@ -11,7 +11,7 @@ class View
 	protected $path;
 
 	protected $data = [];
-	
+
 	protected static $sharedData = [];
 
 	public function __construct($app)
@@ -27,7 +27,7 @@ class View
 	 */
 	public function render($path, $data = [])
 	{
-		echo $this->make($path, $data);
+		echo $this->make($path, $data); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 
 	/**
@@ -115,7 +115,7 @@ class View
 		} else {
 			$this->__set($name, $data);
 		}
-		
+
 		return $this;
 	}
 

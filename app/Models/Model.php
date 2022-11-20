@@ -2,6 +2,7 @@
 
 namespace FluentCrm\App\Models;
 
+use FluentCrm\Framework\Database\Orm\DateTime;
 use FluentCrm\Framework\Database\Orm\Model as BaseModel;
 
 class Model extends BaseModel
@@ -25,4 +26,20 @@ class Model extends BaseModel
     {
         return (isset($_REQUEST['per_page'])) ? intval($_REQUEST['per_page']) : 15;
     }
+
+    /**
+     * Get a fresh timestamp for the model.
+     *
+     * @return \FluentCrm\Framework\Database\Orm\DateTime
+     */
+    public function freshTimestamp()
+    {
+        return new \DateTime(current_time('mysql'));
+    }
+
+    public function getTimezone()
+    {
+        return '';
+    }
+
 }

@@ -55,7 +55,8 @@ class Subscriber extends Model
         'longitude',
         'ip',
         'created_at',
-        'updated_at'
+        'updated_at',
+        'avatar'
     ];
 
     public static function boot()
@@ -131,13 +132,13 @@ class Subscriber extends Model
                     $query->orWhere(function ($q) use ($nameArray) {
                         $fname = array_shift($nameArray);
                         $lastName = implode(' ', $nameArray);
-                        $q->where('first_name', 'LIKE', "$fname%");
-                        $q->where('last_name', 'LIKE', "$lastName%");
+                        $q->where('first_name', 'LIKE', "%$fname%");
+                        $q->orWhere('last_name', 'LIKE', "%$lastName%");
                     });
                 }
 
                 foreach ($fields as $field) {
-                    $query->orWhere($field, 'LIKE', "$search%");
+                    $query->orWhere($field, 'LIKE', "%$search%");
                 }
             });
 
@@ -329,6 +330,21 @@ class Subscriber extends Model
     }
 
     /**
+     * Many2Many: Subscriber has many sequence trackers
+     * @return \FluentCrm\Framework\Database\Orm\Relations\HasMany
+     */
+    public function sequence_trackers()
+    {
+        $class = '\FluentCampaign\App\Models\SequenceTracker';
+
+        return $this->hasMany(
+            $class,
+            'subscriber_id',
+            'id'
+        );
+    }
+
+    /**
      * Many2Many: Subscriber has many funnels
      * @return \FluentCrm\Framework\Database\Orm\Relations\BelongsToMany
      */
@@ -344,6 +360,19 @@ class Subscriber extends Model
         )
             ->withoutGlobalScopes()
             ->withTimestamps();
+    }
+
+    /**
+     * Many2Many: Subscriber has many funnel subscribers
+     * @return \FluentCrm\Framework\Database\Orm\Relations\hasMany
+     */
+    public function funnel_subscribers()
+    {
+        return $this->hasMany(
+            __NAMESPACE__ . '\FunnelSubscriber',
+            'subscriber_id',
+            'id'
+        );
     }
 
     /**
@@ -565,6 +594,10 @@ class Subscriber extends Model
     {
         $model = static::create($data);
 
+        if ($customValues = Arr::get($data, 'custom_values')) {
+            $model->syncCustomFieldValues($customValues);
+        }
+
         $tagIds = Arr::get($data, 'tags', []);
         if ($tagIds) {
             $model->attachTags($tagIds);
@@ -573,10 +606,6 @@ class Subscriber extends Model
         $listIds = Arr::get($data, 'lists', []);
         if ($listIds) {
             $model->attachLists($listIds);
-        }
-
-        if ($customValues = Arr::get($data, 'custom_values')) {
-            $model->syncCustomFieldValues($customValues);
         }
 
         return $model;
@@ -618,7 +647,17 @@ class Subscriber extends Model
         if (isset($this->attributes['avatar'])) {
             return $this->attributes['avatar'];
         }
-        return fluentcrmGravatar($this->attributes['email']);
+
+        $fallBack = '';
+        if (isset($this->attributes['first_name'])) {
+            $fallBack = $this->attributes['first_name'];
+        }
+
+        if (isset($this->attributes['last_name'])) {
+            $fallBack .= '+' . $this->attributes['last_name'];
+        }
+
+        return fluentcrmGravatar($this->attributes['email'], $fallBack);
     }
 
     /**
@@ -640,9 +679,10 @@ class Subscriber extends Model
      * @param mixed $update string true/false or boolean true/false
      * @param string $newStatus status for the new subscribers
      * @param boolean $doubleOptin Send Double Optin Emails for new pending contacts
+     * @param string $source Fallback Source for New Contacts
      * @return array affected records/collection
      */
-    public static function import($data, $tags, $lists, $update, $newStatus = '', $doubleOptin = false, $forceStatusChange = false)
+    public static function import($data, $tags, $lists, $update, $newStatus = '', $doubleOptin = false, $forceStatusChange = false, $source = '')
     {
         if (!defined('FLUENTCRM_DOING_BULK_IMPORT')) {
             define('FLUENTCRM_DOING_BULK_IMPORT', true);
@@ -698,7 +738,8 @@ class Subscriber extends Model
 
                 unset($item['source']);
 
-                if ($customValues = Arr::get($item, 'custom_values')) {
+                $customValues = Arr::get($item, 'custom_values');
+                if ($shouldUpdate && $customValues) {
                     $existingSubscribers[$lowEmail]->syncCustomFieldValues($customValues, false);
                 }
                 unset($item['custom_values']);
@@ -726,6 +767,11 @@ class Subscriber extends Model
 
                 unset($item['custom_values']);
                 unset($item['id']);
+
+                if (empty($item['source']) && $source) {
+                    $item['source'] = $source;
+                }
+
                 $newRecords[$itemEmail] = 1;
                 $insertables[] = array_filter(array_merge($item, $extraValues));
             }
@@ -850,10 +896,15 @@ class Subscriber extends Model
                 do_action('fluentcrm_contact_email_changed', $exist, $oldEmail);
             }
         } else {
+            if (!isset($subscriberData['created_at'])) {
+                $subscriberData['created_at'] = current_time('mysql');
+            }
             $exist = static::create($subscriberData);
+            $exist = $this->find($exist->id);
+            $exist->wasRecentlyCreated = true;
         }
 
-        if ($customValues = Arr::get($data, 'custom_values')) {
+        if ($customValues = Arr::get($data, 'custom_values', [])) {
             $exist->syncCustomFieldValues($customValues, $deleteOtherValues);
         }
 
@@ -879,8 +930,8 @@ class Subscriber extends Model
     public function sendDoubleOptinEmail()
     {
         $lastDoubleOptin = fluentcrm_get_subscriber_meta($this->id, '_last_double_optin_timestamp');
-        if ($lastDoubleOptin && ( time() - $lastDoubleOptin < 150)) {
-             return false;
+        if ($lastDoubleOptin && (time() - $lastDoubleOptin < 150)) {
+            return false;
         } else {
             fluentcrm_update_subscriber_meta($this->id, '_last_double_optin_timestamp', time());
         }
@@ -919,7 +970,7 @@ class Subscriber extends Model
         $newListIds = array_diff($listIds, $existingListIds);
 
         $newListIds = array_map(function ($listId) {
-            return (int)$listId;
+            return (int) $listId;
         }, $newListIds);
 
         $newListIds = array_filter($newListIds);
@@ -952,13 +1003,13 @@ class Subscriber extends Model
         $existingTags = $this->tags;
         $existingTagIds = [];
         foreach ($existingTags as $tag) {
-            $existingTagIds[] = intval($tag->id);
+            $existingTagIds[] = (int) $tag->id;
         }
 
         $newTagIds = array_diff($tagIds, $existingTagIds);
 
         $newTagIds = array_map(function ($tagId) {
-            return intval($tagId);
+            return (int) $tagId;
         }, $newTagIds);
 
         $newTagIds = array_filter($newTagIds);
@@ -996,7 +1047,7 @@ class Subscriber extends Model
         $validListIds = array_intersect($listIds, $existingListIds);
 
         $validListIds = array_map(function ($listId) {
-            return intval($listId);
+            return (int) $listId;
         }, $validListIds);
 
         $validListIds = array_filter($validListIds);
@@ -1026,7 +1077,7 @@ class Subscriber extends Model
 
 
         $validTagIds = array_map(function ($tagId) {
-            return intval($tagId);
+            return (int) $tagId;
         }, $validTagIds);
 
         $validTagIds = array_filter($validTagIds);
@@ -1043,6 +1094,18 @@ class Subscriber extends Model
     public function unsubscribeReason($metaKey = 'unsubscribe_reason')
     {
         return fluentcrm_get_subscriber_meta($this->id, $metaKey, '');
+    }
+
+    public function unsubscribeReasonDate($metaKey = 'unsubscribe_reason')
+    {
+        $item = SubscriberMeta::where('key', $metaKey)
+            ->where('subscriber_id', $this->id)
+            ->first();
+
+        if ($item) {
+            return (string)$item->updated_at;
+        }
+        return '';
     }
 
     public function hasAnyTagId($tagIds)
@@ -1113,15 +1176,20 @@ class Subscriber extends Model
      */
     public static function filterParser($filter)
     {
+
         switch ($filter['operator']) {
             case 'before':
                 $filter['operator'] = '<';
-                $filter['value'] = $filter['value'] . ' 23:59:59';
+                if(strlen($filter['value']) < 11) {
+                    $filter['value'] = $filter['value'] . ' 23:59:59';
+                }
                 break;
 
             case 'after':
                 $filter['operator'] = '>';
-                $filter['value'] = $filter['value'] . ' 23:59:59';
+                if(strlen($filter['value']) < 11) {
+                    $filter['value'] = $filter['value'] . ' 23:59:59';
+                }
                 break;
 
             case 'date_equal':
@@ -1135,14 +1203,16 @@ class Subscriber extends Model
                 break;
 
             case 'days_before':
+                $daysToSeconds = intval($filter['value']) * 24 * 60 * 60;
                 $filter['operator'] = '<';
-                $filter['value'] = date('Y-m-d', current_time('timestamp') - $filter['value'] * 24 * 60 * 60);
+                $filter['value'] = date('Y-m-d', current_time('timestamp') - $daysToSeconds);
                 break;
 
             case 'days_within':
+                $daysToSeconds = intval($filter['value']) * 24 * 60 * 60;
                 $filter['operator'] = 'BETWEEN';
                 $filter['value'] = [
-                    date('Y-m-d 00:00:01', current_time('timestamp') - $filter['value'] * 24 * 60 * 60),
+                    date('Y-m-d 00:00:01', current_time('timestamp') - $daysToSeconds),
                     date('Y-m-d') . ' 23:59:59'
                 ];
                 break;
@@ -1168,13 +1238,20 @@ class Subscriber extends Model
             $filter = self::filterParser($filter);
 
             if ($filter['operator'] != $operator) {
-                $operator = $filter['operator'];
-                if ($operator == 'BETWEEN') {
+                $newOperator = $filter['operator'];
+                if ($newOperator == 'BETWEEN') {
                     $query->whereBetween($referenceColumn, $filter['value']);
-                } elseif ($operator == 'LIKE' || $operator == 'NOT LIKE') {
-                    $query->where($referenceColumn, $operator, '%' . $filter['value'] . '%');
+                } elseif ($newOperator == 'LIKE' || $newOperator == 'NOT LIKE') {
+                    $query->where($referenceColumn, $newOperator, '%' . $filter['value'] . '%');
                 } else {
-                    $query->where($referenceColumn, $operator, $filter['value']);
+                    // This can be date
+                    $dateOperators = ['before', 'after', 'date_equal', 'days_before', 'days_within'];
+
+                    if (in_array($operator, $dateOperators)) {
+                        $query->whereTimestamp($referenceColumn, $newOperator, $filter['value']);
+                    } else {
+                        $query->where($referenceColumn, $newOperator, $filter['value']);
+                    }
                 }
             } else {
                 $filter['value'] = sanitize_text_field($filter['value']);
@@ -1236,8 +1313,13 @@ class Subscriber extends Model
                 if ($filter['property'] != 'commerce_coupons') {
                     $filter['property'] = 'commerce_taxonomies';
                 }
-
                 $carry['contactCommerceIn'][] = $filter;
+            } elseif ($filter['property'] == 'commerce_exist') {
+                $filter['method'] = 'whereHas';
+                if ($filter['operator'] == 'not_exist') {
+                    $filter['method'] = 'whereDoesntHave';
+                }
+                $carry['contactCommerceCheck'][] = $filter;
             } else {
                 $carry['contactRelations'][] = $filter;
             }
@@ -1249,7 +1331,6 @@ class Subscriber extends Model
             $query->whereHas('contact_commerce', function ($contactCommerceQuery) use ($filters, $provider) {
                 foreach ($filters['contactRelations'] as $filter) {
                     $filter = static::filterParser($filter);
-
                     if ($filter['operator'] == 'BETWEEN') {
                         $contactCommerceQuery->whereBetween($filter['property'], $filter['value']);
                     } else {
@@ -1277,17 +1358,18 @@ class Subscriber extends Model
 
                 if (in_array($filter['operator'], ['in', 'not_in'])) {
                     $query->{$method}('contact_commerce', function ($contactCommerceQuery) use ($filter, $provider) {
-                        $firstVal = array_shift($filter['value']);
-
-                        $operator = 'LIKE';
-
                         $contactCommerceQuery
                             ->where('provider', $provider)
-                            ->where($filter['property'], $operator, '%' . $firstVal . '%');
+                            ->where(function ($query) use ($filter) {
+                                $firstVal = array_shift($filter['value']);
+                                $operator = 'LIKE';
 
-                        foreach ($filter['value'] as $value) {
-                            $contactCommerceQuery->orWhere($filter['property'], $operator, '%' . $value . '%');
-                        }
+                                $query->where($filter['property'], $operator, '%' . $firstVal . '%');
+                                foreach ($filter['value'] as $value) {
+                                    $query->orWhere($filter['property'], $operator, '%' . $value . '%');
+                                }
+                            });
+
                     });
                 } else {
                     foreach ($filter['value'] as $value) {
@@ -1298,6 +1380,15 @@ class Subscriber extends Model
                         });
                     }
                 }
+            }
+        }
+
+        if (array_key_exists('contactCommerceCheck', $filters)) {
+            foreach ($filters['contactCommerceCheck'] as $filter) {
+                $method = $filter['method'];
+                $query->{$method}('contact_commerce', function ($q) use ($provider) {
+                    $q->where('provider', $provider);
+                });
             }
         }
 
@@ -1357,7 +1448,7 @@ class Subscriber extends Model
                 $searchTerm = '%' . $filter['value'] . '%';
             }
 
-            $dateFields = ['created_at', 'last_activity'];
+            $dateFields = ['created_at', 'last_activity', 'date_of_birth'];
 
             if (in_array($filter['property'], $dateFields)) {
 
@@ -1382,6 +1473,16 @@ class Subscriber extends Model
                 if ($searchTerm) {
                     $query = $query->whereNotIn($filter['property'], $searchTerm);
                 }
+            } else if ($operator == 'is_null') {
+                $query = $query->where(function ($q) use ($filter) {
+                    return $q->whereNull($filter['property'])
+                        ->orWhere($filter['property'], '=', '');
+                });
+            } else if ($operator == 'not_null') {
+                $query = $query->where(function ($q) use ($filter) {
+                    return $q->whereNotNull($filter['property'])
+                        ->orWhere($filter['property'], '!=', '');
+                });
             } else {
                 $query = $query->where($filter['property'], $operator, $searchTerm);
             }
@@ -1428,12 +1529,16 @@ class Subscriber extends Model
     public function buildSegmentFilterQuery($query, $filters)
     {
         foreach ($filters as $filter) {
+            if (empty($filter['value'])) {
+                continue;
+            }
+
             if (in_array($filter['property'], ['tags', 'lists'])) {
                 list($method, $subMethod) = static::parseRelationalFilterQueryMethods($filter);
-
                 $query = static::buildRelationFilterQuery($filter['property'], $query, $method, $subMethod, 'object_id', $filter);
             } else {
-                $method = $filter['operator'] == 'in' ? 'whereIn' : 'whereNotIn';
+                $operator = $filter['operator'];
+                $method = ($operator == 'in' || $operator == 'contains') ? 'whereIn' : 'whereNotIn';
 
                 $query = $query->{$method}($filter['property'], (array)$filter['value']);
             }
@@ -1445,18 +1550,22 @@ class Subscriber extends Model
     /**
      * @param \FluentCrm\Framework\Database\Orm\Builder|\FluentCrm\Framework\Database\Query\Builder $query
      * @param array $filters
-     * @return \FluentCrm\Framework\Database\Orm\Builder|\FluentCrm\Framework\Database\Query\Builder
+     * @return \FluentCrm\Framework\Database\Query\Builder
      */
     public function buildCustomFieldsFilterQuery($query, $filters)
     {
+
         $filters = array_reduce($filters, function ($carry, $filter) {
             if ($filter['operator'] == 'not_in') {
                 $carry['notIn'][] = $filter;
+            } else if ($filter['operator'] == '!=' || $filter['operator'] == 'not_contains') {
+                $carry['notEqualNorExist'][] = $filter;
             } else {
                 $carry['regular'][] = $filter;
             }
             return $carry;
         }, []);
+
 
         if (array_key_exists('regular', $filters)) {
             foreach ($filters['regular'] as $filter) {
@@ -1494,6 +1603,26 @@ class Subscriber extends Model
             }
         }
 
+        if (array_key_exists('notEqualNorExist', $filters)) {
+            foreach ($filters['notEqualNorExist'] as $filter) {
+                $value = (string) trim($filter['value']);
+                $operator = $filter['operator'];
+
+                if ($operator == 'not_contains') {
+                    $operator = 'LIKE';
+                    $value = '%' . $value . '%';
+                } else {
+                    $operator = '=';
+                }
+
+                $query->whereDoesntHave('custom_field_meta', function ($customFieldQuery) use ($value, $filter, $operator) {
+                    $customFieldQuery->where('key', $filter['property'])
+                        ->where('value', $operator, $value);
+                });
+
+            }
+        }
+
         return $query;
     }
 
@@ -1526,6 +1655,10 @@ class Subscriber extends Model
             if (empty($filter['value'])) {
                 continue;
             }
+
+
+            $originalValue = $filter['value'];
+
             $relation = 'campaignEmails';
 
             $filter['where'] = [
@@ -1534,7 +1667,72 @@ class Subscriber extends Model
                 'field' => 'scheduled_at'
             ];
 
-            if ($filter['property'] != 'email_sent') {
+            $filterProp = $filter['property'];
+
+            if ($filterProp == 'campaign_email_activity') {
+                $campaignId = (int)$filter['value'];
+                $operator = $filter['operator'];
+
+                if ($operator == 'not_in') {
+                    $query->whereDoesntHave('campaignEmails', function ($q) use ($campaignId) {
+                        $q->where('campaign_id', $campaignId);
+                    });
+                } else {
+                    $query->whereHas('campaignEmails', function ($q) use ($campaignId, $operator) {
+                        $q->where('campaign_id', $campaignId);
+                        if ($operator == 'clicked') {
+                            $q->whereNull('click_counter');
+                        } else if ($operator == 'not_clicked') {
+                            $q->whereNotNull('click_counter');
+                        } else if ($operator == 'open') {
+                            $q->where('is_open', 1);
+                        } else if ($operator == 'no_open') {
+                            $q->where('is_open', '0');
+                        }
+                    });
+                }
+                continue;
+            } else if ($filterProp == 'automation_activity') {
+
+                $funnelId = (int)$filter['value'];
+                $operator = $filter['operator'];
+
+                if ($operator == 'not_in') {
+                    $query->whereDoesntHave('funnel_subscribers', function ($q) use ($funnelId) {
+                        $q->where('funnel_id', $funnelId);
+                    });
+                } else {
+                    $query->whereHas('funnel_subscribers', function ($q) use ($funnelId, $operator) {
+                        $q->where('funnel_id', $funnelId);
+                        $statusItems = ['completed', 'active', 'cancelled', 'waiting'];
+                        if (in_array($operator, $statusItems)) {
+                            $q->where('status', $operator);
+                        }
+                    });
+                }
+
+                continue;
+            } else if ($filterProp == 'email_sequence_activity') {
+
+                $sequenceId = (int)$filter['value'];
+                $operator = $filter['operator'];
+
+                if ($operator == 'not_in') {
+                    $query->whereDoesntHave('sequence_trackers', function ($q) use ($sequenceId) {
+                        $q->where('campaign_id', $sequenceId);
+                    });
+                } else {
+                    $query->whereHas('sequence_trackers', function ($q) use ($sequenceId, $operator) {
+                        $q->where('campaign_id', $sequenceId);
+                        $statusItems = ['completed', 'active', 'cancelled'];
+                        if (in_array($operator, $statusItems)) {
+                            $q->where('status', $operator);
+                        }
+                    });
+                }
+
+                continue;
+            } else if ($filterProp != 'email_sent') {
                 $relation = 'urlMetrics';
 
                 $filter['where'] = [
@@ -1546,15 +1744,28 @@ class Subscriber extends Model
 
             $filter = static::filterParser($filter);
 
-            $query->whereHas($relation, function ($campaignEmailQuery) use ($filter) {
+            $query->whereHas($relation, function ($campaignEmailQuery) use ($filter, $relation) {
                 $campaignEmailQuery->where($filter['where']['prop'], $filter['where']['value']);
-
                 if ($filter['operator'] == 'BETWEEN') {
                     $campaignEmailQuery->whereBetween($filter['where']['field'], $filter['value']);
                 } else {
                     $campaignEmailQuery->where($filter['where']['field'], $filter['operator'], $filter['value']);
                 }
             });
+
+            $operator = $filter['operator'];
+            if ($operator == '<' || $operator == 'LIKE') {
+                if ($operator == 'LIKE') {
+                    $compareValue = $originalValue . ' 23:59:59';
+                } else {
+                    $compareValue = $filter['value'] . ' 23:59:59';
+                }
+
+                $query->whereDoesntHave($relation, function ($campaignEmailQuery) use ($filter, $compareValue) {
+                    $campaignEmailQuery->where($filter['where']['prop'], $filter['where']['value']);
+                    $campaignEmailQuery->where($filter['where']['field'], '>', $compareValue);
+                });
+            }
         }
 
         return $query;
@@ -1643,5 +1854,21 @@ class Subscriber extends Model
         }
 
         return $dirty;
+    }
+
+    public function getSecureHash()
+    {
+        $hash = $this->getMeta('_secure_hash', 'internal');
+        if ($hash) {
+            return $hash;
+        }
+
+        $hash = md5(mt_rand(100, 10000) . '_' . $this->id . '_' . $this->email . '_' . time());
+
+        $hash = str_replace('e', 'd', $hash);
+
+        $this->updateMeta('_secure_hash', $hash, 'internal');
+
+        return $hash;
     }
 }

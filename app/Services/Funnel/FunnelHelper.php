@@ -41,7 +41,6 @@ class FunnelHelper
     {
         $subscriber = Helper::getWPMapUserInfo($user);
         $subscriber['source'] = 'web';
-        $subscriber['ip'] = FluentCrm()->request->getIp();
         return $subscriber;
     }
 
@@ -49,7 +48,7 @@ class FunnelHelper
     {
         $column = 'email';
         if (is_int($emailOrUserId)) {
-            $column = 'id';
+            $column = 'user_id';
         }
 
         return Subscriber::where($column, $emailOrUserId)->first();
@@ -222,6 +221,11 @@ class FunnelHelper
         $funnel->status = Arr::get($data, 'status');
         $funnel->save();
 
+        if ($funnelDescription = Arr::get($data, 'funnel_description')) {
+            $funnel->updateMeta('description', $funnelDescription);
+        } else {
+            $funnel->deleteMeta('description');
+        }
 
         $sequences = \json_decode(Arr::get($data, 'sequences', []), true);
 
@@ -244,7 +248,7 @@ class FunnelHelper
             $actionName = $sequence['action_name'];
 
             if ($actionName == 'fluentcrm_wait_times') {
-                $delay = self::getDelayInSecond($sequence);
+                $delay = self::getDelayInSecond($sequence['settings']);
                 $cDelay += $delay;
             }
 
@@ -260,7 +264,7 @@ class FunnelHelper
             if ($sequence['type'] == 'conditional') {
                 $childIds = self::saveChildSequences($sequence, $funnel);
                 $indexCount += count($childIds);
-                $sequenceIds = array_merge($sequenceIds, $childIds);
+                $sequenceIds = array_unique(array_merge($sequenceIds, $childIds));
             }
 
             $indexCount += 1;
@@ -306,21 +310,103 @@ class FunnelHelper
         return $sequenceId;
     }
 
-    public static function getDelayInSecond($sequence)
+    public static function getDelayInSecond($settings)
     {
-        if (Arr::get($sequence, 'settings.is_timestamp_wait') == 'yes') {
+        $waitType = Arr::get($settings, 'wait_type');
+
+        if (!$waitType && Arr::get($settings, 'is_timestamp_wait') == 'yes') {
             return 1;
         }
 
-        $unit = Arr::get($sequence, 'settings.wait_time_unit');
+        if ($waitType == 'timestamp_wait' || $waitType == 'to_day') {
+            return 1;
+        }
+
+        $unit = Arr::get($settings, 'wait_time_unit');
         $converter = 86400; // default day
         if ($unit == 'hours') {
             $converter = 3600; // hour
         } else if ($unit == 'minutes') {
             $converter = 60;
         }
-        $time = Arr::get($sequence, 'settings.wait_time_amount');
-        return intval($time * $converter);
+        $time = Arr::get($settings, 'wait_time_amount');
+        return (int) $time * $converter;
+    }
+
+    public static function getCurrentDelayInSeconds($settings)
+    {
+        $waitType = Arr::get($settings, 'wait_type');
+
+        /*
+         * For Specific Date and Time
+         */
+        if ((!$waitType && Arr::get($settings, 'is_timestamp_wait') == 'yes') || $waitType == 'timestamp_wait') {
+            $timeStamp = current_time('timestamp');
+            $waitTimes = strtotime(Arr::get($settings, 'wait_date_time'), $timeStamp) - $timeStamp;
+            if ($waitTimes < 1) {
+                $waitTimes = 0;
+            }
+            return apply_filters('fluent_crm/funnel_seq_delay_in_seconds', $waitTimes, $settings);
+        }
+
+        if ($waitType && $waitType == 'to_day') {
+            $nextDays = Arr::get($settings, 'to_day');
+            $timeStampNow = current_time('timestamp');
+
+            if (empty($nextDays)) { // if no day is selected
+                $nextDays = [date('D', $timeStampNow), date('D', strtotime('+1 day', $timeStampNow))];
+            }
+
+            $nextTime = Arr::get($settings, 'to_day_time');
+            if (!$nextTime) {
+                $nextTime = date('H:i', $timeStampNow);
+            }
+
+            $date = self::getEarliestDay($nextDays, $nextTime);
+            $seconds = strtotime($date) - current_time('timestamp');
+            $waitTimes = ($seconds < 1) ? 0 : $seconds;
+            return apply_filters('fluent_crm/funnel_seq_delay_in_seconds', $waitTimes, $settings);
+        }
+
+        $unit = Arr::get($settings, 'wait_time_unit');
+        $converter = 86400; // default day
+        if ($unit == 'hours') {
+            $converter = 3600; // hour
+        } else if ($unit == 'minutes') {
+            $converter = 60;
+        }
+
+        $time = Arr::get($settings, 'wait_time_amount');
+        $waitTimes = (int) $time * $converter;
+
+        return apply_filters('fluent_crm/funnel_seq_delay_in_seconds', $waitTimes, $settings);
+    }
+
+    /*
+     * Get the next earliest day provided to $days array as ['Mon', Wed, 'Fri']
+     * @param array $days
+     * @return string $earliest
+     */
+    private static function getEarliestDay($days, $time = '')
+    {
+        $timestamp = current_time('timestamp');
+        $timeStampsArray = [];
+        for ($i = 0; $i < 8; $i++) {
+            $timeStampsArray[] = $timestamp + ($i * 86400);
+        }
+
+        $earliest = date('Y-m-d ' . $time . ':s', $timestamp);
+
+        foreach ($timeStampsArray as $timeStampVal) {
+            if (in_array(date('D', $timeStampVal), $days)) {
+                $earliest = date('Y-m-d ' . $time . ':s', $timeStampVal);
+                if (strtotime($earliest) - $timestamp > -60) {
+                    return $earliest;
+                }
+            }
+        }
+
+        return $earliest;
     }
 
     private static function saveChildSequences($sequence, $funnel)
@@ -348,7 +434,7 @@ class FunnelHelper
                  */
                 $actionName = $childSequence['action_name'];
                 if ($actionName == 'fluentcrm_wait_times') {
-                    $childDelay = self::getDelayInSecond($childSequence);
+                    $childDelay = self::getDelayInSecond($childSequence['settings']);
                     $childCDelay += $childDelay;
                 }
 
@@ -443,7 +529,12 @@ class FunnelHelper
 
     public static function migrateConditionSequence($sequence, $dryRun = false)
     {
-        if ($sequence->type != 'conditional' || $sequence->action_name == 'funnel_condition') {
+        $conditionalBlocks = [
+            'funnel_condition',
+            'funnel_ab_testing'
+        ];
+
+        if ($sequence->type != 'conditional' || in_array($sequence->action_name, $conditionalBlocks)) {
             return $sequence;
         }
 
@@ -555,7 +646,7 @@ class FunnelHelper
                     ]
                 ]
             ];
-            if(!$dryRun) {
+            if (!$dryRun) {
                 $sequence->save();
             }
         } else if ($conditionName == 'fcrm_check_user_prop') {
@@ -622,7 +713,7 @@ class FunnelHelper
             $sequence->settings = [
                 'conditions' => $formattedConditions
             ];
-            if(!$dryRun) {
+            if (!$dryRun) {
                 $sequence->save();
             }
         } else if ($conditionName == 'fcrm_woo_conditions') {
@@ -722,7 +813,7 @@ class FunnelHelper
                 'conditions' => $formattedConditions
             ];
 
-            if(!$dryRun) {
+            if (!$dryRun) {
                 $sequence->save();
             }
         }
@@ -733,23 +824,23 @@ class FunnelHelper
 
     public static function createWpUserFromSubscriber($subscriber, $sendWelcomeEmail = false, $password = '', $role = '', $metaData = [])
     {
-        if($userId = $subscriber->getWpUserId()) {
+        if ($userId = $subscriber->getWpUserId()) {
             return $userId;
         }
 
-        if(!$password) {
+        if (!$password) {
             $password = wp_generate_password(8);
         }
 
-        $userId = wp_create_user($subscriber->email, $password, $subscriber->email);
+        $userId = wp_create_user(sanitize_user($subscriber->email), $password, $subscriber->email);
         if (is_wp_error($userId)) {
             return $userId;
         }
 
-        if(!$role) {
+        if (!$role) {
             // get default user role of WordPress
             $role = get_option('default_role');
-            if(!$role) {
+            if (!$role) {
                 $role = 'subscriber';
             }
         }
@@ -774,6 +865,17 @@ class FunnelHelper
         $subscriber->user_id = $userId;
         $subscriber->save();
         return $userId;
+    }
+
+
+    public static function getCountryShortName($countryName)
+    {
+        $countries = getFluentFormCountryList();
+        $countries = array_flip($countries);
+        if (isset($countries[$countryName])) {
+            return $countries[$countryName];
+        }
+        return null;
     }
 
 }

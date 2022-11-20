@@ -2,9 +2,11 @@
 
 namespace FluentCrm\App\Services;
 
+use FluentCrm\App\Models\CampaignUrlMetric;
 use FluentCrm\App\Models\FunnelMetric;
 use FluentCrm\App\Models\FunnelSequence;
 use FluentCrm\App\Models\FunnelSubscriber;
+use FluentCrm\Framework\Support\Arr;
 
 class Reporting
 {
@@ -155,7 +157,8 @@ class Reporting
             $count = ($items[$sequence->id]->count) ? $items[$sequence->id]->count : 0;
             $dropCount = $prevCount - $count;
             $percent = ($totalSubscriberCount) ? ceil(($count / $totalSubscriberCount) * 100) : 0;
-            $formattedReports[] = [
+
+            $report = [
                 'label' => $sequence->title,
                 'count' => intval($count),
                 'sequence_id' => $sequence->id,
@@ -166,6 +169,35 @@ class Reporting
                 'drop_count' => $dropCount,
                 'drop_percent' => ($dropCount && $count && $prevCount) ? floor((1 - ($count / $prevCount)) * 100) : 0
             ];
+
+            if ($sequence->action_name == 'send_custom_email') {
+                // Calculate the revenue of this campaign
+                $refCampaign = Arr::get($sequence->settings, 'reference_campaign');
+                if($refCampaign) {
+                    if ($revenue = fluentcrm_get_campaign_meta($refCampaign, '_campaign_revenue')) {
+                        $revs = [];
+                        foreach ($revenue->value as $currency => $cents) {
+                            $money = $cents/100;
+                            $money = number_format($money, (is_int($money)) ? 0 : 2);
+                            $revs[] = strtoupper($currency).' '.$money;
+                        }
+                        if($revs) {
+                            $report['revenues'] = $revs;
+                        }
+                    }
+
+                    $report['link_clicks'] = CampaignUrlMetric::where('campaign_id', $refCampaign)
+                        ->where('type', 'click')
+                        ->count();
+
+                    $report['email_opens'] = CampaignUrlMetric::where('campaign_id', $refCampaign)
+                        ->where('type', 'open')
+                        ->count();
+                }
+
+            }
+
+            $formattedReports[] = $report;
 
             if ($items[$sequence->id]->benchmark_currency) {
                 $currency = $items[$sequence->id]->benchmark_currency;

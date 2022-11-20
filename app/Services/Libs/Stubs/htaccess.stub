@@ -1,0 +1,12 @@
+# BEGIN FluentCMR
+# Disable parsing of PHP for some server configurations. This file may be removed or modified on certain server configurations. Please consult your system administrator before removing this file.
+<Files *>
+  SetHandler none
+  SetHandler default-handler
+  Options -ExecCGI
+  RemoveHandler .cgi .php .php3 .php4 .php5 .phtml .pl .py .pyc .pyo
+</Files>
+<IfModule mod_php5.c>
+  php_flag engine off
+</IfModule>
+# END FluentCRM

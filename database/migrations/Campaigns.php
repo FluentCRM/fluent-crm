@@ -43,9 +43,25 @@ class Campaigns
                 `settings` LONGTEXT null,
                 `created_by` BIGINT UNSIGNED NULL,
                 `created_at` TIMESTAMP NULL,
-                `updated_at` TIMESTAMP NULL
+                `updated_at` TIMESTAMP NULL,
+                KEY `type` (`type`),
+                KEY `status` (`status`),
+                KEY `parent_id` (`parent_id`)
             ) $charsetCollate;";
             dbDelta($sql);
+        } else {
+            $indexes = $wpdb->get_results("SHOW INDEX FROM $table");
+            $indexedColumns = [];
+            foreach ($indexes as $index) {
+                $indexedColumns[] = $index->Column_name;
+            }
+
+            if(!in_array('status', $indexedColumns)) {
+                $indexSql = "ALTER TABLE {$table} ADD INDEX `type` (`type`),
+                        ADD INDEX `status` (`status`),
+                        ADD INDEX `parent_id` (`parent_id`);";
+                $wpdb->query($indexSql);
+            }
         }
     }
 }

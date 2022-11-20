@@ -89,4 +89,23 @@ class Funnel extends Model
     {
         return $this->subscribers()->count();
     }
+
+    public function updateMeta($key, $value)
+    {
+        fluentcrm_update_meta($this->id, __CLASS__, $key, $value);
+    }
+
+    public function getMeta($key, $default = '')
+    {
+        $meta = fluentcrm_get_meta($this->id, __CLASS__, $key);
+        if($meta) {
+            return $meta->value;
+        }
+        return $default;
+    }
+
+    public function deleteMeta($key)
+    {
+        fluentcrm_delete_meta($this->id, __CLASS__, $key);
+    }
 }

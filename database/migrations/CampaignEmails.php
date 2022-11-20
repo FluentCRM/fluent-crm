@@ -43,10 +43,26 @@ class CampaignEmails
                 INDEX `{$indexPrefix}_cid_idx` (`campaign_id` DESC),
                 INDEX `{$indexPrefix}_sid_idx` (`subscriber_id` DESC),
                 INDEX `{$indexPrefix}_et_idx` (`email_type` ASC),
-                INDEX `{$indexPrefix}_estidx` (`status` ASC)
+                INDEX `{$indexPrefix}_estidx` (`status` ASC),
+                INDEX `{$indexPrefix}_emtidx` (`email_hash` ASC),
+                KEY `scheduled_at` (`scheduled_at`)
             ) $charsetCollate;";
 
             dbDelta($sql);
+        } else {
+            $indexes = $wpdb->get_results("SHOW INDEX FROM $table");
+            $indexedColumns = [];
+            foreach ($indexes as $index) {
+                $indexedColumns[] = $index->Column_name;
+            }
+
+            if(!in_array('scheduled_at', $indexedColumns)) {
+                $wpdb->query("ALTER TABLE {$table} ADD INDEX `scheduled_at` (`scheduled_at`);");
+            }
+
+            if(!in_array('email_hash', $indexedColumns)) {
+                $wpdb->query("ALTER TABLE {$table} ADD INDEX `{$indexPrefix}_emtidx` (`email_hash`);");
+            }
         }
     }
 }

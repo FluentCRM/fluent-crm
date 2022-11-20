@@ -6,6 +6,7 @@ use FluentCrm\App\Models\CustomContactField;
 use FluentCrm\App\Models\Lists;
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\Tag;
+use FluentCrm\App\Services\Funnel\FunnelHelper;
 use FluentCrm\Framework\Support\Arr;
 use FluentForm\App\Modules\Form\FormFieldsParser;
 use FluentForm\App\Services\FormBuilder\ShortCodeParser;
@@ -78,6 +79,7 @@ class Bootstrap extends IntegrationManager
             'skip_if_exists'         => false,
             'double_opt_in'          => false,
             'force_subscribe'        => false,
+            'skip_primary_data'      => false,
             'conditionals'           => [
                 'conditions' => [],
                 'status'     => false,
@@ -103,6 +105,8 @@ class Bootstrap extends IntegrationManager
         foreach ((new CustomContactField)->getGlobalFields()['fields'] as $field) {
             $fieldOptions[$field['slug']] = $field['label'];
         }
+
+        $fieldOptions['avatar'] = 'Profile Photo';
 
         unset($fieldOptions['email']);
         unset($fieldOptions['first_name']);
@@ -190,9 +194,15 @@ class Bootstrap extends IntegrationManager
                 'component'      => 'checkbox-single'
             ],
             [
+                'key'            => 'skip_primary_data',
+                'require_list'   => false,
+                'checkbox_label' => __('Skip name update if existing contact have old data (per primary field)', 'fluent-crm'),
+                'component'      => 'checkbox-single'
+            ],
+            [
                 'key'            => 'double_opt_in',
                 'require_list'   => false,
-                'checkbox_label' => __('Enable Double Option for new contacts', 'fluent-crm'),
+                'checkbox_label' => __('Enable Double opt-in for new contacts', 'fluent-crm'),
                 'component'      => 'checkbox-single'
             ],
             [
@@ -349,6 +359,15 @@ class Bootstrap extends IntegrationManager
             return false;
         }
 
+        if (isset($contact['country'])) {
+            $country = FunnelHelper::getCountryShortName($contact['country']);
+            if ($country) {
+                $contact[$contact['country']] = $country;
+            } else {
+                unset($contact['country']);
+            }
+        }
+
         $subscriber = Subscriber::where('email', $contact['email'])->first();
 
         if ($subscriber && Arr::isTrue($data, 'skip_if_exists')) {
@@ -362,9 +381,35 @@ class Bootstrap extends IntegrationManager
             return false;
         }
 
+
+        if (!empty($contact['avatar'])) {
+            // validate the avatar photo
+            $validUrl = '';
+            if (filter_var($contact['avatar'], FILTER_VALIDATE_URL) !== FALSE) {
+                $url = $contact['avatar'];
+                $dots = explode('.', $url);
+                $ext = strtolower(end($dots));
+
+                if (in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'gif'])) {
+                    $validUrl = $contact['avatar'];
+                }
+            }
+
+            if (!$validUrl) {
+                unset($contact['avatar']);
+            }
+        }
+
         if ($subscriber) {
             if ($subscriber->ip && isset($contact['ip'])) {
                 unset($contact['ip']);
+            }
+
+            if (Arr::isTrue($data, 'skip_primary_data')) {
+                if ($subscriber->first_name) {
+                    unset($contact['first_name']);
+                    unset($contact['last_name']);
+                }
             }
         }
 
@@ -439,6 +484,10 @@ class Bootstrap extends IntegrationManager
             }
 
             $subscriber = FluentCrmApi('contacts')->createOrUpdate($contact, $forceSubscribed, false);
+
+            if (!$subscriber) {
+                return false;
+            }
 
             if ($entry->status == 'confirmed' && $subscriber->status != 'subscribed') {
                 $oldStatus = $subscriber->status;
