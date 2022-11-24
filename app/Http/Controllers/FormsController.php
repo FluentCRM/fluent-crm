@@ -152,7 +152,6 @@ class FormsController extends Controller
         $form = $this->validate($request->all(), [
             'template_id'   => 'required',
             'title'         => 'required|unique:fluentform_forms',
-            'selected_tags' => 'required',
             'selected_list' => 'required'
         ]);
         $template = $this->getSelectedTemplate($form['template_id']);
