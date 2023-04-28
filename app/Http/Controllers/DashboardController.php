@@ -44,7 +44,7 @@ class DashboardController extends Controller
         if (defined('WC_PLUGIN_FILE')) {
             $recommendations[] = [
                 'provider'    => 'WooCommerce',
-                'title'       => 'Do more with WoCommerce + FluentCRM',
+                'title'       => 'Do more with WooCommerce + FluentCRM',
                 'description' => 'Integrate FluentCRM with WooCommerce and segment your customers by purchase behavior, send super targeted emails, onboarding emails, cross promotions and many more.',
                 'btn_text'    => 'Upgrade to Pro',
                 'learn_more'  => 'https://fluentcrm.com/integrations/woocommerce-marketing-automation/',
@@ -52,7 +52,7 @@ class DashboardController extends Controller
             ];
             $recommendations[] = [
                 'provider'    => 'WooCommerce',
-                'title'       => 'Do more with WoCommerce + FluentCRM',
+                'title'       => 'Do more with WooCommerce + FluentCRM',
                 'description' => 'Integrate FluentCRM with WooCommerce and segment your customers by purchase behavior, send super targeted emails, onboarding emails, cross promotions and many more.',
                 'btn_text'    => 'Upgrade to Pro',
                 'learn_more'  => 'https://fluentcrm.com/integrations/woocommerce-marketing-automation/',
