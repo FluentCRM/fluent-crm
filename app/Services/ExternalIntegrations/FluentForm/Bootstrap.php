@@ -362,7 +362,9 @@ class Bootstrap extends IntegrationManager
         if (isset($contact['country'])) {
             $country = FunnelHelper::getCountryShortName($contact['country']);
             if ($country) {
-                $contact[$contact['country']] = $country;
+                $contact['country'] = $country;
+            }elseif (!$country){
+                $contact['country'] = $contact['country'];
             } else {
                 unset($contact['country']);
             }
