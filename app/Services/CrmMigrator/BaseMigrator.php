@@ -111,6 +111,45 @@ abstract class BaseMigrator
 
     }
 
+
+    /**
+     * Maybe create field options.
+     *
+     * When importing multi-checkbox or multi-select data, we can save time by
+     * auto-populating the options into the FluentCRM custom field config.
+     *
+     * @since x.x.x
+     *
+     * @param array $mergeData The loaded custom field data.
+     */
+    public function maybeCreateFieldOptions( $mergeData ) {
+
+        $needsUpdate  = false;
+        $customFields = fluentcrm_get_custom_contact_fields();
+
+        foreach ( $mergeData['custom_values'] as $key => $value ) {
+
+            if ( is_array( $value ) ) {
+
+                foreach ( $customFields as $i => $field ) {
+
+                    if ( $key === $field['slug'] && in_array( $field['type'], [ 'checkbox', 'select-multi' ] ) && ! empty( array_diff( $value, $field['options'] ) ) ) {
+
+                        $value                         = array_map( 'sanitize_text_field', $value );
+                        $customFields[ $i ]['options'] = array_merge( $field['options'], array_diff( $value, $field['options'] ) );
+                        $needsUpdate                   = true;
+
+                    }
+                }
+            }
+        }
+
+        if ( $needsUpdate ) {
+            fluentcrm_update_option( 'contact_custom_fields', $customFields );
+        }
+
+    }
+
     public function mapTags($tagMappings)
     {
         $formattedMaps = [];
