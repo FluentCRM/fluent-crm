@@ -100,7 +100,7 @@ class ActiveCampaignMigrator extends BaseMigrator
         foreach ($tags as $tag) {
             $formattedTags[] = [
                 'remote_name'  => $tag['name'],
-                'remote_id'    => (string)$tag['name'],
+                'remote_id'    => $tag['id'],
                 'will_create'  => 'no',
                 'fluentcrm_id' => ''
             ];
@@ -122,9 +122,9 @@ class ActiveCampaignMigrator extends BaseMigrator
             $item = [
                 'type'            => 'any',
                 'remote_label'    => $field['title'],
-                'remote_tag'      => $field['perstag'],
+                'remote_tag'      => $field['id'],
                 'fluentcrm_field' => '',
-                'remote_type'     => '',
+                'remote_type'     => $field['type'],
                 'will_skip'       => 'no'
             ];
 
@@ -185,9 +185,8 @@ class ActiveCampaignMigrator extends BaseMigrator
         }
 
         $params = [
-            'ids'  => 'ALL',
-            'full' => 1,
-            'page' => $page
+            'offset' => empty( $page ) ? 0 : $page + 100,
+            'status' => $subscribedOnly ? '1' : '-1',
         ];
         $subscribers = $api->getContacts($params);
 
@@ -239,10 +238,23 @@ class ActiveCampaignMigrator extends BaseMigrator
             if (!empty($subscriber['fields'])) {
                 $customFields = [];
                 foreach ($subscriber['fields'] as $field) {
-                    $customFields['perstag'] = $field['val'];
+                    $val = $field['val'];
+                    /**
+                     * ActiveCampaign api return checkbox & listbox field value as ||VALUE|| format
+                     * For example: ||a||, ||yes||
+                     * Here we remove the || from the value
+                     */
+                    if (in_array($field['type'], ['checkbox', 'listbox'])) {
+                        $val = array_values( array_filter( explode( '||', $val ) ) );
+                    }
+                    $customFields[$field['perstag']] = $val;
                 }
                 if ($customFields) {
                     $mergeData = $this->getMergedData($customFields, $fieldMaps);
+
+                    // Create values for multiselect and checkbox fields.
+                    $this->maybeCreateFieldOptions( $mergeData );
+
                     if ($mergeData) {
                         $data = array_merge($data, $mergeData);
                     }
@@ -292,11 +304,11 @@ class ActiveCampaignMigrator extends BaseMigrator
         }
 
         return [
-            'completed'     => $page + 1,
-            'total'         => $page + 1,
-            'has_more'      => true,
+            'completed'     => $page + 100,
+            'total'         => $page + 100,
+            'has_more'      => ! empty( $subscribers ),
             'hide_progress' => true,
-            'message'       => ($page * 20) . __(' contacts has been imported so far.', 'fluent-crm')
+            'message'       => ($page + 100) . __(' contacts has been imported so far.', 'fluent-crm')
         ];
     }
 
