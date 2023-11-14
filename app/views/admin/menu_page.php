@@ -5,6 +5,7 @@
  * @var $menuItems array
  */
 ?>
+<?php do_action('fluent_crm/before_admin_app_wrap'); ?>
 <div class="fluentcrm_app_wrapper">
     <div class="fluentcrm_main_menu_items">
         <div class="fluentcrm_menu_logo_holder">
@@ -26,9 +27,26 @@
                         <span class="fc_submenu_handler dashicons dashicons-arrow-down-alt2"></span>
                     <?php } ?></a>
                 <?php if($hasSubMenu): ?>
-                <div class="fluentcrm_submenu_items">
+
+                <?php $layoutClass = \FluentCrm\Framework\Support\Arr::get($item, 'layout_class'); ?>
+                <div class="fluentcrm_submenu_items <?php echo esc_attr($layoutClass); ?>">
                     <?php foreach ($item['sub_items'] as $sub_item): ?>
-                    <a href="<?php echo esc_url($sub_item['permalink']); ?>"><?php echo esc_html($sub_item['label']); ?></a>
+                    <a href="<?php echo esc_url($sub_item['permalink']); ?>">
+                        <?php
+                            if(!$layoutClass) {
+                                echo esc_html($sub_item['label']);
+                            } else {
+                                ?>
+                                <div class="fc_menu_card">
+                                    <span class="fc_menu_title"><?php echo  esc_html($sub_item['label']); ?></span>
+                                    <?php if(!empty($sub_item['description'])): ?>
+                                    <p class="fc_menu_description"><?php echo wp_kses_post($sub_item['description']); ?></p>
+                                    <?php endif; ?>
+                                </div>
+                                <?php
+                            }
+                        ?>
+                    </a>
                     <?php endforeach; ?>
                 </div>
                 <?php endif; ?>
@@ -36,7 +54,6 @@
             <?php endforeach; ?>
         </ul>
     </div>
-
     <div id='fluentcrm_app'></div>
     <?php do_action('fluent_crm/admin_app'); ?>
 </div>

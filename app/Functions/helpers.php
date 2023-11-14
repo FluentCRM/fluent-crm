@@ -472,20 +472,45 @@ function fluentcrm_delete_subscriber_meta($subscriberId, $key)
  *
  * @return array
  */
-function fluentcrm_subscriber_statuses()
+function fluentcrm_subscriber_statuses($isOptions = false)
 {
     /**
      * Subscriber Statuses
      *
      * @param: array $statuses array of subscriber statuses
      */
-    return apply_filters('fluentcrm_subscriber_statuses', [
+    $statuses = apply_filters('fluent_crm/contact_statuses', [
         'subscribed',
         'pending',
         'unsubscribed',
         'bounced',
         'complained'
     ]);
+
+    if (!$isOptions) {
+        return $statuses;
+    }
+
+    $formattedStatues = [];
+
+    $transMaps = [
+        'subscribed'   => __('Subscribed', 'fluent-crm'),
+        'pending'      => __('Pending', 'fluent-crm'),
+        'unsubscribed' => __('Unsubscribed', 'fluent-crm'),
+        'bounced'      => __('Bounced', 'fluent-crm'),
+        'complained'   => __('Complained', 'fluent-crm')
+    ];
+
+    foreach ($statuses as $status) {
+        $formattedStatues[] = [
+            'id'    => $status,
+            'slug'  => $status,
+            'title' => isset($transMaps[$status]) ? $transMaps[$status] : ucfirst($status)
+        ];
+    }
+
+    return $formattedStatues;
+
 }
 
 /**
@@ -493,35 +518,79 @@ function fluentcrm_subscriber_statuses()
  *
  * @return array
  */
-function fluentcrm_subscriber_editable_statuses()
+function fluentcrm_subscriber_editable_statuses($isOptions = false)
 {
+
+    $statuses = fluentcrm_subscriber_statuses();
+
+    $unEditableStatuses = ['bounced', 'complained'];
+
+    $statuses = array_diff($statuses, $unEditableStatuses);
+
     /**
      * Contact's Editable Statuses
      *
      * @param: array $editableStatuses array of subscriber's editable statuses
      */
-    return apply_filters('fluentcrm_subscriber_editable_statuses', [
-        'subscribed',
-        'unsubscribed',
-        'pending'
-    ]);
+    $editableStatuses = apply_filters('fluent_crm/contact_editable_statuses', $statuses);
+
+    if (!$isOptions) {
+        return $editableStatuses;
+    }
+
+    $formattedStatues = [];
+
+    $transMaps = [
+        'subscribed'   => __('Subscribed', 'fluent-crm'),
+        'pending'      => __('Pending', 'fluent-crm'),
+        'unsubscribed' => __('Unsubscribed', 'fluent-crm'),
+        'bounced'      => __('Bounced', 'fluent-crm'),
+        'complained'   => __('Complained', 'fluent-crm')
+    ];
+
+    foreach ($editableStatuses as $status) {
+        $formattedStatues[] = [
+            'id'    => $status,
+            'slug'  => $status,
+            'title' => isset($transMaps[$status]) ? $transMaps[$status] : ucfirst($status)
+        ];
+    }
+
+    return $formattedStatues;
 }
 
 /**
  * Get Contact Types
  * @return array
  */
-function fluentcrm_contact_types()
+function fluentcrm_contact_types($isOptions = false)
 {
     /**
      * Contact Types
      *
      * @param: array $contactTypes array of contact types
      */
-    return apply_filters('fluentcrm_contact_types', [
+    $types = apply_filters('fluent_crm/contact_types', [
         'lead'     => __('Lead', 'fluent-crm'),
         'customer' => __('Customer', 'fluent-crm')
     ]);
+
+    if (!$isOptions) {
+        return $types;
+    }
+
+    $formattedTypes = [];
+
+    foreach ($types as $type => $label) {
+        $formattedTypes[] = [
+            'id'    => $type,
+            'slug'  => $type,
+            'title' => $label
+        ];
+    }
+
+    return $formattedTypes;
+
 }
 
 /**
@@ -536,7 +605,7 @@ function fluentcrm_activity_types()
      *
      * @param: array $activityTypes array of contact's Activity Types
      */
-    return apply_filters('fluentcrm_contact_activity_types', [
+    return apply_filters('fluent_crm/contact_activity_types', [
         'note'              => __('Note', 'fluent-crm'),
         'call'              => __('Call', 'fluent-crm'),
         'email'             => __('Email', 'fluent-crm'),
@@ -639,8 +708,8 @@ function fluentcrmGravatar($email, $name = '')
         $fallback = '&d=https%3A%2F%2Fui-avatars.com%2Fapi%2F' . urlencode($name) . '/128';
     }
 
-    return apply_filters('fluentcrm_get_avatar',
-        "https://www.gravatar.com/avatar/${hash}?s=128" . $fallback,
+    return apply_filters('fluent_crm/get_avatar',
+        "https://www.gravatar.com/avatar/{$hash}?s=128" . $fallback,
         $email
     );
 }
@@ -655,6 +724,11 @@ function fluentcrmGetGlobalSettings($key, $default = false)
 {
     $settings = get_option('fluentcrm-global-settings');
     if ($settings && isset($settings[$key])) {
+
+        if ($key == 'business_settings' && !isset($settings[$key]['admin_email'])) {
+            $settings[$key]['admin_email'] = '{{wp.admin_email}}';
+        }
+
         return $settings[$key];
     }
     return $default;
@@ -682,7 +756,7 @@ function fluentcrmTrackClicking()
      * @param bool $trackClicking if click tracking is enabled or disabled
      * @return bool
      */
-    return apply_filters('fluentcrm_track_click', true);
+    return apply_filters('fluent_crm/track_click', true);
 }
 
 
@@ -698,7 +772,7 @@ function fluentCrmWillTrackIp()
      * @param bool $trackIp return true if ip address tracking is enabled or false if disabled
      * @return bool
      */
-    return apply_filters('fluentcrm_will_track_user_ip', true);
+    return apply_filters('fluent_crm/will_track_user_ip', true);
 }
 
 /**
@@ -712,6 +786,7 @@ function fluentcrm_contact_added_to_tags($attachedTagIds, Subscriber $subscriber
     if (defined('FLUENTCRM_DISABLE_TAG_LIST_EVENTS')) {
         return;
     }
+
     /**
      * Fires when tags have been added to a subscriber
      *
@@ -721,6 +796,25 @@ function fluentcrm_contact_added_to_tags($attachedTagIds, Subscriber $subscriber
     do_action(
         'fluentcrm_contact_added_to_tags',
         (array)$attachedTagIds,
+        $subscriber
+    );
+}
+
+function fluentcrm_contact_added_to_companies($attachedCompanyIds, Subscriber $subscriber)
+{
+    if (defined('FLUENTCRM_DISABLE_TAG_LIST_EVENTS')) {
+        return;
+    }
+
+    /**
+     * Fires when tags have been added to a subscriber
+     *
+     * @param array $attachedCompanyIds IDs of the companies that will be added to the subscriber
+     * @param \FluentCrm\App\Models\Subscriber $subscriber
+     */
+    do_action(
+        'fluentcrm_contact_added_to_companies',
+        (array)$attachedCompanyIds,
         $subscriber
     );
 }
@@ -742,7 +836,7 @@ function fluentcrm_contact_added_to_lists($attachedListIds, Subscriber $subscrib
      * @param array $attachedListIds IDs of the lists that will be added to the subscriber
      * @param \FluentCrm\App\Models\Subscriber $subscriber
      */
-    return do_action(
+    do_action(
         'fluentcrm_contact_added_to_lists',
         (array)$attachedListIds,
         $subscriber
@@ -799,6 +893,33 @@ function fluentcrm_contact_removed_from_lists($detachedListIds, Subscriber $subs
     );
 }
 
+
+/**
+ * Remove companies from a subscriber
+ * @param $detachedCompanyIds
+ * @param \FluentCrm\App\Models\Subscriber $subscriber
+ * @return void
+ */
+function fluentcrm_contact_removed_from_companies($detachedCompanyIds, Subscriber $subscriber)
+{
+    if (defined('FLUENTCRM_DISABLE_TAG_LIST_EVENTS')) {
+        return;
+    }
+
+    /**
+     * Fires when companies have been removed from a subscriber
+     *
+     * @param array $detachedCompanyIds IDs of the tags that will be removed from the subscriber
+     * @param \FluentCrm\App\Models\Subscriber $subscriber
+     */
+    do_action(
+        'fluentcrm_contact_removed_from_companies',
+        (array)$detachedCompanyIds,
+        $subscriber
+    );
+}
+
+
 /*
  * Get Current Contact based on the current userID or contact from the cookie value
  *
@@ -806,23 +927,12 @@ function fluentcrm_contact_removed_from_lists($detachedListIds, Subscriber $subs
  */
 function fluentcrm_get_current_contact()
 {
-    $subscriber = false;
-    $userId = get_current_user_id();
+    return FluentCrmApi('contacts')->getCurrentContact(true, true);
+}
 
-    if ($userId) {
-        $subscriber = Subscriber::where('user_id', $userId)->first();
-        if (!$subscriber) {
-            $user = get_user_by('ID', $userId);
-            $subscriber = Subscriber::where('email', $user->user_email)->first();
-        }
-    } else {
-        $fcSubscriberHash = FluentCrm\Framework\Support\Arr::get($_COOKIE, 'fc_s_hash');
-        if ($fcSubscriberHash) {
-            $subscriber = Subscriber::where('hash', $fcSubscriberHash)->first();
-        }
-    }
-
-    return $subscriber;
+function fluentcrm_menu_url_base()
+{
+    return apply_filters('fluent_crm/menu_url_base', admin_url('admin.php?page=fluentcrm-admin#/'));
 }
 
 /**
@@ -855,7 +965,7 @@ function fluentcrm_get_crm_profile_html($userIdOrEmail, $checkPermission = true,
      * Filter for URL Base of CRM Admin menu
      * @param string The full url of the admin page
      */
-    $urlBase = apply_filters('fluentcrm_menu_url_base', admin_url('admin.php?page=fluentcrm-admin#/'));
+    $urlBase = fluentcrm_menu_url_base();
     $crmProfileUrl = $urlBase . 'subscribers/' . $profile->id;
     $tags = $profile->tags;
     $lists = $profile->lists;
@@ -1041,7 +1151,7 @@ function fluentcrm_queue_on_background($callbackName, $payload)
         'blocking'  => false,
         'body'      => $body,
         'cookies'   => $_COOKIE,
-        'sslverify' => apply_filters('fluentcrm_https_local_ssl_verify', false),
+        'sslverify' => apply_filters('fluent_crm/https_local_ssl_verify', false),
     );
 
     $queryArgs = array(
@@ -1066,7 +1176,7 @@ function fluentcrm_is_rtl()
      *
      * @param bool $is_rtl - return true if you want to render FluentCRM emails in RTL mode
      */
-    return apply_filters('fluentcrm_is_rtl', is_rtl());
+    return apply_filters('fluent_crm/is_rtl', is_rtl());
 }
 
 /**
@@ -1129,7 +1239,7 @@ function fluentCrmWillAnonymizeIp()
     static $status;
     if ($status) {
         $bool = $status == 'yes';
-        return apply_filters('fluentcrm_anonymize_ip', $bool);
+        return apply_filters('fluent_crm/anonymize_ip', $bool);
     }
 
     $settings = \FluentCrm\App\Services\Helper::getComplianceSettings();
@@ -1138,7 +1248,7 @@ function fluentCrmWillAnonymizeIp()
 
     $bool = $status == 'yes';
 
-    return apply_filters('fluentcrm_anonymize_ip', $bool);
+    return apply_filters('fluent_crm/anonymize_ip', $bool);
 }
 
 function fluentCrmGetContactSecureHash($contactId)
@@ -1170,7 +1280,6 @@ function fluentCrmGetContactSecureHash($contactId)
     return $hash;
 }
 
-
 function fluentCrmGetFromCache($key, $callback = false, $expire = 600)
 {
     if ($value = wp_cache_get($key, 'fluent_crm')) {
@@ -1185,4 +1294,43 @@ function fluentCrmGetFromCache($key, $callback = false, $expire = 600)
     }
 
     return $value;
+}
+
+function fluentCrmAutoProcessCampaignTypes()
+{
+    return ['campaign', 'recurring_mail'];
+}
+
+
+function fluentCrmRunTimeCache($key, $value = NULL)
+{
+    static $items = [];
+
+    if ($value === NULL) {
+        return isset($items[$key]) ? $items[$key] : NULL;
+    }
+
+    $items[$key] = $value;
+    return $value;
+}
+
+if (!function_exists('fluentCrmMaxRunTime')) {
+    function fluentCrmMaxRunTime()
+    {
+        if (function_exists('ini_get')) {
+            $maxRunTime = (int) ini_get('max_execution_time');
+        } else {
+            return 27;
+        }
+
+        if (!$maxRunTime || $maxRunTime < 0) {
+            $maxRunTime = 30;
+        }
+
+        if ($maxRunTime > 50) {
+            $maxRunTime = 50;
+        }
+
+        return $maxRunTime - 3;
+    }
 }

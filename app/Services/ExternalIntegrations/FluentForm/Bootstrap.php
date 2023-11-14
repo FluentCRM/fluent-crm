@@ -8,23 +8,22 @@ use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\Tag;
 use FluentCrm\App\Services\Funnel\FunnelHelper;
 use FluentCrm\Framework\Support\Arr;
+use FluentForm\App\Http\Controllers\IntegrationManagerController;
 use FluentForm\App\Modules\Form\FormFieldsParser;
 use FluentForm\App\Services\FormBuilder\ShortCodeParser;
-use FluentForm\App\Services\Integrations\GlobalNotificationManager;
-use FluentForm\App\Services\Integrations\IntegrationManager;
-use FluentForm\Framework\Foundation\Application;
+use FluentForm\App\Services\Integrations\GlobalNotificationService;
 use FluentForm\Framework\Helpers\ArrayHelper;
 
-class Bootstrap extends IntegrationManager
+class Bootstrap extends IntegrationManagerController
 {
     public $hasGlobalMenu = false;
 
     public $disableGlobalSettings = 'yes';
 
-    public function __construct(Application $app)
+    public function __construct()
     {
         parent::__construct(
-            $app,
+            null,
             __('FluentCRM', 'fluent-crm'),
             'fluentcrm',
             '_fluentform_fluentcrm_settings',
@@ -32,13 +31,13 @@ class Bootstrap extends IntegrationManager
             10
         );
 
-        $this->logo = FLUENTCRM_PLUGIN_URL . 'assets/images/fluentcrm-logo.png';
+        $this->logo = FLUENTCRM_PLUGIN_URL . 'assets/images/fluentcrm-logo.svg';
 
         $this->description = __('Connect FluentCRM with WP Fluent Forms and subscribe a contact when a form is submitted.', 'fluent-crm');
 
         $this->registerAdminHooks();
 
-        add_filter('fluentform_notifying_async_fluentcrm', '__return_false');
+        add_filter('fluentform/notifying_async_fluentcrm', '__return_false');
 
         $this->registerPaymentEvents();
 
@@ -225,14 +224,14 @@ class Bootstrap extends IntegrationManager
             $hasSubscriptionFields = !!FormFieldsParser::getInputsByElementTypes($form, ['subscription_payment_component']);
 
             $options = [
-                'fluentform_payment_refunded' => 'On Payment Refund'
+                'fluentform/payment_refunded' => 'On Payment Refund'
             ];
 
             if ($hasSubscriptionFields) {
                 $options = [
-                    'fluentform_subscription_payment_active'   => __('On Subscription Active', 'fluent-crm'),
-                    'fluentform_subscription_payment_canceled' => __('On Subscription Cancel', 'fluent-crm'),
-                    'fluentform_payment_refunded'              => __('On Payment Refund', 'fluent-crm')
+                    'fluentform/subscription_payment_active'   => __('On Subscription Active', 'fluent-crm'),
+                    'fluentform/subscription_payment_canceled' => __('On Subscription Cancel', 'fluent-crm'),
+                    'fluentform/payment_refunded'              => __('On Payment Refund', 'fluent-crm')
                 ];
             }
 
@@ -340,7 +339,7 @@ class Bootstrap extends IntegrationManager
 
         foreach (Arr::get($data, 'other_fields') as $field) {
             if ($field['item_value']) {
-                $contact[$field['label']] = $field['item_value'];
+                $contact[$field['label']] = str_replace('<br />', ' ', $field['item_value']);
             }
         }
 
@@ -362,7 +361,7 @@ class Bootstrap extends IntegrationManager
         if (isset($contact['country'])) {
             $country = FunnelHelper::getCountryShortName($contact['country']);
             if ($country) {
-                $contact[$contact['country']] = $country;
+                $contact['country'] = $country;
             } else {
                 unset($contact['country']);
             }
@@ -463,7 +462,7 @@ class Bootstrap extends IntegrationManager
                 $entry->id
             );
 
-            do_action('fluentcrm_contact_added_by_fluentform', $subscriber, $entry, $form, $feed);
+            do_action('fluent_crm/contact_added_by_fluentform', $subscriber, $entry, $form, $feed);
 
         } else {
 
@@ -500,7 +499,7 @@ class Bootstrap extends IntegrationManager
                 $subscriber->sendDoubleOptinEmail();
             }
 
-            do_action('fluentcrm_contact_updated_by_fluentform', $subscriber, $entry, $form, $feed);
+            do_action('fluent_crm/contact_updated_by_fluentform', $subscriber, $entry, $form, $feed);
 
             if ($removeTags = Arr::get($feed, 'settings.remove_tags', [])) {
                 $subscriber->detachTags($removeTags);
@@ -590,14 +589,14 @@ class Bootstrap extends IntegrationManager
 
     private function registerPaymentEvents()
     {
-        add_action('fluentform_subscription_payment_active', function ($subscription, $submission) {
+        add_action('fluentform/subscription_payment_active', function ($subscription, $submission) {
             $this->handlePaymentEvent($submission, 'fluentform_subscription_payment_active');
         }, 10, 2);
-        add_action('fluentform_subscription_payment_canceled', function ($subscription, $submission) {
+        add_action('fluentform/subscription_payment_canceled', function ($subscription, $submission) {
             $this->handlePaymentEvent($submission, 'fluentform_subscription_payment_canceled');
         }, 10, 2);
 
-        add_action('fluentform_payment_refunded', function ($refund, $transaction, $submission) {
+        add_action('fluentform/payment_refunded', function ($refund, $transaction, $submission) {
             $this->handlePaymentEvent($submission, 'fluentform_payment_refunded');
         }, 10, 3);
     }
@@ -622,7 +621,7 @@ class Bootstrap extends IntegrationManager
 
         $form = fluentFormApi('forms')->find($submission->form_id);
 
-        $notificationManager = new GlobalNotificationManager(wpFluentForm());
+        $notificationService = new GlobalNotificationService();
 
         foreach ($feeds as $feed) {
             $parsedValue = json_decode($feed->value, true);
@@ -636,7 +635,7 @@ class Bootstrap extends IntegrationManager
                 }
 
                 // Now check if conditions matched or not
-                $isConditionMatched = $notificationManager->checkCondition($parsedValue, $formData, $submission->id);
+                $isConditionMatched = $notificationService->checkCondition($parsedValue, $formData, $submission->id);
                 if ($isConditionMatched) {
                     $item = [
                         'id'       => $feed->id,

@@ -27,9 +27,9 @@ class PurchaseHistoryController extends Controller
     {
         $provider = $this->request->getSafe('provider');
         $subscriberId = $this->request->getSafe('id', 'intval');
-        $subscriber = Subscriber::where('id', $subscriberId)->first();
+        $subscriber = Subscriber::findOrFail($subscriberId);
 
-        $data = apply_filters('fluentcrm_get_purchase_history_'.$provider, [
+        $data = apply_filters('fluent_crm/purchase_history_'.$provider, [
             'orders' => [],
             'total' => 0
         ], $subscriber);

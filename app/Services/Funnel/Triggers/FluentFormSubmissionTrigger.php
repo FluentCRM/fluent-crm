@@ -17,6 +17,7 @@ class FluentFormSubmissionTrigger extends BaseTrigger
             return;
         }
 
+
         $this->actionArgNum = 3;
         $this->triggerName = 'fluentform_submission_inserted';
         $this->priority = 25;
@@ -64,7 +65,7 @@ class FluentFormSubmissionTrigger extends BaseTrigger
             $subtitle .= ' Use shortcode <b> [fluentform id="' . $formId . '"] </b> to show the form in your WordPress page/posts. <a target="_blank" href="' . admin_url('admin.php?page=fluent_forms&route=editor&form_id=' . $formId) . '">Edit The Form</a>';
         }
 
-        $secondaryFields = apply_filters('fluentcrm_fluentform_other_map_fields',
+        $secondaryFields = apply_filters('fluent_crm/fluentform_other_map_fields',
             FunnelHelper::getSecondaryContactFieldMaps()
         );
 

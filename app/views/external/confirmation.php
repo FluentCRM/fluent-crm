@@ -6,9 +6,10 @@
     <meta http-equiv="Imagetoolbar" content="No"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?php esc_html_e('Email Confirmation', 'fluent-crm') ?></title>
+    <meta name="robots" content="noindex">
     <?php
         wp_head();
-        do_action('fluentcrm_confirmation_head', $subscriber);
+        do_action('fluent_crm/confirmation_head', $subscriber);
     ?>
 </head>
 <body>
@@ -28,7 +29,7 @@
 </div>
 <?php
     wp_footer();
-    do_action('fluentcrm_confirmation_head_footer', $subscriber);
+    do_action('fluent_crm/confirmation_footer', $subscriber);
 ?>
 </body>
 </html>

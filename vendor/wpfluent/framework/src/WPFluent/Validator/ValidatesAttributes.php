@@ -235,7 +235,7 @@ trait ValidatesAttributes
      */
     protected function validateUrl($attribute, $value)
     {
-        return (bool) wp_http_validate_url($value);
+        return filter_var($value, FILTER_VALIDATE_URL);
     }
 
     /**
@@ -358,7 +358,7 @@ trait ValidatesAttributes
     protected function validateUnique($attribute, $value, $parameters)
     {
         global $wpdb;
-        
+
         if ($parameters && !$parameters[0]) {
             unset($parameters[0]);
         }
@@ -372,7 +372,7 @@ trait ValidatesAttributes
         $bindings = [$value];
 
         $query = "SELECT * FROM {$wpdb->prefix}{$parameters[0]} WHERE {$attribute} = %s";
-        
+
         if (count($parameters) > 2) {
             $ignorekey = 'id';
 
@@ -402,7 +402,7 @@ trait ValidatesAttributes
                 }
             }
         }
-        
+
         return is_null($wpdb->get_row($wpdb->prepare($query, $bindings)));
     }
 }

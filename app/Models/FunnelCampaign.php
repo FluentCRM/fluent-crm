@@ -75,8 +75,8 @@ class FunnelCampaign extends Campaign
             $emailSubject = $this->email_subject;
 
             if ($refSubscriber) {
-                $emailBody = apply_filters('fluentcrm_parse_campaign_email_text', $emailBody, $refSubscriber);
-                $emailSubject = apply_filters('fluentcrm_parse_campaign_email_text', $emailSubject, $refSubscriber);
+                $emailBody = apply_filters('fluent_crm/parse_campaign_email_text', $emailBody, $refSubscriber);
+                $emailSubject = apply_filters('fluent_crm/parse_campaign_email_text', $emailSubject, $refSubscriber);
             }
 
             $email = [
@@ -116,8 +116,8 @@ class FunnelCampaign extends Campaign
 
         // We have to handle manually
      //   $emailBody = (new BlockParser($this->subscriber))->parse($this->email_body);
-       // $args['email_body'] = apply_filters('fluentcrm_parse_campaign_email_text', $emailBody, $subscriber);
-      //  $args['email_subject'] = apply_filters('fluentcrm_parse_campaign_email_text', $this->email_subject, $subscriber);;
+       // $args['email_body'] = apply_filters('fluent_crm/parse_campaign_email_text', $emailBody, $subscriber);
+      //  $args['email_subject'] = apply_filters('fluent_crm/parse_campaign_email_text', $this->email_subject, $subscriber);;
        // $args['is_parsed'] = 1;
 
         return $this->subscribe([$subscriber], $args, true);

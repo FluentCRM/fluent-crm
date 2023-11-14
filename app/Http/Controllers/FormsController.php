@@ -79,7 +79,7 @@ class FormsController extends Controller
 
 
         if ($formIds) {
-            $crmBaseUrl = apply_filters('fluentcrm_menu_url_base', admin_url('admin.php?page=fluentcrm-admin#/'));
+            $crmBaseUrl = fluentcrm_menu_url_base();
 
             $search = sanitize_text_field($request->get('search', ''));
 
@@ -223,10 +223,11 @@ class FormsController extends Controller
             'form_id'  => $formId,
             'value'    => \json_encode($feedDefaults)
         ];
-        $createdFeedId = fluentCrmDb()->table('fluentform_form_meta')
-            ->insert($feedData);
 
-        do_action('fluentform_inserted_new_form', $formId, $formData);
+        $createdFeedId = fluentCrmDb()->table('fluentform_form_meta')
+            ->insertGetId($feedData);
+
+        do_action('fluentform/inserted_new_form', $formId, $formData);
         do_action('fluentcrm_created_new_fluentform', $formId, $formData);
 
         $feedUrl = admin_url('admin.php?page=fluent_forms&form_id=' . $formId . '&route=settings&sub_route=form_settings#/all-integrations/' . $createdFeedId . '/fluentcrm');
@@ -245,10 +246,10 @@ class FormsController extends Controller
 
     public function getTemplates()
     {
-        return apply_filters('fluentcrm_ff_form_templates', [
+        return apply_filters('fluent_crm/ff_form_templates', [
             'inline_subscribe'    => [
                 'label'       => __('Inline Opt-in Form', 'fluent-crm'),
-                'image'       => fluentCrm('url.assets') . 'images/forms/form_1.svg',
+                'image'       => fluentCrmMix('images/forms/form_1.svg'),
                 'id'          => 'inline_subscribe',
                 'form_fields' => '{"fields":[{"index":1,"element":"input_email","attributes":{"type":"email","name":"email","value":"","id":"","class":"extra_spaced","placeholder":"Email Address"},"settings":{"container_class":"","label":"","label_placement":"","help_message":"","admin_field_label":"Email Address","validation_rules":{"required":{"value":true,"message":"This field is required"},"email":{"value":true,"message":"This field must contain a valid email"}},"conditional_logics":{"type":"any","status":false,"conditions":[{"field":"","value":"","operator":""}]},"is_unique":"no","unique_validation_message":"Email address need to be unique."},"editor_options":{"title":"Email Address","icon_class":"ff-edit-email","template":"inputText"},"uniqElKey":"el_1601142291509"}],"submitButton":{"uniqElKey":"el_1524065200616","element":"button","attributes":{"type":"submit","class":""},"settings":{"align":"left","button_style":"default","container_class":"top_merged","help_message":"","background_color":"#409EFF","button_size":"md","color":"#ffffff","button_ui":{"type":"default","text":"Subscribe","img_url":""},"normal_styles":{"backgroundColor":"#409EFF","borderColor":"#409EFF","color":"#ffffff","borderRadius":"","minWidth":""},"hover_styles":{"backgroundColor":"#ffffff","borderColor":"#409EFF","color":"#409EFF","borderRadius":"","minWidth":""},"current_state":"normal_styles"},"editor_options":{"title":"Submit Button"}}}',
                 'custom_css'  => $this->getFormCss('inline_subscribe'),

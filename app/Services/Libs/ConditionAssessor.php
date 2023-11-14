@@ -62,6 +62,10 @@ class ConditionAssessor
             $sourceValue = Arr::get($inputs, $conditional['data_key']);
             $dataValue = $conditional['data_value'];
 
+            if ( $conditional['data_key'] === 'order_status'  && !strpos('wc-', $sourceValue )) {
+                $sourceValue = str_replace($sourceValue, 'wc-'.$sourceValue, $sourceValue);
+            }
+
             switch ($conditional['operator']) {
                 case '=':
                     if (is_array($sourceValue)) {

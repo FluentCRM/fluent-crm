@@ -153,12 +153,12 @@ class MigratorController extends Controller
             return ActiveCampaignMigrator::class;
         }
 
-        return apply_filters('fluentcrm_migrator_driver_class', null, $driver);
+        return apply_filters('fluent_crm/migrator_driver_class', null, $driver);
     }
 
     private function getMigrators()
     {
-        return apply_filters('fluentcrm_saas_migrators', [
+        return apply_filters('fluent_crm/saas_migrators', [
             'mailchimp'      => (new MailChimpMigrator())->getInfo(),
             'ConvertKit'     => (new ConvertKitMigrator())->getInfo(),
             'MailerLite'     => (new MailerLiteMigrator())->getInfo(),

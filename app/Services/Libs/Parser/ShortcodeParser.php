@@ -89,6 +89,7 @@ class ShortcodeParser
 
         $matched = explode('.', $matches[2]);
 
+
         if (count($matched) <= 1) {
             return apply_filters('fluentcrm_smartcode_fallback', $matches[0], $subscriber);
         }
@@ -126,6 +127,11 @@ class ShortcodeParser
                 $value = $this->getWpValue($valueKey, $defaultValue, $subscriber);
                 break;
             case 'crm':
+                /*
+                 * We need to check this condition. Most probably we are parsing these smartcodes later
+                 * I am restricting this for now. Need to check later
+                 * @todo: Urgent
+                 */
                 $urlKeys = [
                     'unsubscribe_url',
                     'manage_subscription_url',
@@ -146,7 +152,7 @@ class ShortcodeParser
                 $value = $this->parseOtherValue($valueKey, $defaultValue, $subscriber);
                 break;
             default:
-                $value = apply_filters('fluentcrm_smartcode_fallback_callback_' . $dataKey, $matches[0], $valueKey, $defaultValue, $subscriber);
+                $value = apply_filters('fluent_crm/smartcode_group_callback_' . $dataKey, $matches[0], $valueKey, $defaultValue, $subscriber);
         }
 
         if ($transformer && is_string($transformer) && $value) {
@@ -290,6 +296,12 @@ class ShortcodeParser
             if (is_array($value)) {
                 return implode(', ', $value);
             }
+
+            $multiLines = preg_split("/\r\n|\n|\r/", $value);
+            if ($multiLines && is_array($multiLines)) {
+                return implode('<br/> ', $multiLines);
+            }
+
             if ($value) {
                 return $value;
             }
@@ -383,15 +395,55 @@ class ShortcodeParser
     protected function parseOtherValue($valueKey, $defaultValue, $subscriber)
     {
         $valueKeys = explode('.', $valueKey);
+
         if (count($valueKeys) == 1) {
             return $defaultValue;
         }
 
         $key = $valueKeys[0];
+
         $otherKey = $valueKeys[1];
 
         if (!$otherKey) {
             return $defaultValue;
+        }
+
+        if($key == 'latest_post') {
+            // get latest post title
+            $posts = get_posts([
+                'post_type' => 'post',
+                'post_status' => 'publish',
+                'posts_per_page' => 1,
+                'orderby' => 'date',
+                'order' => 'DESC',
+                'ignore_sticky_posts' => 1
+            ]);
+
+            if(!count($posts)) {
+                return $defaultValue;
+            }
+
+            $post = $posts[0];
+
+            if($otherKey == 'title') {
+                return $post->post_title;
+            }
+
+            if($otherKey == 'content') {
+                return get_the_content(null, false, $post);
+            }
+
+            if($otherKey == 'excerpt') {
+                return get_the_excerpt($post);
+            }
+
+            return $post->post_title;
+        }
+
+        if($key == 'date_format') {
+            array_shift($valueKeys);
+            $dateKey = implode('.', $valueKeys);
+            return date($dateKey, current_time('timestamp'));
         }
 
         if ($key == 'date') {

@@ -4,6 +4,8 @@ namespace FluentCrm\App\Hooks\Handlers;
 
 use FluentCrm\App\Models\CampaignEmail;
 use FluentCrm\App\Models\CampaignUrlMetric;
+use FluentCrm\App\Models\Company;
+use FluentCrm\App\Models\CompanyNote;
 use FluentCrm\App\Models\FunnelMetric;
 use FluentCrm\App\Models\FunnelSubscriber;
 use FluentCrm\App\Models\Subscriber;
@@ -41,6 +43,14 @@ class Cleanup
         if (defined('FLUENTCAMPAIGN_DIR_FILE')) {
             \FluentCampaign\App\Models\SequenceTracker::whereIn('subscriber_id', $subscriberIds)->delete();
         }
+
+        if(Helper::isExperimentalEnabled('company_module')) {
+            Company::whereIn('owner_id', $subscriberIds)
+                ->update([
+                    'owner_id' => NULL
+                ]);
+        }
+
     }
 
     /**
@@ -132,7 +142,7 @@ class Cleanup
 
         $subscriber = Subscriber::where('user_id', $userId)->first();
 
-        if(!$subscriber && $deletedUser) {
+        if (!$subscriber && $deletedUser) {
             $subscriber = Subscriber::where('email', $deletedUser->user_email)->first();
         }
 
@@ -184,7 +194,7 @@ class Cleanup
         ];
 
         foreach ($mainFields as $fieldKey => $fieldValue) {
-            if($fieldValue) {
+            if ($fieldValue) {
                 $data['data'][] = [
                     'name'  => $fieldKey,
                     'value' => $fieldValue
@@ -203,6 +213,23 @@ class Cleanup
             'data' => [$data],
             'done' => true,
         ];
+    }
 
+    public function handleCompanyDelete($id)
+    {
+        /*
+         * Remove Company ID from all connected subscribers
+         */
+        Subscriber::where('company_id', $id)->update([
+            'company_id' => NULL
+        ]);
+
+        fluentCrmDb()->table('fc_subscriber_pivot')
+            ->where('object_id', $id)
+            ->where('object_type', 'FluentCrm\App\Models\Company')
+            ->delete();
+
+        // Delete company notes
+        CompanyNote::where('subscriber_id', $id)->delete();
     }
 }

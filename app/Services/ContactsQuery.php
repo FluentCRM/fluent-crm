@@ -27,7 +27,8 @@ class ContactsQuery
             'custom_fields'      => false,
             'limit'              => false,
             'offset'             => false,
-            'contact_status'     => ''
+            'contact_status'     => '',
+            'company_ids'        => []
         ]);
 
         $this->setupQuery();
@@ -53,6 +54,7 @@ class ContactsQuery
         if ($this->args['filter_type'] == 'advanced') {
             $filtersGroups = $this->args['filters_groups'];
             $subscribersQuery->where(function ($subscribersQueryGroup) use ($filtersGroups) {
+
                 foreach ($filtersGroups as $groupIndex => $group) {
                     $method = 'orWhere';
                     if ($groupIndex == 0) {
@@ -74,7 +76,14 @@ class ContactsQuery
                 $subscribersQuery->filterByLists($lists);
             }
 
+            if ($company_ids = $this->args['company_ids']) {
+                $subscribersQuery->filterByCompanies($company_ids);
+            }
+
             if ($statuses = $this->args['statuses']) {
+                $statuses = (array) $statuses;
+                $statuses = array_intersect($statuses, fluentcrm_subscriber_statuses());
+
                 $subscribersQuery->filterByStatues($statuses);
             }
         }
@@ -90,6 +99,10 @@ class ContactsQuery
 
         if ($this->args['contact_status']) {
             $subscribersQuery->where('status', $this->args['contact_status']);
+        }
+
+        if ($this->args['company_ids']) {
+            $subscribersQuery->filterByCompanies($this->args['company_ids']);
         }
 
         $this->model = $subscribersQuery;

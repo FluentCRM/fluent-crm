@@ -77,7 +77,7 @@ class ActivationHandler
                 ]
             ],
             'email' => [
-                'emails_per_second' => 0
+                'emails_per_second' => 4
             ]
         ];
 

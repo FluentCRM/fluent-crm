@@ -67,7 +67,14 @@ class Lists
                 ],
                 ['slug' => $list['slug']]
             );
-            do_action('fluentcrm_list_created', $list->id);
+
+            if($list->wasRecentlyCreated) {
+                do_action('fluentcrm_list_created', $list->id);
+                do_action('fluent_crm/list_created', $list);
+            } else {
+                do_action('fluentcrm_list_updated', $list->id);
+                do_action('fluent_crm/list_updated', $list);
+            }
 
             $newLists[] = $list;
         }

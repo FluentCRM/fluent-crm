@@ -23,7 +23,7 @@ class AdminBar
     {
         $contactPermission = PermissionManager::currentUserCan('fcrm_read_contacts');
 
-        if ( !is_admin() || !$contactPermission || apply_filters('fluentcrm_disable_global_search', false) ) {
+        if ( !is_admin() || !$contactPermission || apply_filters('fluent_crm/disable_global_search', false) ) {
             return;
         }
 
@@ -33,16 +33,14 @@ class AdminBar
 
     public function addGlobalSearch($adminBar)
     {
+
         wp_enqueue_script(
             'fluentcrm_global_search',
             fluentCrmMix('/admin/js/global-search.js'),
             ['jquery']
         );
 
-        $urlBase = apply_filters(
-            'fluentcrm_menu_url_base',
-            admin_url('admin.php?page=fluentcrm-admin#/')
-        );
+        $urlBase = fluentcrm_menu_url_base();
 
         $currentScreen = get_current_screen();
         $editingUserVars = null;

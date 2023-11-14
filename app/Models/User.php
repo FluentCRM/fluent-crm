@@ -27,6 +27,14 @@ class User extends Model
      */
     public function getPhotoAttribute()
     {
+        if(empty($this->attributes['user_email'])) {
+            $contact = Subscriber::where('user_id', $this->ID)
+                ->first();
+            if($contact) {
+                return $contact->photo;
+            }
+            return '';
+        }
         return fluentcrmGravatar($this->attributes['user_email'], $this->attributes['display_name']);
     }
 }

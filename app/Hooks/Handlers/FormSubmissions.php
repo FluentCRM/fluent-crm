@@ -59,10 +59,10 @@ class FormSubmissions
         $formattedSubmissions = [];
         foreach ($submissions as $submission) {
             $submissionUrl = admin_url('admin.php?page=fluent_forms&route=entries&form_id=' . $submission->form_id . '#/entries/' . $submission->id);
-            $actionUrl = '<a target="_blank" href="' . $submissionUrl . '">View Submission</a>';
+            $actionUrl = '<a target="_blank" href="' . $submissionUrl . '">view</a>';
             $formattedSubmissions[] = [
                 'id'           => '#' . $submission->id,
-                'Form Title'   => $submission->title,
+                'title'   => $submission->title,
                 'Status'       => $submission->status,
                 'Submitted At' => $submission->created_at,
                 'action'       => $actionUrl
@@ -71,7 +71,28 @@ class FormSubmissions
 
         return [
             'total' => $total,
-            'data'  => $formattedSubmissions
+            'data'  => $formattedSubmissions,
+            'columns_config' => [
+                'id' => [
+                    'label' => 'ID',
+                    'width' => '100px'
+                ],
+                'title' => [
+                    'label' => 'Form Title'
+                ],
+                'Status' => [
+                    'label' => 'Status',
+                    'width' => '100px'
+                ],
+                'Submitted At' => [
+                    'label' => 'Submitted At',
+                    'width' => '180px'
+                ],
+                'action' => [
+                    'label' => 'Action',
+                    'width' => '100px'
+                ]
+            ]
         ];
     }
 

@@ -20,7 +20,7 @@ class ImporterController extends Controller
 {
     public function getDrivers()
     {
-        $drivers = apply_filters('fluentcrm_import_providers', [
+        $drivers = apply_filters('fluent_crm/import_providers', [
             'csv'   => [
                 'label'    => __('CSV File', 'fluent-crm'),
                 'logo'     => fluentCrmMix('images/csv.svg'),
@@ -48,7 +48,7 @@ class ImporterController extends Controller
             return $this->processUserDriver($request);
         }
 
-        $response = apply_filters('fluentcrm_get_import_driver_' . $driver, false, $request);
+        $response = apply_filters('fluent_crm/get_import_driver_' . $driver, false, $request);
 
         if (!$response || is_wp_error($response)) {
             $message = __('Sorry no driver found for this import', 'fluent-crm');
@@ -72,7 +72,7 @@ class ImporterController extends Controller
             return $this->processUserImport($config, $page);
         }
 
-        $response = apply_filters('fluentcrm_post_import_driver_' . $driver, false, $config, $page);
+        $response = apply_filters('fluent_crm/post_import_driver_' . $driver, false, $config, $page);
 
         if (!$response || is_wp_error($response)) {
             $message = __('Sorry no driver found for this import', 'fluent-crm');
@@ -190,7 +190,7 @@ class ImporterController extends Controller
         ]);
 
 
-        $limit = apply_filters('fluentcrm_process_subscribers_per_request', 100);
+        $limit = apply_filters('fluent_crm/process_subscribers_per_request', 100);
 
         $userQuery = new \WP_User_Query([
             'role__in' => $inputs['roles'],

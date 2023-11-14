@@ -252,9 +252,11 @@ class Route
             ], 404);
         } catch (Exception $e) {
             $code = $e->getCode();
-            if(!$code) {
+
+            if(!$code || $code < 200) {
                 $code = 423;
             }
+
             return $this->app->response->sendError([
                 'message' => $e->getMessage()
             ], $code);
@@ -289,7 +291,7 @@ class Route
 
         return $this->app->response->sendError(
             $response->get_error_messages(),
-            is_numeric($code) ? $code : null
+            is_numeric($code) ? $code : 423
         );
     }
 }

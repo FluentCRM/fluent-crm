@@ -143,6 +143,7 @@ class LengthAwarePaginator extends AbstractPaginator implements ArrayableInterfa
      *
      * @return array
      */
+    #[\ReturnTypeWillChange]
     public function toArray()
     {
         return [
@@ -163,6 +164,7 @@ class LengthAwarePaginator extends AbstractPaginator implements ArrayableInterfa
      *
      * @return array
      */
+    #[\ReturnTypeWillChange]
     public function jsonSerialize()
     {
         return $this->toArray();
@@ -174,6 +176,7 @@ class LengthAwarePaginator extends AbstractPaginator implements ArrayableInterfa
      * @param  int  $options
      * @return string
      */
+    #[\ReturnTypeWillChange]
     public function toJson($options = 0)
     {
         return json_encode($this->jsonSerialize(), $options);

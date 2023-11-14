@@ -7,19 +7,15 @@ use FluentCrm\Framework\Support\Arr;
 
 class BlockParser
 {
-
     public function __construct($subscriber = null)
     {
-        static $initiated;
-
         BlockParserHelper::setSubscriber($subscriber);
 
-        if (!$initiated) {
-            $initiated = true;
+        if (!fluentCrmRunTimeCache('fluentcrm_block_parser_initiated')) {
+            fluentCrmRunTimeCache('fluentcrm_block_parser_initiated', 'yes');
             add_filter('render_block', array($this, 'alterBlockContent'), 999, 2);
         }
     }
-
 
     public function parse($content)
     {
@@ -68,9 +64,17 @@ class BlockParser
         } else if ($blockName == 'core/image') {
             $block['innerContent'][0] = $this->getImageBlockHtml($block);
         } else if ($blockName == 'core/latest-posts') {
-            $block['blockName'] = 'fluent-crm/latest-posts';
+            $block['blockName'] = 'fluent-crm/core-posts';
             $block['fc_total_blocks'] = 1;
         } else if ($blockName == 'fluentcrm/woo-product') {
+            $block['innerContent'][0] = '';
+            $block['innerContent'][2] = '';
+            $block['fc_total_blocks'] = 1;
+        } else if ($blockName == 'fluent-crm/latest-posts') {
+            $block['innerContent'][0] = '';
+            $block['innerContent'][2] = '';
+            $block['fc_total_blocks'] = 1;
+        } else if ($blockName == 'fluent-crm/products') {
             $block['innerContent'][0] = '';
             $block['innerContent'][2] = '';
             $block['fc_total_blocks'] = 1;
@@ -95,10 +99,21 @@ class BlockParser
             $content = $this->getColumnOpening($data) . $content . $this->getColumnClosing($data);
         } else if ($blockName == 'core/button') {
             $content = $this->getButtonWrapper($content, $data);
-        } else if ($blockName == 'fluent-crm/latest-posts') {
+        } else if ($blockName == 'fluent-crm/core-posts') {
             $content = $this->renderLatestPosts($data);
         } else if ($blockName == 'fluentcrm/woo-product') {
             $content = WooProduct::renderProduct($content, $data);
+        } else if ($blockName == 'fluent-crm/latest-posts') {
+
+            $content = '';
+            if (class_exists('\FluentCampaign\App\Services\PostParser\LatestPost')) {
+                $content = \FluentCampaign\App\Services\PostParser\LatestPost::renderPosts($content, $data);
+            }
+        } else if ($blockName == 'fluent-crm/products') {
+            $content = '';
+            if (class_exists('\FluentCampaign\App\Services\PostParser\LatestProductsBlock')) {
+                $content = \FluentCampaign\App\Services\PostParser\LatestProductsBlock::renderProducts($content, $data);
+            }
         }
 
         return $content;
@@ -208,8 +223,14 @@ class BlockParser
 
         $extraStyle = '';
         if ($spacings = Arr::get($block, 'attrs.style.spacing.margin', [])) {
-            $extraStyle .= 'margin-top:' . $spacings['top'] . ';';
-            $extraStyle .= 'margin-bottom:' . $spacings['bottom'] . ';';
+
+            if(!empty($spacings['top'])) {
+                $extraStyle .= 'margin-top:' . $spacings['top'] . ';';
+            }
+
+            if(!empty($spacings['bottom'])) {
+                $extraStyle .= 'margin-bottom:' . $spacings['bottom'] . ';';
+            }
         }
 
         return '<table valign="middle" align="' . $align . '" class="' . $tableCssClass . '" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%; width: ' . $width . '; float:none;' . $extraStyle . '"><tbody><tr>';
@@ -264,7 +285,7 @@ class BlockParser
 
         $alignment = $align == 'center' ? 'text-align: -webkit-center' : ' ';
 
-        return '<td style="padding-right: 10px;' . $alignment . '" align="' . $align . '" valign="middle" class="fce_column"><table border="0" cellspacing="0" cellpadding="0"><tr>' . $td . $content . '</td></tr></table></td>';
+        return '<td style="padding-right: 10px;' . $alignment . '" align="' . $align . '" valign="middle" class="fce_column"><table style="margin-bottom: 4px; margin-top: 4px;" border="0" cellspacing="0" cellpadding="0"><tr>' . $td . $content . '</td></tr></table></td>';
     }
 
     private function getButtonsClosing($block)
@@ -313,17 +334,38 @@ class BlockParser
             'align' . Arr::get($block, 'attrs.align', 'left')
         ]));
         $radius = Arr::get($block, 'attrs.style.border.radius', '0px');
+        $marginTop  = $this->getSpacing('attrs.marginTop', $block);
+        $marginBottom  = $this->getSpacing('attrs.marginBottom', $block);
+        $marginLeft  = $this->getSpacing('attrs.marginLeft', $block);
+        $marginRight  = $this->getSpacing('attrs.marginRight', $block);
+
+        $paddingTop  = $this->getSpacing('attrs.paddingTop', $block);
+        $paddingBottom  = $this->getSpacing('attrs.paddingBottom', $block);
+        $paddingLeft  = $this->getSpacing('attrs.paddingLeft', $block);
+        $paddingRight  = $this->getSpacing('attrs.paddingRight', $block);
+
+        $margin  = ''.$marginTop.'px '.$marginRight.'px '.$marginBottom.'px '.$marginLeft.'px';
+        $padding = ''.$paddingTop.'px '.$paddingRight.'px '.$paddingBottom.'px '.$paddingLeft.'px';
 
 
         $content = $block['innerContent'][0];
         $html = strip_tags($content, '<a><figcaption><img>');
         $html = str_replace(['<figcaption', 'figcaption/>'], ['<p', '/p>'], $html);
-        $html = '<div class="' . $classNames .'" style="border-radius: ' . $radius . '">'. $html . '</div>';
+        $html = '<div class="' . $classNames .'" style="border-radius: ' . $radius . '; margin: '. $margin . '; padding: '.$padding.'">'. $html . '</div>';
         return $html;
     }
 
     private function renderLatestPosts($attributes)
     {
         return '';
+    }
+
+    private  function getSpacing($key, $block)
+    {
+        $data  = Arr::get($block, $key, '0');
+        if (empty($data)) {
+            $data = '0';
+        }
+        return $data;
     }
 }

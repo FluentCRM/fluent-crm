@@ -35,16 +35,13 @@ $app->addAction('fluentcrm_scheduled_weekly_tasks', 'Scheduler@processWeekly');
 
 $app->addAction('wp_loaded', 'AdminMenu@init');
 
-/*
- * We don't need this
- */
-//$app->addAction('fluentcrm_campaign_status_active', 'CampaignGuard@checkIsActive');
-//$app->addAction('fluentcrm_campaign_status_working', 'CampaignGuard@checkIsWorking');
-
 $app->addAction('init', 'ExternalPages@route', 99);
 
 $app->addAction('wp_ajax_fluentcrm_unsubscribe_ajax', 'ExternalPages@handleUnsubscribe');
 $app->addAction('wp_ajax_nopriv_fluentcrm_unsubscribe_ajax', 'ExternalPages@handleUnsubscribe');
+
+$app->addAction('wp_ajax_fluentcrm_request_unsubscribe_ajax', 'ExternalPages@handleUnsubscribeRequestAjax');
+$app->addAction('wp_ajax_nopriv_fluentcrm_request_unsubscribe_ajax', 'ExternalPages@handleUnsubscribeRequestAjax');
 
 $app->addAction('wp_ajax_fluentcrm_manage_preferences_ajax', 'ExternalPages@handleManageSubPref');
 $app->addAction('wp_ajax_nopriv_fluentcrm_manage_preferences_ajax', 'ExternalPages@handleManageSubPref');
@@ -78,16 +75,17 @@ $app->addAction('fluentcrm_subscriber_status_to_subscribed', 'FunnelHandler@resu
  * Cleanup Hooks
  */
 $app->addAction('fluentcrm_after_subscribers_deleted', 'Cleanup@deleteSubscribersAssets', 10, 1);
-$app->addAction('fluentcrm_campaign_deleted', 'Cleanup@deleteCampaignAssets', 10, 1);
-$app->addAction('fluentcrm_list_deleted', 'Cleanup@deleteListAssets', 10, 1);
-$app->addAction('fluentcrm_tag_deleted', 'Cleanup@deleteTagAssets', 10, 1);
+$app->addAction('fluent_crm/campaign_deleted', 'Cleanup@deleteCampaignAssets', 10, 1);
+$app->addAction('fluent_crm/list_deleted', 'Cleanup@deleteListAssets', 10, 1);
+$app->addAction('fluent_crm/tag_deleted', 'Cleanup@deleteTagAssets', 10, 1);
 
 $app->addAction('fluentcrm_subscriber_status_to_unsubscribed', 'Cleanup@handleUnsubscribe');
 $app->addAction('fluentcrm_subscriber_status_to_bounced', 'Cleanup@handleUnsubscribe');
 $app->addAction('fluentcrm_subscriber_status_to_complained', 'Cleanup@handleUnsubscribe');
 
-$app->addAction('fluentcrm_contact_email_changed', 'Cleanup@handleContactEmailChanged');
+$app->addAction('fluent_crm/contact_email_changed', 'Cleanup@handleContactEmailChanged');
 $app->addAction('delete_user', 'Cleanup@handleUserDelete', 10, 3);
+$app->addAction('fluent_crm/company_deleted', 'Cleanup@handleCompanyDelete', 10, 1);
 
 /*
  * Admin Bar
@@ -167,7 +165,32 @@ add_shortcode('fluentcrm_pref', function ($atts, $content) {
     return (new \FluentCrm\App\Hooks\Handlers\PrefFormHandler())->handleShortCode($atts, $content);
 });
 
+add_shortcode('fluentcrm_content', function ($atts, $content) {
+    return (new \FluentCrm\App\Hooks\Handlers\PrefFormHandler())->handleDynamicContentShortCode($atts, $content);
+});
+
 // require the CLI
 if (defined('WP_CLI') && WP_CLI) {
     \WP_CLI::add_command('fluent_crm', '\FluentCrm\App\Hooks\CLI\Commands');
 }
+
+add_action('admin_notices', function () {
+    if (defined('FLUENTCAMPAIGN_FRAMEWORK_VERSION') && FLUENTCAMPAIGN_FRAMEWORK_VERSION < 3) {
+        echo '<div class="fc_notice notice notice-error fc_notice_error"><h3>Update FluentCRM Pro Plugin</h3><p>Your are using out-dated version of FluentCRM Pro. <a href="' . admin_url('plugins.php?s=fluentcampaign=pro&plugin_status=all&fluentcrm_pro_check_update=' . time()) . '">' . __('Please update FluentCRM Pro to latest version', 'fluent-crm') . '</a>.</p></div>';
+    }
+});
+
+
+/*
+ * For REST API Nonce Renew
+ */
+add_action('wp_ajax_fluentcrm_renew_rest_nonce', function () {
+    if(!\FluentCrm\App\Services\PermissionManager::currentUserPermissions()) {
+        wp_send_json([
+            'error' => 'You do not have permission to do this'
+        ], 403);
+    }
+    wp_send_json([
+        'nonce' => wp_create_nonce('wp_rest')
+    ], 200);
+});

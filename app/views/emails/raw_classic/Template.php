@@ -14,7 +14,7 @@
     <link rel="profile" href="https://gmpg.org/xfn/11">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-    <?php do_action('fluentform_email_header', 'raw_classic'); ?>
+    <?php do_action('fluent_crm/email_header', 'raw_classic'); ?>
     <?php include(FLUENTCRM_PLUGIN_PATH.'app/views/emails/classic-style.php'); ?>
 
 </head>

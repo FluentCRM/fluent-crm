@@ -2,6 +2,7 @@
 
 namespace FluentCrm\App\Http\Controllers;
 
+use FluentCrm\App\Models\Company;
 use FluentCrm\App\Services\Libs\FileSystem;
 use FluentCrm\App\Services\Sanitize;
 use FluentCrm\Framework\Support\Arr;
@@ -17,7 +18,6 @@ use FluentCrm\App\Models\Subscriber;
  *
  * @version 1.0.0
  */
-
 class CsvController extends Controller
 {
 
@@ -70,7 +70,13 @@ class CsvController extends Controller
             ]);
         }
 
-        $mappables = Subscriber::mappables();
+
+        if ($request->get('type') == 'company') {
+            $mappables = Company::mappables();
+        } else {
+            $mappables = Subscriber::mappables();
+        }
+
         $headerItems = array_filter($headers);
         $subscriberColumns = array_keys($mappables);
 
@@ -92,13 +98,21 @@ class CsvController extends Controller
             ];
         }
 
+        if ($request->get('type') == 'company') {
+            $columns = apply_filters(
+                'fluent_crm/company_table_columns', $subscriberColumns
+            );
+        } else {
+            $columns = apply_filters(
+                'fluent_crm/subscriber_table_columns', $subscriberColumns
+            );
+        }
+
         return $this->send([
             'file'    => $uploadedFiles[0]['file'],
             'headers' => $headerItems,
             'fields'  => $mappables,
-            'columns' => apply_filters(
-                'fluentcrm_subscriber_table_columns', $subscriberColumns
-            ),
+            'columns' => $columns,
             'map'     => $maps
         ]);
     }
@@ -241,6 +255,137 @@ class CsvController extends Controller
             'lists'                => $inputs['lists'],
             'offset'               => $offset,
             'result'               => $result
+        ]);
+    }
+
+    public function importCompanies()
+    {
+        $inputs = $this->request->only([
+            'map', 'file', 'update', 'create_owner'
+        ]);
+
+        $delimeter = $this->request->get('delimiter', 'comma');
+
+        if ($delimeter == 'comma') {
+            $delimeter = ',';
+        } else {
+            $delimeter = ';';
+        }
+
+        try {
+            $reader = $this->getCsvReader(FileSystem::get($inputs['file']));
+            $reader->setDelimiter($delimeter);
+
+            if (method_exists($reader, 'getRecords')) {
+                $aHeaders = $reader->fetchOne(0);
+
+                $allRecords = $reader->getRecords($aHeaders);
+
+                if (!is_array($allRecords)) {
+                    $allRecords = iterator_to_array($allRecords, true);
+                }
+
+                unset($allRecords[0]);
+                $allRecords = array_values($allRecords);
+            } else {
+                $aHeaders = $reader->fetchOne(0);
+                $allRecords = $reader->fetchAssoc($aHeaders);
+                if (!is_array($allRecords)) {
+                    $allRecords = iterator_to_array($allRecords, true);
+                }
+
+                unset($allRecords[0]);
+
+                $allRecords = array_values($allRecords);
+            }
+        } catch (\Exception $exception) {
+            return $this->sendError([
+                'message' => $exception->getMessage()
+            ]);
+        }
+
+        $page = $this->request->get('importing_page', 1);
+        $processPerRequest = 100;
+        $offset = ($page - 1) * $processPerRequest;
+        $records = array_slice($allRecords, $offset, $processPerRequest);
+
+        $willCreateOwner = $this->request->get('create_owner') == 'yes';
+        $willUpdate = $this->request->get('update') == 'yes';
+
+        $companies = [];
+        $skipped = [];
+        foreach ($records as $record) {
+            if (!array_filter($record)) {
+                continue;
+            }
+
+            $company = [];
+            foreach ($inputs['map'] as $map) {
+                if (!$map['table']) {
+                    continue;
+                }
+                if (isset($map['csv'], $map['table'])) {
+                    $company[$map['table']] = trim($record[$map['csv']]);
+                }
+            }
+
+            if (empty($company['name'])) {
+                return $this->sendError(['email' => "The company name field is required."], 422);
+            }
+
+            if (!$willUpdate) {
+                // check if exists
+                if (Company::where('name', $company['name'])->first()) {
+                    $skipped[] = $company;
+                    continue;
+                }
+            }
+
+            $company = Sanitize::company($company);
+
+            if (!empty($company['owner_email']) && is_email($company['owner_email'])) {
+                $ownerEmail = sanitize_email($company['owner_email']);
+            } else {
+                $ownerEmail = null;
+            }
+
+            if ($ownerEmail) {
+                $owner = FluentCrmApi('contacts')->getContact($ownerEmail);
+                if ($owner) {
+                    $company['owner_id'] = $owner->id;
+                } else if ($willCreateOwner) {
+                    $owner = FluentCrmApi('contacts')->createOrUpdate([
+                        'full_name' => sanitize_text_field(Arr::get($company, 'owner_name')),
+                        'email'     => $ownerEmail,
+                        'status'    => 'subscribed'
+                    ]);
+
+                    if ($owner) {
+                        $company['owner_id'] = $owner->id;
+                    }
+                }
+            }
+
+            $createdCompany = FluentCrmApi('companies')->createOrUpdate($company);
+
+            $companies[] = $createdCompany;
+        }
+
+        $completed = $offset + count($companies);
+        $totalCount = count($allRecords);
+        $hasMore = $completed < $totalCount;
+        if (!$hasMore) {
+            FileSystem::delete($inputs['file']);
+        }
+
+        return $this->sendSuccess([
+            'total'      => $totalCount,
+            'completed'  => count($companies),
+            'total_page' => ceil($totalCount / $processPerRequest),
+            'skipped'    => count($skipped),
+            'has_more'   => $hasMore,
+            'last_page'  => $page,
+            'offset'     => $offset
         ]);
     }
 

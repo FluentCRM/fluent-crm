@@ -124,6 +124,7 @@ class Paginator extends AbstractPaginator implements ArrayableInterface, ArrayAc
      *
      * @return array
      */
+    #[\ReturnTypeWillChange]
     public function toArray()
     {
         return [
@@ -139,6 +140,7 @@ class Paginator extends AbstractPaginator implements ArrayableInterface, ArrayAc
      *
      * @return array
      */
+    #[\ReturnTypeWillChange]
     public function jsonSerialize()
     {
         return $this->toArray();
@@ -150,6 +152,7 @@ class Paginator extends AbstractPaginator implements ArrayableInterface, ArrayAc
      * @param  int  $options
      * @return string
      */
+    #[\ReturnTypeWillChange]
     public function toJson($options = 0)
     {
         return json_encode($this->jsonSerialize(), $options);

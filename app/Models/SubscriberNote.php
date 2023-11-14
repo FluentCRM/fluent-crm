@@ -22,7 +22,6 @@ class SubscriberNote extends Model
         'subscriber_id',
         'parent_id',
         'created_by',
-        'status',
         'type',
         'title',
         'description',
@@ -43,6 +42,11 @@ class SubscriberNote extends Model
         static::updated(function ($model) {
             $model->updated_at = fluentCrmTimestamp();
         });
+
+        static::addGlobalScope('status', function ($builder) {
+            $builder->where('status', '!=', '_company_note_');
+        });
+
     }
     /**
      * One2One: SubscriberNote belongs to one Subscriber

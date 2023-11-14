@@ -68,7 +68,6 @@ class FunnelHelper
         $roles = \get_editable_roles();
         $formattedRoles = [];
         foreach ($roles as $roleKey => $role) {
-
             if ($keyed) {
                 $formattedRoles[$roleKey] = $role['name'];
             } else {
@@ -870,7 +869,15 @@ class FunnelHelper
 
     public static function getCountryShortName($countryName)
     {
+        if(!function_exists('getFluentFormCountryList')) {
+            return null;
+        }
+
         $countries = getFluentFormCountryList();
+        if (isset($countries[strtoupper($countryName)])) {
+            return $countryName;
+        }
+
         $countries = array_flip($countries);
         if (isset($countries[$countryName])) {
             return $countries[$countryName];

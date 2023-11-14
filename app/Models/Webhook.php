@@ -2,6 +2,7 @@
 
 namespace FluentCrm\App\Models;
 
+use FluentCrm\App\Services\Helper;
 use FluentCrm\Framework\Support\Arr;
 
 /**
@@ -50,13 +51,19 @@ class Webhook extends Meta
 
     public function getSchema()
     {
-        return [
-            'name' => '',
-            'lists' => [],
-            'tags' => [],
-            'url' => '',
-            'status' => ''
+        $schema = [
+            'name'      => '',
+            'lists'     => [],
+            'tags'      => [],
+            'url'       => '',
+            'status'    => ''
         ];
+
+        if (Helper::isCompanyEnabled()) {
+            $schema['companies'] = [];
+        }
+
+        return $schema;
     }
 
     public function store($data)
@@ -74,6 +81,7 @@ class Webhook extends Meta
     {
         $data['tags'] = Arr::get($data, 'tags', []);
         $data['lists'] = Arr::get($data, 'lists', []);
+        $data['companies'] = Arr::get($data, 'companies', []);
 
         $this->value = array_merge(
             $this->value,

@@ -75,7 +75,14 @@ class ReportingController extends Controller
     public function getAdvancedReportProviders()
     {
         return [
-            'providers' => apply_filters('fluentcrm_advanced_report_providers', [])
+            'providers' => apply_filters('fluent_crm/advanced_report_providers', [])
         ];
-    } 
+    }
+
+    public function ping()
+    {
+        return [
+            'message' => 'pong'
+        ];
+    }
 }

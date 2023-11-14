@@ -6,109 +6,109 @@ class PermissionManager
 {
     public static function getReadablePermissions()
     {
-        return [
-            'fcrm_view_dashboard'         => [
+        return apply_filters('fluent_crm/readable_permissions', [
+            'fcrm_view_dashboard'             => [
                 'title'   => __('CRM Dashboard', 'fluent-crm'),
                 'depends' => [],
                 'group'   => 'dashboard'
             ],
-            'fcrm_read_contacts'          => [
+            'fcrm_read_contacts'              => [
                 'title'   => __('Contacts Read', 'fluent-crm'),
                 'depends' => [],
                 'group'   => 'contacts'
             ],
-            'fcrm_manage_contacts'        => [
-                'title'   => __('Contacts Add/Update', 'fluent-crm'),
+            'fcrm_manage_contacts'            => [
+                'title'   => __('Contacts Add/Update/Import', 'fluent-crm'),
                 'depends' => [
                     'fcrm_read_contacts'
                 ],
                 'group'   => 'contacts'
             ],
-            'fcrm_manage_contacts_delete' => [
+            'fcrm_manage_contacts_delete'     => [
                 'title'   => __('Contacts Delete', 'fluent-crm'),
                 'depends' => [
                     'fcrm_read_contacts'
                 ],
                 'group'   => 'contacts'
             ],
-            'fcrm_manage_contacts_export' => [
+            'fcrm_manage_contacts_export'     => [
                 'title'   => __('Contacts Export', 'fluent-crm'),
                 'depends' => [
                     'fcrm_read_contacts'
                 ],
                 'group'   => 'contacts'
             ],
-            'fcrm_manage_contact_cats'    => [
-                'title'   => __('Contact Tags/List/Segment Create or Update', 'fluent-crm'),
+            'fcrm_manage_contact_cats'        => [
+                'title'   => __('Contact Tags/List/Companies/Segment Create or Update', 'fluent-crm'),
                 'depends' => [
                     'fcrm_read_contacts'
                 ],
                 'group'   => 'segments'
             ],
-            'fcrm_manage_contact_cats_delete'    => [
-                'title'   => __('Contact Tags/List/Segment `Delete`', 'fluent-crm'),
+            'fcrm_manage_contact_cats_delete' => [
+                'title'   => __('Contact Tags/List/Companies/Segment Delete', 'fluent-crm'),
                 'depends' => [
                     'fcrm_read_contacts'
                 ],
                 'group'   => 'segments'
             ],
-            'fcrm_read_emails'            => [
+            'fcrm_read_emails'                => [
                 'title'   => __('Emails Read', 'fluent-crm'),
                 'depends' => [],
                 'group'   => 'emailing'
             ],
-            'fcrm_manage_emails'          => [
+            'fcrm_manage_emails'              => [
                 'title'   => __('Emails Write/Send', 'fluent-crm'),
                 'depends' => [
                     'fcrm_read_emails'
                 ],
                 'group'   => 'emailing'
             ],
-            'fcrm_manage_email_templates' => [
+            'fcrm_manage_email_templates'     => [
                 'title'   => __('Email Templates Manage', 'fluent-crm'),
                 'depends' => [],
                 'group'   => 'emailing'
             ],
-            'fcrm_manage_email_delete' => [
+            'fcrm_manage_email_delete'        => [
                 'title'   => __('Emails Delete', 'fluent-crm'),
                 'depends' => [],
                 'group'   => 'emailing'
             ],
-            'fcrm_manage_forms'           => [
+            'fcrm_manage_forms'               => [
                 'title'   => __('Manage Forms', 'fluent-crm'),
                 'depends' => [],
                 'group'   => 'forms'
             ],
-            'fcrm_read_funnels'           => [
+            'fcrm_read_funnels'               => [
                 'title'   => __('Automation Read', 'fluent-crm'),
                 'depends' => [],
                 'group'   => 'automations'
             ],
-            'fcrm_write_funnels'          => [
+            'fcrm_write_funnels'              => [
                 'title'   => __('Automation Write/Edit/Delete', 'fluent-crm'),
                 'depends' => [
                     'fcrm_read_funnels'
                 ],
                 'group'   => 'automations'
             ],
-            'fcrm_delete_funnels'          => [
+            'fcrm_delete_funnels'             => [
                 'title'   => __('Automation Delete', 'fluent-crm'),
                 'depends' => [
                     'fcrm_read_funnels'
                 ],
                 'group'   => 'automations'
             ],
-            'fcrm_manage_settings'        => [
+            'fcrm_manage_settings'            => [
                 'title'   => __('Manage CRM Settings', 'fluent-crm'),
                 'depends' => [],
                 'group'   => 'settings'
             ]
-        ];
+        ]);
     }
 
     public static function pluginPermissions()
     {
-        return [
+        return apply_filters('fluent_crm/plugin_permissions', [
             'fcrm_view_dashboard',
             'fcrm_read_contacts',
             'fcrm_manage_contacts',
@@ -125,7 +125,7 @@ class PermissionManager
             'fcrm_write_funnels',
             'fcrm_delete_funnels', // New
             'fcrm_manage_settings'
-        ];
+        ]);
     }
 
     public static function attachPermissions($user, $permissions)
@@ -175,7 +175,7 @@ class PermissionManager
             $permissions = array_values(array_intersect(array_keys($user->allcaps), $pluginPermission));
         }
 
-        $permissions = apply_filters('fluent_crm_user_permissions', $permissions, $user);
+        $permissions = apply_filters('fluent_crm/user_permissions', $permissions, $user);
         return array_values($permissions);
     }
 
@@ -195,7 +195,7 @@ class PermissionManager
     public static function currentUserCan($permission)
     {
         if (current_user_can('manage_options')) {
-            return true;
+            return apply_filters('fluentcrm_current_admin_can', true, $permission);
         }
 
         if (defined('FLUENTCAMPAIGN')) {

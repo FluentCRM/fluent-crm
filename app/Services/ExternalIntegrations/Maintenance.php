@@ -45,7 +45,7 @@ class Maintenance
 
     private function isAllowed()
     {
-        return apply_filters('fluentcrm_allow_share_essential', fluentcrm_get_option('_fluentcrm_share_essential', 'no') == 'yes');
+        return apply_filters('fluent_crm/allow_share_essential', fluentcrm_get_option('_fluentcrm_share_essential', 'no') == 'yes');
     }
 
     private function timeMatched()
@@ -60,7 +60,7 @@ class Maintenance
 
     private function getApiUrl()
     {
-        return 'https://api.wpmanageninja.com/plugin-maintenance';
+        return 'https://apiv2.wpmanageninja.com/plugin-maintenance';
     }
 
 }

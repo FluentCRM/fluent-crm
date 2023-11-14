@@ -97,6 +97,8 @@ class TagsController extends Controller
 
         do_action('fluentcrm_tag_created', $tag->id);
 
+        do_action('fluent_crm/tag_created', $tag);
+
         return $this->sendSuccess([
             'lists'   => $tag,
             'message' => __('Successfully saved the tag.', 'fluent-crm')
@@ -149,6 +151,8 @@ class TagsController extends Controller
 
         do_action('fluentcrm_tag_updated', $id);
 
+        do_action('fluent_crm/tag_updated', $tag);
+
         return $this->sendSuccess([
             'lists'   => $tag,
             'message' => __('Successfully saved the tag.', 'fluent-crm')
@@ -184,7 +188,14 @@ class TagsController extends Controller
 
             $createdIds[] = $tag->id;
 
-            do_action('fluentcrm_tag_created', $tag->id);
+            if($tag->wasRecentlyCreated) {
+                do_action('fluentcrm_tag_created', $tag->id);
+                do_action('fluent_crm/tag_created', $tag);
+            } else {
+                do_action('fluentcrm_tag_updated', $tag->id);
+                do_action('fluent_crm/tag_updated', $tag);
+            }
+
         }
 
         return $this->sendSuccess([
@@ -203,7 +214,9 @@ class TagsController extends Controller
     public function remove(Request $request, $tagId)
     {
         Tag::find($tagId)->delete();
+
         do_action('fluentcrm_tag_deleted', $tagId);
+        do_action('fluent_crm/tag_deleted', $tagId);
 
         return $this->sendSuccess([
             'message' => __('Successfully removed the tag.', 'fluent-crm')
@@ -221,6 +234,8 @@ class TagsController extends Controller
             foreach ($tagIds as $tagId) {
                 Tag::where('id', $tagId)->delete();
                 do_action('fluentcrm_tag_deleted', $tagId);
+
+                do_action('fluent_crm/tag_deleted', $tagId);
             }
         }
 

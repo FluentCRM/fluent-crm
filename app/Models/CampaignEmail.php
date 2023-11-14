@@ -110,7 +110,7 @@ class CampaignEmail extends Model
         $emailBody = ($this->email_body) ? $this->email_body : $this->campaign->email_body;
         $emailBody = (new BlockParser($this->subscriber))->parse($emailBody);
 
-        $emailBody = apply_filters('fluentcrm_parse_campaign_email_text', $emailBody, $this->subscriber);
+        $emailBody = apply_filters('fluent_crm/parse_campaign_email_text', $emailBody, $this->subscriber);
 
         $designTemplate = 'classic';
         if ($this->campaign) {
@@ -129,7 +129,7 @@ class CampaignEmail extends Model
 
 
         $email_body = apply_filters(
-            'fluentcrm_email-design-template-' . $designTemplate,
+            'fluent_crm/email-design-template-' . $designTemplate,
             $emailBody,
             [
                 'preHeader'   => ($this->campaign) ? $this->campaign->email_pre_header : '',
@@ -144,7 +144,7 @@ class CampaignEmail extends Model
 
         if (strpos($email_body, '##crm.') || strpos($email_body, '{{crm.')) {
             // we have CRM specific smartcodes
-            $email_body = apply_filters('fluentcrm_parse_extended_crm_text', $email_body, $this->subscriber);
+            $email_body = apply_filters('fluent_crm/parse_extended_crm_text', $email_body, $this->subscriber);
         }
 
         $footerText = '';
@@ -152,7 +152,7 @@ class CampaignEmail extends Model
             $subscriber = $this->subscriber;
             $subscriber->campaign_id = $this->campaign_id;
             $footerText = Arr::get(Helper::getGlobalEmailSettings(), 'email_footer', '');
-            $footerText = apply_filters('fluentcrm_parse_campaign_email_text', $footerText, $subscriber);
+            $footerText = apply_filters('fluent_crm/parse_campaign_email_text', $footerText, $subscriber);
         }
 
         $preViewUrl = site_url('?fluentcrm=1&route=email_preview&_e_hash=' . $this->email_hash);
@@ -198,22 +198,29 @@ class CampaignEmail extends Model
         if (!$this->is_parsed) {
             $rawTemplates = [
                 'raw_html',
-                'raw_classic',
                 'visual_builder'
             ];
 
+            $emailBody = ($this->campaign_id) ? $this->campaign->email_body : $this->email_body;
+
+            $canCache = !Helper::hasConditionOnString($emailBody);
+
             if (in_array($designTemplate, $rawTemplates)) {
                 $emailBody = $this->campaign->email_body;
+                $emailBody = str_replace(['https://fonts.googleapis.com/css2', 'https://fonts.googleapis.com/css'], 'https://fonts.bunny.net/css', $emailBody);
             } else {
                 $emailBody = $this->getParsedEmailBody();
             }
 
-            $emailBody = apply_filters('fluentcrm_parse_campaign_email_text', $emailBody, $subscriber);
+            $emailBody = apply_filters('fluent_crm/parse_campaign_email_text', $emailBody, $subscriber);
             $emailBody = apply_filters('fluentcrm_email_body_text', $emailBody, $subscriber, $this);
-            $campaignUrls = $this->getCampaignUrls($emailBody);
+            $campaignUrls = $this->getCampaignUrls($emailBody, $canCache);
+
+
             if ($campaignUrls) {
-                $emailBody = Helper::attachUrls($emailBody, $campaignUrls, $this->id);
+                $emailBody = Helper::attachUrls($emailBody, $campaignUrls, $this->id, $this->email_hash);
             }
+
             $this->email_body = $emailBody;
             $this->is_parsed = 1;
             $this->save();
@@ -222,8 +229,8 @@ class CampaignEmail extends Model
         $footerText = '';
         if ($subscriber) {
             $subscriber->campaign_id = $this->campaign_id;
-            $footerText = Arr::get(Helper::getGlobalEmailSettings(), 'email_footer', '');
-            $footerText = apply_filters('fluentcrm_parse_campaign_email_text', $footerText, $subscriber);
+            $footerText = Helper::getEmailFooterContent($this->campaign);
+            $footerText = apply_filters('fluent_crm/parse_campaign_email_text', $footerText, $subscriber);
         }
 
         if ($this->campaign && Arr::get($this->campaign->settings, 'template_config')) {
@@ -235,7 +242,7 @@ class CampaignEmail extends Model
         $preHeader = ($this->campaign) ? $this->campaign->email_pre_header : '';
 
         if ($preHeader && $subscriber) {
-            $preHeader = apply_filters('fluentcrm_parse_campaign_email_text', $preHeader, $subscriber);
+            $preHeader = apply_filters('fluent_crm/parse_campaign_email_text', $preHeader, $subscriber);
         }
 
         $templateData = [
@@ -246,7 +253,7 @@ class CampaignEmail extends Model
         ];
 
         $content = apply_filters(
-            'fluentcrm_email-design-template-' . $designTemplate,
+            'fluent_crm/email-design-template-' . $designTemplate,
             $this->email_body,
             $templateData,
             $this->campaign,
@@ -258,29 +265,29 @@ class CampaignEmail extends Model
 
         if (strpos($content, '##crm.') || strpos($content, '{{crm.')) {
             // we have CRM specific smartcodes
-            $content = apply_filters('fluentcrm_parse_extended_crm_text', $content, $subscriber);
+            $content = apply_filters('fluent_crm/parse_extended_crm_text', $content, $subscriber);
         }
 
-        return Helper::injectTrackerPixel($content, $this->email_hash);
+        return Helper::injectTrackerPixel($content, $this->email_hash, $this->id);
     }
 
     private function getParsedEmailBody()
     {
-        if (!$this->campaign_id) {
+        if (!$this->campaign_id || !$this->campaign) {
             return (new BlockParser($this->subscriber))->parse($this->email_body);
         }
 
         static $parsedEmailBody = [];
+        $originalBody = $this->campaign->email_body;
 
-        if (isset($parsedEmailBody[$this->campaign_id])) {
+        $hasConditions = Helper::hasConditionOnString($originalBody);
+
+        if (isset($parsedEmailBody[$this->campaign_id]) && !$hasConditions) {
             return $parsedEmailBody[$this->campaign_id];
         }
 
-        $originalBody = $this->campaign->email_body;
-
         $rawTemplates = [
             'raw_html',
-            'raw_classic',
             'visual_builder'
         ];
 
@@ -290,24 +297,29 @@ class CampaignEmail extends Model
             $emailBody = (new BlockParser($this->subscriber))->parse($originalBody);
         }
 
-        if (strpos($originalBody, 'fc-cond-blocks')) {
+        if ($hasConditions) {
             return $emailBody;
         }
 
         $parsedEmailBody[$this->campaign_id] = $emailBody;;
-        return $parsedEmailBody[$this->campaign_id];
+        return $emailBody;
     }
 
-    private function getCampaignUrls($emailBody)
+    public function getCampaignUrls($emailBody, $cached = false)
     {
         if (!fluentcrmTrackClicking()) {
             return [];
+        }
+
+        if (!$cached || !$this->campaign_id) {
+            return Helper::urlReplaces($emailBody);
         }
 
         static $campaignUrls = [];
         if (isset($campaignUrls[$this->campaign_id])) {
             return $campaignUrls[$this->campaign_id];
         }
+
         $campaignUrls[$this->campaign_id] = Helper::urlReplaces($emailBody);
         return $campaignUrls[$this->campaign_id];
     }

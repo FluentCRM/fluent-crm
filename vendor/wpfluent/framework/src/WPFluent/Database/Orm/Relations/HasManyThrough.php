@@ -39,23 +39,26 @@ class HasManyThrough extends Relation
      */
     protected $localKey;
 
+    protected $parentRelationKey;
+
     /**
      * Create a new has many through relationship instance.
      *
-     * @param  \FluentCrm\Framework\Database\Orm\Builder  $query
-     * @param  \FluentCrm\Framework\Database\Orm\Model  $farParent
-     * @param  \FluentCrm\Framework\Database\Orm\Model  $parent
-     * @param  string  $firstKey
-     * @param  string  $secondKey
-     * @param  string  $localKey
+     * @param \FluentCrm\Framework\Database\Orm\Builder $query
+     * @param \FluentCrm\Framework\Database\Orm\Model $farParent
+     * @param \FluentCrm\Framework\Database\Orm\Model $parent
+     * @param string $firstKey
+     * @param string $secondKey
+     * @param string $localKey
      * @return void
      */
-    public function __construct(Builder $query, Model $farParent, Model $parent, $firstKey, $secondKey, $localKey)
+    public function __construct(Builder $query, Model $farParent, Model $parent, $firstKey, $secondKey, $localKey, $parentRelationKey = 'id')
     {
         $this->localKey = $localKey;
         $this->firstKey = $firstKey;
         $this->secondKey = $secondKey;
         $this->farParent = $farParent;
+        $this->parentRelationKey = $parentRelationKey;
 
         parent::__construct($query, $parent);
     }
@@ -74,16 +77,16 @@ class HasManyThrough extends Relation
         $this->setJoin();
 
         if (static::$constraints) {
-            $this->query->where($parentTable.'.'.$this->firstKey, '=', $localValue);
+            $this->query->where($parentTable . '.' . $this->firstKey, '=', $localValue);
         }
     }
 
     /**
      * Add the constraints for a relationship query.
      *
-     * @param  \FluentCrm\Framework\Database\Orm\Builder  $query
-     * @param  \FluentCrm\Framework\Database\Orm\Builder  $parent
-     * @param  array|mixed  $columns
+     * @param \FluentCrm\Framework\Database\Orm\Builder $query
+     * @param \FluentCrm\Framework\Database\Orm\Builder $parent
+     * @param array|mixed $columns
      * @return \FluentCrm\Framework\Database\Orm\Builder
      */
     public function getRelationQuery(Builder $query, Builder $parent, $columns = ['*'])
@@ -94,7 +97,7 @@ class HasManyThrough extends Relation
 
         $query->select($columns);
 
-        $key = $this->wrap($parentTable.'.'.$this->firstKey);
+        $key = $this->wrap($parentTable . '.' . $this->firstKey);
 
         return $query->where($this->getHasCompareKey(), '=', new Expression($key));
     }
@@ -102,20 +105,25 @@ class HasManyThrough extends Relation
     /**
      * Set the join clause on the query.
      *
-     * @param  \FluentCrm\Framework\Database\Orm\Builder|null  $query
+     * @param \FluentCrm\Framework\Database\Orm\Builder|null $query
      * @return void
      */
     protected function setJoin(Builder $query = null)
     {
         $query = $query ?: $this->query;
 
-        $foreignKey = $this->related->getTable().'.'.$this->secondKey;
+        $foreignKey = $this->related->getTable() . '.' . $this->secondKey;
 
         $query->join($this->parent->getTable(), $this->getQualifiedParentKeyName(), '=', $foreignKey);
 
         if ($this->parentSoftDeletes()) {
             $query->whereNull($this->parent->getQualifiedDeletedAtColumn());
         }
+    }
+
+    public function getQualifiedParentKeyName()
+    {
+        return $this->parent->getTable().'.'.$this->parentRelationKey;
     }
 
     /**
@@ -125,27 +133,27 @@ class HasManyThrough extends Relation
      */
     public function parentSoftDeletes()
     {
-        return in_array(SoftDeletes::class, class_uses_recursive(get_class($this->parent)));
+        return in_array(SoftDeletes::class, $this->class_uses_recursive(get_class($this->parent)));
     }
 
     /**
      * Set the constraints for an eager load of the relation.
      *
-     * @param  array  $models
+     * @param array $models
      * @return void
      */
     public function addEagerConstraints(array $models)
     {
         $table = $this->parent->getTable();
 
-        $this->query->whereIn($table.'.'.$this->firstKey, $this->getKeys($models));
+        $this->query->whereIn($table . '.' . $this->firstKey, $this->getKeys($models));
     }
 
     /**
      * Initialize the relation on a set of models.
      *
-     * @param  array   $models
-     * @param  string  $relation
+     * @param array $models
+     * @param string $relation
      * @return array
      */
     public function initRelation(array $models, $relation)
@@ -160,9 +168,9 @@ class HasManyThrough extends Relation
     /**
      * Match the eagerly loaded results to their parents.
      *
-     * @param  array   $models
-     * @param  \FluentCrm\Framework\Database\Orm\Collection  $results
-     * @param  string  $relation
+     * @param array $models
+     * @param \FluentCrm\Framework\Database\Orm\Collection $results
+     * @param string $relation
      * @return array
      */
     public function match(array $models, Collection $results, $relation)
@@ -188,7 +196,7 @@ class HasManyThrough extends Relation
     /**
      * Build model dictionary keyed by the relation's foreign key.
      *
-     * @param  \FluentCrm\Framework\Database\Orm\Collection  $results
+     * @param \FluentCrm\Framework\Database\Orm\Collection $results
      * @return array
      */
     protected function buildDictionary(Collection $results)
@@ -220,7 +228,7 @@ class HasManyThrough extends Relation
     /**
      * Execute the query and get the first related model.
      *
-     * @param  array   $columns
+     * @param array $columns
      * @return mixed
      */
     public function first($columns = ['*'])
@@ -233,14 +241,14 @@ class HasManyThrough extends Relation
     /**
      * Execute the query and get the first result or throw an exception.
      *
-     * @param  array  $columns
+     * @param array $columns
      * @return \FluentCrm\Framework\Database\Orm\Model|static
      *
      * @throws \FluentCrm\Framework\Database\Orm\ModelNotFoundException
      */
     public function firstOrFail($columns = ['*'])
     {
-        if (! is_null($model = $this->first($columns))) {
+        if (!is_null($model = $this->first($columns))) {
             return $model;
         }
 
@@ -250,8 +258,8 @@ class HasManyThrough extends Relation
     /**
      * Find a related model by its primary key.
      *
-     * @param  mixed  $id
-     * @param  array  $columns
+     * @param mixed $id
+     * @param array $columns
      * @return \FluentCrm\Framework\Database\Orm\Model|\FluentCrm\Framework\Database\Orm\Collection|null
      */
     public function find($id, $columns = ['*'])
@@ -268,8 +276,8 @@ class HasManyThrough extends Relation
     /**
      * Find multiple related models by their primary keys.
      *
-     * @param  mixed  $ids
-     * @param  array  $columns
+     * @param mixed $ids
+     * @param array $columns
      * @return \FluentCrm\Framework\Database\Orm\Collection
      */
     public function findMany($ids, $columns = ['*'])
@@ -286,8 +294,8 @@ class HasManyThrough extends Relation
     /**
      * Find a related model by its primary key or throw an exception.
      *
-     * @param  mixed  $id
-     * @param  array  $columns
+     * @param mixed $id
+     * @param array $columns
      * @return \FluentCrm\Framework\Database\Orm\Model|\FluentCrm\Framework\Database\Orm\Collection
      *
      * @throws \FluentCrm\Framework\Database\Orm\ModelNotFoundException
@@ -300,7 +308,7 @@ class HasManyThrough extends Relation
             if (count($result) == count(array_unique($id))) {
                 return $result;
             }
-        } elseif (! is_null($result)) {
+        } elseif (!is_null($result)) {
             return $result;
         }
 
@@ -310,7 +318,7 @@ class HasManyThrough extends Relation
     /**
      * Execute the query as a "select" statement.
      *
-     * @param  array  $columns
+     * @param array $columns
      * @return \FluentCrm\Framework\Database\Orm\Collection
      */
     public function get($columns = ['*'])
@@ -339,25 +347,25 @@ class HasManyThrough extends Relation
     /**
      * Set the select clause for the relation query.
      *
-     * @param  array  $columns
+     * @param array $columns
      * @return array
      */
     protected function getSelectColumns(array $columns = ['*'])
     {
         if ($columns == ['*']) {
-            $columns = [$this->related->getTable().'.*'];
+            $columns = [$this->related->getTable() . '.*'];
         }
 
-        return array_merge($columns, [$this->parent->getTable().'.'.$this->firstKey]);
+        return array_merge($columns, [$this->parent->getTable() . '.' . $this->firstKey]);
     }
 
     /**
      * Get a paginator for the "select" statement.
      *
-     * @param  int  $perPage
-     * @param  array  $columns
-     * @param  string  $pageName
-     * @param  int  $page
+     * @param int $perPage
+     * @param array $columns
+     * @param string $pageName
+     * @param int $page
      * @return \FluentCrm\Framework\Contracts\Pagination\LengthAwarePaginator
      */
     public function paginate($perPage = null, $columns = ['*'], $pageName = 'page', $page = null)
@@ -370,9 +378,9 @@ class HasManyThrough extends Relation
     /**
      * Paginate the given query into a simple paginator.
      *
-     * @param  int  $perPage
-     * @param  array  $columns
-     * @param  string  $pageName
+     * @param int $perPage
+     * @param array $columns
+     * @param string $pageName
      * @return \FluentCrm\Framework\Contracts\Pagination\Paginator
      */
     public function simplePaginate($perPage = null, $columns = ['*'], $pageName = 'page')
@@ -399,7 +407,7 @@ class HasManyThrough extends Relation
      */
     public function getForeignKey()
     {
-        return $this->related->getTable().'.'.$this->secondKey;
+        return $this->related->getTable() . '.' . $this->secondKey;
     }
 
     /**
@@ -409,6 +417,32 @@ class HasManyThrough extends Relation
      */
     public function getThroughKey()
     {
-        return $this->parent->getTable().'.'.$this->firstKey;
+        return $this->parent->getTable() . '.' . $this->firstKey;
+    }
+
+    public function class_uses_recursive($class)
+    {
+        if (is_object($class)) {
+            $class = get_class($class);
+        }
+
+        $results = [];
+
+        foreach (array_reverse(class_parents($class)) + [$class => $class] as $class) {
+            $results += $this->trait_uses_recursive($class);
+        }
+
+        return array_unique($results);
+    }
+
+    public function trait_uses_recursive($trait)
+    {
+        $traits = class_uses($trait) ?: [];
+
+        foreach ($traits as $trait) {
+            $traits += $this->trait_uses_recursive($trait);
+        }
+
+        return $traits;
     }
 }

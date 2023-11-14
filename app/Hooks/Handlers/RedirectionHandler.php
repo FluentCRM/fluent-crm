@@ -18,6 +18,7 @@ class RedirectionHandler
 {
     public function redirect($data)
     {
+
         nocache_headers();
 
         $mailId = false;
@@ -35,7 +36,12 @@ class RedirectionHandler
             return;
         }
 
-        $redirectUrl = $this->trackUrlClick($mailId, $urlData);
+
+        if(isset($data['fch'])) {
+            $urlData->url_token = $data['fch'];
+        }
+
+        $redirectUrl = trim($this->trackUrlClick($mailId, $urlData));
 
         $redirectUrl = htmlspecialchars_decode($redirectUrl);
 
@@ -49,6 +55,7 @@ class RedirectionHandler
 
     public function trackUrlClick($mailId, $urlData)
     {
+
         if (!$mailId) {
             return $urlData->url;
         }
@@ -64,7 +71,6 @@ class RedirectionHandler
         });
 
         if(!$campaign) {
-            error_log('Campaign could not be found');
             return $urlData->url;
         }
 
@@ -76,20 +82,23 @@ class RedirectionHandler
             'ip_address'    => FluentCrm('request')->getIp(fluentCrmWillAnonymizeIp())
         ]);
 
-        if (apply_filters('fluentcrm_will_use_cookie', true)) {
-            $secureHash = fluentCrmGetContactSecureHash($campaignEmail->subscriber_id);
-            setcookie("fc_s_hash", $campaignEmail->subscriber->hash, time() + 7776000, COOKIEPATH, COOKIE_DOMAIN);  /* expire in 90 days */
-            setcookie("fc_hash_secure", $secureHash, time() + 7776000, COOKIEPATH, COOKIE_DOMAIN);  /* expire in 90 days */
+        if (apply_filters('fluent_crm/will_use_cookie', true) && !empty($urlData->url_token)) {
 
-            $_COOKIE['fc_s_hash'] = $campaignEmail->subscriber->hash;
-            $_COOKIE['fc_hash_secure'] = $secureHash;
+            // validate the URL token here
+            if(substr($campaignEmail->email_hash, 0, 8) == $urlData->url_token) {
+                $secureHash = fluentCrmGetContactSecureHash($campaignEmail->subscriber_id);
+                //   setcookie("fc_s_hash", $campaignEmail->subscriber->hash, time() + 7776000, COOKIEPATH, COOKIE_DOMAIN);  /* expire in 90 days */
+                setcookie("fc_hash_secure", $secureHash, time() + 7776000, COOKIEPATH, COOKIE_DOMAIN);  /* expire in 90 days */
+                //   $_COOKIE['fc_s_hash'] = $campaignEmail->subscriber->hash;
+                $_COOKIE['fc_hash_secure'] = $secureHash;
+            }
 
             if ($campaignEmail->campaign_id) {
                 setcookie("fc_cid", $campaignEmail->campaign_id, time() + 9676800, COOKIEPATH, COOKIE_DOMAIN);  /* expire in 28 days */
             }
         }
 
-        do_action(FLUENTCRM . '_email_url_clicked', $campaignEmail, $urlData);
+        do_action('fluent_crm/email_url_clicked', $campaignEmail, $urlData);
 
         $args = $campaign->getUtmParams();
 
@@ -97,9 +106,9 @@ class RedirectionHandler
         $campaignEmail->is_open = 1;
         $campaignEmail->save();
 
-        do_action('fluentform_track_activity_by_subscriber', $campaignEmail->subscriber_id);
+        do_action('fluent_crm/track_activity_by_subscriber', $campaignEmail->subscriber_id);
 
-        $url = str_replace('&amp;', '&', $urlData->url);;
+        $url = str_replace(['&amp;', '+'], ['&', '%2B'], $urlData->url);
 
         if (strpos($url, 'route=smart_url')) {
             // this is a smart URL

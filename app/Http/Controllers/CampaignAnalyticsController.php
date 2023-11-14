@@ -20,7 +20,7 @@ class CampaignAnalyticsController extends Controller
     public function getLinksReport(CampaignUrlMetric $campaignUrlMetric, $campaignId)
     {
         return $this->sendSuccess([
-            'links' =>  $campaignUrlMetric->getLinksReport($campaignId)
+            'links' =>  array_values($campaignUrlMetric->getLinksReport($campaignId))
         ]);
     }
 

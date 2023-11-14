@@ -53,7 +53,8 @@ class ListAppliedBenchmark extends BaseBenchMark
                     'option_key'  => 'lists',
                     'is_multiple' => true,
                     'label'       => __('Select Lists', 'fluent-crm'),
-                    'placeholder' => __('Select List', 'fluent-crm')
+                    'placeholder' => __('Select List', 'fluent-crm'),
+                    'creatable' => true
                 ],
                 'select_type' => [
                     'label'      => __('Run When', 'fluent-crm'),

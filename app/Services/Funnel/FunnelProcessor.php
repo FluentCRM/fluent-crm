@@ -98,6 +98,8 @@ class FunnelProcessor
         // let's create an empty sequence_subscriber
         $funnelSubscriber = FunnelSubscriber::create($data);
 
+        do_action('fluent_crm/automation_funnel_start', $funnel, $subscriber);
+
         if ($funnelSubscriber->status != 'pending') {
             $this->processSequencePoints($sequencePoints, $subscriber, $funnelSubscriber);
         }
@@ -109,17 +111,25 @@ class FunnelProcessor
             $this->completeFunnelSequence($funnelSubscriber);
             return;
         }
+        
+        $hasEnd = $sequencePoints->hasEndSequence;
 
-
-        foreach ($sequencePoints->getCurrentSequences() as $sequence) {
-            $this->processSequence($subscriber, $sequence, $funnelSubscriber->id);
-            if ($sequence->action_name == 'end_this_funnel') {
-                return;
+        if($hasEnd) {
+            foreach ($sequencePoints->getCurrentSequences() as $sequence) {
+                $this->processSequence($subscriber, $sequence, $funnelSubscriber->id);
+                if ($sequence->action_name == 'end_this_funnel') {
+                    return;
+                }
             }
+
+            FunnelSubscriber::where('id', $funnelSubscriber->id)
+                ->update([
+                    'status' => 'completed'
+                ]);
+            return;
         }
 
         $nextSequence = $sequencePoints->getNextSequence();
-
 
         $requiredBenchMark = $sequencePoints->getRequiredBenchmark();
 
@@ -135,18 +145,12 @@ class FunnelProcessor
                 ->update([
                     'next_sequence'       => $requiredBenchMark->sequence,
                     'next_sequence_id'    => $requiredBenchMark->id,
-                    'next_execution_time' => null,
+                    'next_execution_time' => NULL,
                     'status'              => 'waiting'
                 ]);
-            return;
-        }
-
-        if (!$sequencePoints->hasNext()) {
+        } else if (!$sequencePoints->hasNext()) {
             $this->completeFunnelSequence($funnelSubscriber);
-            return;
-        }
-
-        if ($nextSequence) {
+        } else if ($nextSequence) {
             $nextDateTime = date('Y-m-d H:i:s', current_time('timestamp') + $nextSequence->delay);
 
             if ($nextSequence->execution_date_time) {
@@ -160,6 +164,17 @@ class FunnelProcessor
                     'next_execution_time' => $nextDateTime,
                     'status'              => 'active'
                 ]);
+        }
+
+        foreach ($sequencePoints->getCurrentSequences() as $sequence) {
+            $this->processSequence($subscriber, $sequence, $funnelSubscriber->id);
+            if ($sequence->action_name == 'end_this_funnel') {
+                FunnelSubscriber::where('id', $funnelSubscriber->id)
+                    ->update([
+                        'status' => 'completed'
+                    ]);
+                return;
+            }
         }
     }
 
@@ -196,6 +211,8 @@ class FunnelProcessor
             ->update([
                 'status' => 'completed'
             ]);
+
+        do_action('fluent_crm/automation_funnel_completed', $funnelSubscriber->funnel, $funnelSubscriber->subscriber);
     }
 
     public function followUpSequenceActions()

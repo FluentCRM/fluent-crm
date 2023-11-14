@@ -2,9 +2,9 @@
 Contributors: techjewel,adreastrian,heera,wpmanageninja
 Tags: email marketing, newsletter, crm, email newsletter, subscribers
 Requires at least: 5.0
-Tested up to: 6.1
+Tested up to: 6.3
 Requires PHP: 7.1
-Stable tag: 2.6.51
+Stable tag: 2.8.33
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,22 +21,22 @@ The easiest and fastest Email Marketing, Newsletter, Marketing Automation Plugin
 
 = Your Self Hosted CRM & Email Marketing Solution in WordPress  =
 
-[FluentCRM](https://fluentcrm.com) is the best and complete feature-rich Email Marketing & CRM solution. It is also the simplest and fastest CRM and Marketing Plugin on WordPress. Manage your customer relationships, build your email lists, send email campaigns, build funnels, and make more profit and increase your conversion rates. (Yes, It's Free!)
+[FluentCRM](https://fluentcrm.com) is the best and complete feature-rich Email Marketing & CRM solution. It is also the simplest and fastest CRM and Marketing Plugin on WordPress. Manage your customer relationships, build your email lists, send email campaigns, build funnels, make more profit and increase your conversion rates. (Yes, It's Free!)
 
 = The most complete Email Newsletter and Campaigns Plugin for WordPress =
 [youtube https://www.youtube.com/watch?v=QSVpos-WJFg]
 
-Want to run email campaigns or email newsletter for your leads or customers? FluentCRM is the perfect solution for your email newsletter and email campaigns. Just import a csv or WordPress Users and you ready to go. Segment your contacts and send emails whenever you want.
+Want to run email campaigns or email newsletters for your leads or customers? FluentCRM is the perfect solution for your email newsletter and email campaigns. Just import a CSV or WordPress user and you're ready to go. Segment your contacts and send emails whenever you want.
 
 = FEATURES - Every online business needs =
 
 **🎉 All-in-One Email Marketing Solution**
-With FluentCRM, send email campaigns to targeted audiences, send sequential emails, onboard your new customers even automate your full email marketing with powerful automation visual automation builder.
-After sending each email campaign, you can analyze the open rate, click rate, revenue earned from that specific campaign. You can also check data matrix like who open the emails and who clicked and based on that, you can do more actions and segment your customers further.
+With FluentCRM, send email campaigns to targeted audiences, send sequential emails, onboard your new customers even automate your full email marketing with a powerful automation visual automation builder.
+After sending each email campaign, you can analyze the open rate, click rate, and revenue earned from that specific campaign. You can also check the data matrix like who opened the emails and who clicked and based on that, you can do more actions and segment your customers further.
 
 * Send or Schedule Email Campaigns (Unlimited contacts and campaigns)
 * In-detailed campaign reports
-* Run Automation for customer on-boarding or on different WordPress events.
+* Run Automation for customer onboarding or on different WordPress events.
 * Send automated emails and track performance
 
 **🎉 Customer relationship management (CRM)**
@@ -44,8 +44,8 @@ After sending each email campaign, you can analyze the open rate, click rate, re
 * Store all your customer information in a central place.
 * Automatically import your contacts from CSV/WP Users/WooCommerce customers and view them in a central place.
 * Know and analyze every bit of information about your contact. FluentCRM will show all the relevant data from WooCommerce, EDD, LearnDash, LifterLMS and give you better visibility.
-* Track every marketing emails by Contact level
-* Store Notes, Meeting logs, Calls in the contact profile
+* Track every marketing email by Contact level
+* Store Notes, Meeting logs, and Calls in the contact profile
 * Segment your contacts by <b>Lists</b>, <b>Tags</b> and filter for your appropriate target.
 
 **🎉 Contact Segmentation and Reporting**
@@ -62,8 +62,8 @@ After sending each email campaign, you can analyze the open rate, click rate, re
 * Add Columns/images or dynamic content and make the email as simple or just fancy, Just based on your customer's taste.
 * Use Dynamic Smart code like contact name or the country in your email or subject to personalize the experience.
 * Send or Schedule emails at a future date and time, and you are ready to go.
-* See in details reporting about the open rate, click rate
-* See which links are clicks or which contacts opened your links
+* See in detail reporting about the open rate, click rate
+* See which links are clicked or which contacts opened your links
 * Also, Send unlimited emails. (No Restriction)
 
 **🎉 Email Newsletter Solution**
@@ -71,24 +71,24 @@ FluentCRM will help you to collect leads, automate emails, display subscription 
 
 **🎉 Marketing Funnel Builder**
 
-* Design high converting customer journey with FluentCRM's Powerful funnel builder.
+* Design high-converting customer journeys with FluentCRM's Powerful funnel builder.
 * Integrated with your favorite WordPress plugins.
-* Start funnel sequences from different user actions like sign up, form submission, product purchase, LMS course enrollment.
-* Build a simple funnel, like collecting contact to selling your paid products
+* Start funnel sequences from different user actions like sign-up, form submission, product purchase, LMS course enrollment.
+* Build a simple funnel, like collecting contact to sell your paid products
 * Automate your full marketing steps and give your customers a personal touch with our timely actions and responses.
 * Measure funnel metrics in every step and find where you can do better.
 
 **🎉 Integrated Optin Forms**
 
-* Create and use optin forms right from FluentCRM, and for more advanced forms, use FluentForms (Totally Free) to collect your leads.
+* Create and use opt-in forms right from FluentCRM, and for more advanced forms, use FluentForms (Totally Free) to collect your leads.
 * Use forms with your Funnel builder as a trigger and automate your post form submission.
 * Segment your users based on different form submissions or submitted data.
 
 **🎉 BUILT-IN ANALYTICS & DASHBOARDS**
 
 * View your full business insight right from the FluentCRM dashboard by using graphs, charts, data widgets
-* Track every marketing emails and get in-detail metrics
-* View all the data points of your customers from Purchase History, Support tickets to the offline phone call using activity logs.
+* Track every marketing email and get in-detail metrics
+* View all the data points of your customers from Purchase History, and Support tickets to the offline phone call using activity logs.
 * Integrate and use with other plugins like WooCommerce, EDD, LifterLMS, LearnDash, AffiliateWP, Paid Membership Pro, FluentForms, WPFusion, and many more coming.
 
 [youtube https://www.youtube.com/watch?v=QSVpos-WJFg]
@@ -99,7 +99,7 @@ FluentCRM will help you to collect leads, automate emails, display subscription 
 
 * Turn your WordPress post commenters into Subscribers
 * Double Optin feature for getting quality leads
-* Automatically make your WordPress users as your subscribers
+* Automatically make your WordPress users your subscribers
 * Manage and customize your email footer, Subscription Preference.
 * Find out why your contacts are unsubscribing
 
@@ -110,23 +110,23 @@ FluentCRM is a self-hosted WordPress plugin. You own your data, and no external 
 
 * Build with VueJS and REST API as a Single-page Application
 * Super fast and lean interface so anyone can use it without any learning curve
-* Super awesome Dashboard with charts, graphs, essential data points to show your full business overview.
+* Super awesome Dashboard with charts, graphs, and essential data points to show your full business overview.
 * Integrated Email Marketing analytics to see the conversion rates.
-* Developer Ready: Find the <a target="_blank" href="https://github.com/fluentcrm/fluent-crm/">source code in github and explore the PHP API and action hooks and extend.
+* Developer Ready: Find the <a target="_blank" href="https://github.com/fluentcrm/fluent-crm/">source code in GitHub and explore the PHP API and action hooks and extend.
 * Setup your CRM in less than 2 minutes with our powerful Welcome Wizard
-* Mail Deliverability: Send 100 emails or 50,000 emails. You are covered. With a powerful email sending mechanism, FluentCRM will send your emails and track those and report back to you.
+* Mail Deliverability: Send 100 emails or 50,000 emails. You are covered. With a powerful email-sending mechanism, FluentCRM will send your emails and track those and report back to you.
 
 = 🚀 FluentSMTP - WordPress Mail SMTP, SES, SendGrid, MailGun Plugin 🚀 =
-We have released a companion plugin to connect with your Email sending service providers like Amazon SES, SendGrid, MailGun, SendInBlue, PepiPost, SparkPost, All Other SMTP.
-FluentSMTP has all the powerful features like email logging, email resend, and most importantly, adding multiple email connections and routing your transactional and marketing emails easily.
+We have released a companion plugin to connect with your Email sending service providers like Amazon SES, SendGrid, MailGun, SendInBlue, PepiPost, SparkPost, and All Other SMTP.
+FluentSMTP has all the powerful features like email logging, email resending, and most importantly, adding multiple email connections and routing your transactional and marketing emails easily.
 
 = 🚀 Connect with ThriveCart  🚀 =
-If you use ThriveCart then you easily integrate your ThriveCart store with FluentCRM. You can import your ThriveCart customers and automatically add, segment send sequential emails on ThriveCart activity like product sales, product refund, subscription cancelled etc.
+If you use ThriveCart then you easily integrate your ThriveCart store with FluentCRM. You can import your ThriveCart customers and automatically add, segment send sequential emails on ThriveCart activity like product sales, product refunds, subscription canceled etc.
 This is a free integration, and you can make ThriveCart more powerful.
 
 = Build and Crafted By Ninjas =
 
-FluentCRM is built by professional WordPress developers who are working in the WordPress eco-system for more than 10 years. FluentCRM is developed by the same authors of Ninja Tables and FluentForms (The fastest and Modern Form Builder Plugin). We started this project in mid-2019 and after 1 year of development, we released the first version by doing a month-long private beta testing and using this plugin on our own website for the last 6 months. We also made sure  Here are some reviews from early adopters.
+FluentCRM is built by professional WordPress developers who are working in the WordPress eco-system for more than 10 years. FluentCRM is developed by the same authors of Ninja Tables and FluentForms (The fastest and most Modern Form Builder Plugin). We started this project in mid-2019 and after 1 year of development, we released the first version by doing a month-long private beta testing and using this plugin on our own website for the last 6 months. We also made sure  Here are some reviews from early adopters.
 
 >__👦 Chris Lema, VP, Products at Liquid Web / Nexcess__
 >...Those are all external solutions that don't run within your WordPress (or WooCommerce) site. Until now, the only native WordPress marketing automation solution I knew of was Groundhogg. But that was before I discovered FluentCRM. Not everyone can afford an external marketing automation platform or monthly fee. That's where #FluentCRM comes in.
@@ -140,7 +140,7 @@ FluentCRM is built by professional WordPress developers who are working in the W
 >Finally, an email marketing solution that looks native to the WordPress user interface and is super easy to use. Ideal for beginners to quickly get started with email lead generation to advanced users wanting to set up funnels with advanced tagging. FluentCRM offers a lot from the start and promises a lot more in future iterations.
 
 >__👦 Eric Gracieta from BrockwayProduction, WordPress Consultant__
->FluentCRM looks like a very promising WordPress-powered CRM. It has everything a beginner needs to get started and has the power to follow you along when you need more advanced features. Very advanced, yet simple, CRM without the heavy cost, it has won my heart !
+>FluentCRM looks like a very promising WordPress-powered CRM. It has everything a beginner needs to get started and has the power to follow you along when you need more advanced features. Very advanced, yet simple, CRM without the heavy cost, it has won my heart!
 
 = FluentCRM Review by Experts =
 
@@ -162,7 +162,7 @@ FluentCRM features and integrations that will help your business –
 FluentCRM has all the native WordPress integration that will help you to collect leads, create contact segmentations and help to grow your email list.
 
 * <a href="https://fluentcrm.com/docs/import-contacts-to-fluentcrm/"><b>WordPress User:</b></a> Import and Sync WordPress users automatically and segment by list and tag.
-* <b>Comment Form Integration:</b> Let your users choose if they want to subscribe to your blog from the comment form and automatically add as subscriber and segment in list or tag.
+* <b>Comment Form Integration:</b> Let your users choose if they want to subscribe to your blog from the comment form and automatically add a subscriber and segment in the list or tag.
 * <b>User Sign up Form:</b> Automatically add your new signup as CRM lead and segment your contacts.
 * <b>User Registration:</b> Automatically create users from your FluentCRM contacts.
 
@@ -179,10 +179,10 @@ With <b>EDD Advanced Reports</b>, you can see the revenue report by product, sub
 
 <h4>LMS INTEGRATION:</h4>
 
-* <b>LifterLMS:</b> Run funnels and marketing automations for different LMS actions like course enrollment, course completed, lesson completed etc.
+* <b>LifterLMS:</b> Run funnels and marketing automation for different LMS actions like course enrollment, course completed, lesson completed, etc.
 * <b>LearnDash Integration:</b> Run funnels and marketing automation for different LMS actions like course enrollment, course completed, lesson completed, Group Membership Enrollment, etc.
-* <b>TutorLMS Integration:</b> Run funnels and marketing automations for different TutorLMS actions like course enrollment, course completed etc.
-* <b>LearnPress Integration:</b> Run funnels and marketing automations for different Learnpress actions like course enrollment, course completed etc.
+* <b>TutorLMS Integration:</b> Run funnels and marketing automation for different TutorLMS actions like course enrollment, course completion, etc.
+* <b>LearnPress Integration:</b> Run funnels and marketing automation for different Learnpress actions like course enrollment, course completion, etc.
 
 <h4>MEMBERSHIP INTEGRATION:</h4>
 
@@ -206,7 +206,7 @@ With <b>EDD Advanced Reports</b>, you can see the revenue report by product, sub
 <h4>Automation INTEGRATIONS:</h4>
 * Zapier
 * Pabbly Connect
-* Integrately
+* Integrately / Make
 
 <h4>Page Builder INTEGRATIONS:</h4>
 * ThriveThemes integration
@@ -219,15 +219,26 @@ With <b>EDD Advanced Reports</b>, you can see the revenue report by product, sub
 👉 [CLICK HERE TO LEARN MORE](https://fluentcrm.com/?utm_campaign=wordpress-org-visitor&utm_medium=learn_more_about_crm&utm_source=WordPress.org)👈
 
 <h4>Migrate From Other Providers:</h4>
-With FluentCRM's automated migration tool, you can migrate from ActiveCampaign, MailerLite, MailChimp, Drip, ConvertKit easily in minutes.
-Just go to contact imports then select your current provider (ActiveCampaign, MailerLite, MailChimp, Drip, ConvertKit) and once you connect then you can map the data easily and import all the contacts, tags / lists, custom fields and associate data.
+With FluentCRM's automated migration tool, you can migrate from ActiveCampaign, MailerLite, MailChimp, Drip, and ConvertKit easily in minutes.
+Just go to contact imports then select your current provider (ActiveCampaign, MailerLite, MailChimp, Drip, ConvertKit) once you connect then you can map the data easily and import all the contacts, tags/lists, custom fields, and associate data.
 
 <h4>REST API</h4>
-FluentCRM has a full REST API support. If you want to integrate with Other System or building an APP then You can take a look of our REST API Documentation
+FluentCRM has a full REST API support. If you want to integrate with Other Systems or build an APP then You can take a look of our REST API Documentation
 👉 [View Rest API Documentation](https://rest-api.fluentcrm.com/)👈
 
+<h4>Developer Documentation</h4>
+FluentCRM has fully featured developer documentation. Now you can extend it's functionalities with your own custom code. You can take a look of our developer documentation
+👉 [View Rest Developer Documentation](https://developers.fluentcrm.com/)👈
+
 <h4>Migrate from Other Email Marketing System</h4>
-We made it easier for you to migrate from other email marketing tools like MailChimp, ConvertKit, MailerLite, Drip and Active Campaign. You can migrate from these system in minutes. Migrate today and enjoy all the cool features and own your own data.
+We made it easier for you to migrate from other email marketing tools like MailChimp, ConvertKit, MailerLite, Drip and Active Campaign. You can migrate from these systems in minutes. Migrate today and enjoy all the cool features and own your own data.
+
+
+<h4>FluentCRM Company Module</h4>
+Introducing the Company Module for FluentCRM, manage your customer relationships. With this new module, you can easily track and manage all contact's company information in one central location.
+Easily add new companies to your CRM, assign them to specific owners, and keep track of all their details including name, address, industry, and more. You can also add notes and tags to each company to help you organize and filter your data.
+But that's not all - the Company Module also lets you track all the contacts associated with each company, so you can see the entire relationship at a glance.
+
 
 == Other Plugins By The Same Team ==
 <ul>
@@ -255,7 +266,6 @@ OR
 1. Upload the plugin files to the `/wp-content/plugins/fluent-crm` directory, or install the plugin through the WordPress plugins screen directly.
 2. Activate the plugin through the \'Plugins\' screen in WordPress
 3. Use the `FluentCRM` -> `Settings` screen to configure the plugin
-4. (Make your instructions match the desired user flow for activating and installing your plugin. Include any steps that might be needed for explanatory purposes)
 
 == Frequently Asked Questions ==
 = Are there any limitations about how many emails I can send? =
@@ -305,6 +315,93 @@ The entire source code is <a href="https://github.com/fluentcrm/fluent-crm/">ava
 10. Pro Integrations
 
 == Changelog ==
+
+= 2.8.33 (Date: Nov 03, 2023) =
+* Fixed Spacing & FontSize Issue
+* Improvement & Bug Fixes on Both Global & Custom Footer
+* Fixed Syntax Issue in Recurring Email History
+* Fixed Email Open Performance Issue
+* Other Improvements & Bug Fixes
+
+
+= 2.8.32 (Date: Oct 27, 2023) =
+* Permission UX Improvement with addition of Import Permission
+* Color Improvement in Automation Flow
+* UI Improvement & Bug Fixes
+
+= 2.8.31 (Date: Sep 10, 2023) =
+* Webhook issue fixed
+* Replace google fonts with bunnycdn font
+* Enable/Disable AI integration for visual builder (in Experimenta Settings)
+
+= 2.8.30 (Date: Sep 05, 2023) =
+* Improvement on Company module
+* New trigger: Company added to contact Trigger
+* New Trigger: Company Removed Trigger
+* Company Specific Automation Actions
+* Custom email preference management page
+* New Trigger: Contact Created
+* Navigation and UI improvements
+* Duplicate segment or export contacts
+* Other improvements including translatable strings, permissions in CRM managers
+* Other Bug Fixes
+
+= 2.8.20 (Date: Jul 18, 2023) =
+* Campaign Email Scheduling and sending speed increased
+* UI Improvement
+* Confirmation prompt for email campaigns
+* Double Opt-in Email pre-header
+* Ability to delete contact profile picture
+* Company attach/detach
+* Integration Improvements
+* Bug fixes & improvements
+
+= 2.8.02 (Date: Jun 12, 2023) =
+- Use Secure Hash instead of MD5 for subscription preference page (Resolved: CVE-2023-1430).
+
+= 2.8.01 (Date: Apr 17, 2023) =
+* Fixed Contact Filter Issue
+* Fixed Server Time UTC issue on the admin Footer
+* It's quick-fix update so no other features added
+
+= 2.8.0 (Date: Apr 14, 2023) =
+* Added Company module
+* More detailed contact overview
+* Massive UI enhancements
+* FluentCRM Navigation Experience
+* Ability to check email preview for specific contacts
+* New WooCommerce Subscription Triggers (Pro)
+* Improvements and bug fixes
+
+= 2.7.40 (Date: Mar 01, 2023) =
+* Email Conditional Sections issues fixed
+* List & Tag selection UI improved
+* Campaign Email Activity Improvements
+* Fixed Redirecting issues for non-unicode characters
+* Fixed import issue for Restrict Content Pro
+
+= 2.7.1 Date: Feb 06, 2023 =
+* Added New Smartcode for latest post title and Custom Date Format
+* Added Inline Doc Link for Smartcodes
+* Elastic Email bounce handler added
+
+= 2.7.0 Date: Jan 23, 2023 =
+* Improvements in Contact Filtering
+* New developer documentation
+* Refactored plugin and performance improvements
+* Enhancements and bug fixes
+* New: Use SmartCode on the Activity notes from the automation
+* Fixed: Theme color is not showing in the Gutenberg editor
+* Fixed: Image alignment issue in the block editor
+* Fixed: Email template saving issue
+* Fixed: The unsubscribe link is not working in the double opt-in confirmation page issue
+* Fixed: The multiline custom field is not working in the email body issue
+
+= 2.6.52 Date: Nov 24, 2022 =
+* Contact Filtering Improvements
+* Improvement on REST-API Calls
+* Date and Time Filtering issues resolved
+* UI Improvements
 
 = 2.6.51 Date: Nov 17, 2022 =
 * Email Audit for invalid Links for Email Editor
@@ -426,7 +523,7 @@ The entire source code is <a href="https://github.com/fluentcrm/fluent-crm/">ava
 * Added Lots of WooCommerce Integrations
 * Added Plain Text Email Template
 * Added Fluent Forms force subscribe feature
-* User role based tagging feature added
+* User role-based tagging feature added
 * Added Redirection Option after Double-Optin
 * Email Builder Blocks Improvements
 * Add Option to remove contact on WP User delete
@@ -452,7 +549,7 @@ The entire source code is <a href="https://github.com/fluentcrm/fluent-crm/">ava
 * Email Sending Speed Improvement
 * Build-in Documentation Page
 * UI Improvements
-* Lots Improvements and Fixes
+* Lots of Improvements and Fixes
 * Added Search Feature for Tags and Lists UI
 
 = 2.0.1 (Date: March 31, 2021) =
@@ -470,4 +567,4 @@ The entire source code is <a href="https://github.com/fluentcrm/fluent-crm/">ava
 * Overall UI and REST API improvements
 
 == Upgrade Notice ==
-The latest version is compatible with the previous version, So nothing to worry.
+The latest version is compatible with the previous version, So nothing to worry about.

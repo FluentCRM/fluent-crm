@@ -5,6 +5,7 @@ namespace FluentCrm\App\Hooks\Handlers;
 use FluentCrm\App\Models\Campaign;
 use FluentCrm\App\Services\CampaignProcessor;
 use FluentCrm\App\Services\ExternalIntegrations\Maintenance;
+use FluentCrm\App\Services\Libs\FileSystem;
 use FluentCrm\App\Services\Libs\Mailer\Handler;
 
 /**
@@ -18,6 +19,8 @@ class Scheduler
 {
     public static function process()
     {
+        wp_raise_memory_limit('admin');
+
         $lastScheduler = get_option('_fcrm_last_scheduler');
 
         if ($lastScheduler && (time() - $lastScheduler) < 30) {
@@ -42,6 +45,8 @@ class Scheduler
     {
         // cleanup campaigns
         (new Handler)->finishProcessing();
+
+        self::maybeCleanupCsvFiles();
     }
 
     /**
@@ -61,6 +66,8 @@ class Scheduler
         $cutOutTime = date('Y-m-d H:i:s', current_time('timestamp') + 360); // within 6 minutes of the future
 
         $campaigns = Campaign::whereIn('status', ['pending-scheduled', 'processing'])
+            ->withoutGlobalScope('type')
+            ->whereIn('type', fluentCrmAutoProcessCampaignTypes())
             ->orderBy('scheduled_at', 'DESC')
             ->where('scheduled_at', '<=', $cutOutTime)
             ->limit(2)
@@ -78,7 +85,8 @@ class Scheduler
             $firstCampaign->save();
         }
 
-        $campaign = (new CampaignProcessor($firstCampaign->id))->processEmails(20, 45);
+        $runTime = fluentCrmMaxRunTime() - 5;
+        $campaign = (new CampaignProcessor($firstCampaign->id))->processEmails(20, $runTime);
 
         if (fluentCrmIsMemoryExceeded()) {
             return false;
@@ -100,5 +108,18 @@ class Scheduler
         }
 
         return false;
+    }
+
+    public static function maybeCleanupCsvFiles()
+    {
+        $dir = FileSystem::getDir();
+
+        // loop through files in directory
+        foreach (glob($dir . '/fluentcrm-*.csv') as $filename) {
+            // check if file was created before last 15 minutes
+            if (time() - filectime($filename) >= 900) {
+                @unlink($filename); // delete file
+            }
+        }
     }
 }

@@ -60,7 +60,8 @@ class Campaign extends Model
                     'slug' => ''
                 ],
                 'advanced_filters'    => [[]],
-                'template_config'     => Helper::getTemplateConfig($defaultTemplate)
+                'template_config'     => Helper::getTemplateConfig($defaultTemplate),
+                'sending_type'        => 'instant'
             ];
         });
 
@@ -126,6 +127,9 @@ class Campaign extends Model
             Subject::whereNotIn('id', $validSubjectIds)
                 ->where('object_id', $this->id)
                 ->delete();
+        } else {
+            Subject::where('object_id', $this->id)
+                ->delete();
         }
 
         return $this->subjects();
@@ -135,18 +139,18 @@ class Campaign extends Model
     {
 
         $subjects = $campaign->subjects;
-        if(!$subjects) {
+        if (!$subjects) {
             return;
         }
 
         $formattedSubjects = [];
         foreach ($subjects as $subject) {
             $formattedSubjects[] = [
-                'key' => $subject->key,
+                'key'   => $subject->key,
                 'value' => $subject['value']
             ];
         }
-        if($formattedSubjects) {
+        if ($formattedSubjects) {
             $this->syncSubjects($formattedSubjects);
         }
     }
@@ -241,13 +245,22 @@ class Campaign extends Model
 
         $filterType = Arr::get($settings, 'sending_filter', 'list_tag');
 
-
         if ($filterType == 'list_tag') {
             $subscriberModel = $this->getSubscribeIdsByListModel($settings['subscribers'], 'subscribed');
             if ($excludeItems = Arr::get($settings, 'excludedSubscribers')) {
-                $excludedModel = $this->getSubscribeIdsByListModel($excludeItems, 'subscribed');
-                $excludedModel->select('id');
-                $subscriberModel->whereNotIn('id', $excludedModel->getQuery());
+                $formattedExcludedItems = [];
+                foreach ($excludeItems as $item) {
+                    if (empty($item['list']) && empty($item['tag'])) {
+                        continue;
+                    }
+                    $formattedExcludedItems[] = $item;
+                }
+
+                if ($formattedExcludedItems) {
+                    $excludedModel = $this->getSubscribeIdsByListModel($excludeItems, 'subscribed');
+                    $excludedModel->select('id');
+                    $subscriberModel->whereNotIn('id', $excludedModel->getQuery());
+                }
             }
 
             return $subscriberModel;
@@ -494,7 +507,7 @@ class Campaign extends Model
                 $email['email_subject_id'] = $subjectItem->id;
             }
 
-            $email['email_subject'] = apply_filters('fluentcrm_parse_campaign_email_text', $emailSubject, $subscriber);;
+            $email['email_subject'] = apply_filters('fluent_crm/parse_campaign_email_text', $emailSubject, $subscriber);;
 
             $email['email_body'] = $this->email_body;
 
@@ -720,5 +733,53 @@ class Campaign extends Model
             ->delete();
 
         return $this;
+    }
+
+    public function rangedScheduleDates()
+    {
+        $settings = $this->settings;
+
+        if (Arr::get($settings, 'sending_type') != 'range_schedule') {
+            return null;
+        }
+
+
+
+        $ranges = Arr::get($settings, 'schedule_range', ['', '']);
+
+        if(!$ranges) {
+            return null;
+        }
+
+        return [
+            'start' => date('Y-m-d H:i:s', $ranges[0]),
+            'end'   => date('Y-m-d H:i:s', $ranges[1])
+        ];
+    }
+
+    public function getEmailScheduleAt()
+    {
+        static $scheduled_at = null;
+        if ($scheduled_at) {
+            return $scheduled_at;
+        }
+
+        $settings = $this->settings;
+
+        if (Arr::get($settings, 'sending_type') != 'range_schedule') {
+            $scheduled_at = $this->scheduled_at;
+            return $scheduled_at;
+        }
+
+        // this is a range selector
+        $ranges = Arr::get($settings, 'schedule_range', [$this->scheduled_at, $this->scheduled_at]);
+
+        $timeStamp = random_int($ranges[0], $ranges[1]);
+
+        if ($timeStamp < current_time('timestamp')) {
+            $timeStamp = current_time('timestamp') + 60;
+        }
+
+        return date('Y-m-d H:i:s', $timeStamp);
     }
 }

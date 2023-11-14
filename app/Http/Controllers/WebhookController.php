@@ -2,6 +2,8 @@
 
 namespace FluentCrm\App\Http\Controllers;
 
+use FluentCrm\App\Models\Company;
+use FluentCrm\App\Services\Helper;
 use FluentCrm\Framework\Request\Request;
 use FluentCrm\App\Models\Webhook;
 use FluentCrm\App\Models\Lists;
@@ -44,14 +46,19 @@ class WebhookController extends Controller
         }
 
 
-        return [
-            'webhooks' => $rows,
-            'fields' => $fields['fields'],
+        $response = [
+            'webhooks'      => $rows,
+            'fields'        => $fields['fields'],
             'custom_fields' => $fields['custom_fields'],
-            'schema' => $webhook->getSchema(),
-            'lists' => Lists::get(),
-            'tags' => Tag::get()
+            'lists'         => Lists::get(),
+            'tags'          => Tag::get()
         ];
+
+        if (Helper::isCompanyEnabled()) {
+            $response['companies'] = Company::get();
+        }
+
+        return $response;
     }
 
     public function create(Request $request, Webhook $webhook)

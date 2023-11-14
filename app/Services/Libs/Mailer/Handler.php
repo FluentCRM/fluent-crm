@@ -23,17 +23,17 @@ class Handler
 
     public function handle($campaignId = null)
     {
-        if (did_action('fluentcrm_sending_emails_starting')) {
+        if (did_action('fluent_crm/sending_emails_starting')) {
             return false;
         }
 
-        if (apply_filters('fluentcrm_disable_email_processing', false)) {
+        if (apply_filters('fluent_crm/disable_email_processing', false)) {
             return false;
         }
 
-        $this->maximumProcessingTime = apply_filters('fluentcrm_max_email_sending_time', 50);
+        $this->maximumProcessingTime = fluentCrmMaxRunTime();
 
-        $sendingPerChunk = apply_filters('fluentcrm_email_sending_per_chunk', 20);
+        $sendingPerChunk = apply_filters('fluent_crm/email_sending_per_chunk', 20);
 
         Helper::maybeDisableEmojiOnEmail();
 
@@ -54,17 +54,17 @@ class Handler
             }
 
         } catch (\Exception $e) {
-            // vdd($e);
+
         }
 
         $hadJobs = $this->hadJobs;
-        if ($hadJobs || mt_rand(0, 50) > 20) { // sometimes we want to check this
-            $dateStamp = date('Y-m-d H:i:s', (current_time('timestamp') - $this->maximumProcessingTime - 30));
+        if ($hadJobs || random_int(0, 50) > 20) { // sometimes we want to check this
+            $dateStamp = date('Y-m-d H:i:s', ( current_time('timestamp') - $this->maximumProcessingTime - 20 ));
+
             CampaignEmail::where('status', 'processing')
                 ->where('updated_at', '<', $dateStamp)
                 ->update([
-                    'status'       => 'pending',
-                    'scheduled_at' => current_time('mysql')
+                    'status'       => 'pending'
                 ]);
         }
 
@@ -92,9 +92,11 @@ class Handler
             return 'empty';
         }
 
+
         $this->hadJobs = true;
         $this->updateProcessTime();
         $this->sendEmails($emails);
+
         usleep(5000); // 5 miliseconds sleep
 
         return $this->processBatchEmails($startedTimeStamp, $campaignId, $perBatch);
@@ -122,8 +124,7 @@ class Handler
                 ->whereIn('id', $ids)
                 ->update([
                     'status'       => 'processing',
-                    'updated_at'   => $currentTime,
-                    'scheduled_at' => $currentTime
+                    'updated_at'   => $currentTime
                 ]);
         }
 
@@ -187,7 +188,7 @@ class Handler
 
     protected function sendEmails($campaignEmails)
     {
-        do_action('fluentcrm_sending_emails_starting', $campaignEmails);
+        do_action('fluent_crm/sending_emails_starting', $campaignEmails);
 
         if (defined('FLUENTMAIL')) {
             add_filter('fluentmail_will_log_email', 'fluentcrm_maybe_disable_fsmtp_log', 10, 2);
@@ -205,7 +206,24 @@ class Handler
                 $this->restartWhenOneSecondExceeds();
             }
 
-            $response = Mailer::send($email->data());
+            /*
+             * We are doing an extra query to make sure we are not send duplicate emails
+             */
+            fluentCrmDb()->table('fc_campaign_emails')
+                ->where('id', $email->id)
+                ->update([
+                    'status' => 'sent'
+                ]);
+
+            // Check again if the contact is in subscribed status or not
+            // If not then we will cancel the email
+            if($email->subscriber && $email->subscriber->status != 'subscribed') {
+                $email->status = 'cancelled';
+                $email->save();
+                continue;
+            }
+
+            $response = Mailer::send($email->data(), $email->subscriber);
 
             $this->dispatchedWithinOneSecond++;
 
@@ -266,25 +284,32 @@ class Handler
 
     public function finishProcessing()
     {
-        $this->markArchiveCampaigns();
-        //  $this->jobCompleted();
+        return $this->markArchiveCampaigns();
     }
 
     protected function markArchiveCampaigns()
     {
         // get the scheduled or working  campaigns where scheduled_at is five minutes ago
-        $campaigns = Campaign::whereIn('status', ['working', 'scheduled'])->whereDoesntHave('emails', function ($query) {
-            $query->whereIn('status', ['scheduling', 'pending', 'scheduled', 'processing', 'draft']);
-        })
+        $campaigns = Campaign::whereIn('status', ['working', 'scheduled'])
+            ->whereDoesntHave('emails', function ($query) {
+                $query->whereIn('status', ['scheduling', 'pending', 'scheduled', 'processing', 'draft']);
+                return $query;
+            })
+            ->withoutGlobalScope('type')
+            ->whereIn('type', fluentCrmAutoProcessCampaignTypes())
             ->where('scheduled_at', '<', date('Y-m-d H:i:s', current_time('timestamp') - 300))
             ->get();
 
         if (!$campaigns->isEmpty()) {
             Campaign::whereIn('id', array_unique($campaigns->pluck('id')->toArray()))
+                ->withoutGlobalScope('type')
                 ->update([
                     'status' => 'archived'
                 ]);
+            return true;
         }
+
+        return false;
     }
 
     protected function jobCompleted()
@@ -292,7 +317,7 @@ class Handler
         // If we've still some campaigns in working mode then they are stuck so
         // Mark those campaigns and their pending emails as purged, so we can show
         // those campaigns in the campaign's page (index) allowed to edit the campaign.
-        foreach (Campaign::where('status', 'working')->get() as $campaign) {
+        foreach (Campaign::withoutGlobalScope('type')->where('status', 'working')->get() as $campaign) {
 
             $hasPending = $campaign->emails()->whereIn('status', ['draft', 'pending', 'scheduled', 'processing'])->count();
             if ($hasPending) {
@@ -351,24 +376,31 @@ class Handler
             return false; // is not valid
         }
 
-        $emailBody = apply_filters('fluentcrm_parse_campaign_email_text', $config['email_body'], $subscriber);
-        $emailSubject = apply_filters('fluentcrm_parse_campaign_email_text', $config['email_subject'], $subscriber);
-        $url = site_url('?fluentcrm=1&route=confirmation&s_id=' . $subscriber->id . '&hash=' . $subscriber->hash);
+        $emailBody = apply_filters('fluent_crm/parse_campaign_email_text', $config['email_body'], $subscriber);
+        $emailSubject = apply_filters('fluent_crm/parse_campaign_email_text', $config['email_subject'], $subscriber);
 
-        $emailBody = apply_filters('fluentcrm_double_optin_email_body', $emailBody, $subscriber);
-        $emailSubject = apply_filters('fluentcrm_double_optin_email_subject', $emailSubject, $subscriber);
+        $emailPreHeader = '';
+        if (Arr::get($config, 'email_pre_header')) {
+            $emailPreHeader = apply_filters('fluent_crm/parse_campaign_email_text', $config['email_pre_header'], $subscriber);
+        }
+
+        $url = site_url('?fluentcrm=1&route=confirmation&hash=' . $subscriber->hash . '&secure_hash='.$subscriber->getSecureHash());
+
+        $emailBody = apply_filters('fluent_crm/double_optin_email_body', $emailBody, $subscriber);
+        $emailSubject = apply_filters('fluent_crm/double_optin_email_subject', $emailSubject, $subscriber);
+        $emailPreHeader = apply_filters('fluent_crm/double_optin_email_pre_header', $emailPreHeader, $subscriber);
 
         $emailBody = str_replace('#activate_link#', $url, $emailBody);
 
         $templateData = [
-            'preHeader'   => '',
+            'preHeader'   => $emailPreHeader,
             'email_body'  => $emailBody,
             'footer_text' => '',
             'config'      => Helper::getTemplateConfig($config['design_template'], false)
         ];
 
         $emailBody = apply_filters(
-            'fluentcrm_email-design-template-' . $config['design_template'],
+            'fluent_crm/email-design-template-' . $config['design_template'],
             $emailBody,
             $templateData,
             false,
@@ -377,7 +409,7 @@ class Handler
 
         if (strpos($emailBody, '##crm.') || strpos($emailBody, '{{crm.')) {
             // we have CRM specific smartcodes
-            $emailBody = apply_filters('fluentcrm_parse_extended_crm_text', $emailBody, $subscriber);
+            $emailBody = apply_filters('fluent_crm/parse_extended_crm_text', $emailBody, $subscriber);
         }
 
         $data = [
@@ -390,7 +422,7 @@ class Handler
         ];
 
         Helper::maybeDisableEmojiOnEmail();
-        Mailer::send($data);
+        Mailer::send($data, $subscriber);
         return true;
     }
 
@@ -476,7 +508,6 @@ class Handler
                 ->update([
                     'email_body'   => '',
                     'updated_at'   => current_time('mysql'),
-                    'scheduled_at' => current_time('mysql'),
                     'status'       => 'sent'
                 ]);
         } else {

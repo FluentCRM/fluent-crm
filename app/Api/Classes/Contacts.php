@@ -176,15 +176,7 @@ class Contacts
         }
 
         if (!$currentContact && $useSecureCookie) {
-            $fcSubscriberHash = \FluentCrm\Framework\Support\Arr::get($_COOKIE, 'fc_hash_secure');
-            if ($fcSubscriberHash) {
-                $secureMeta = SubscriberMeta::where('value', $fcSubscriberHash)->where('key', '_secure_hash')
-                    ->first();
-
-                if ($secureMeta) {
-                    $currentContact = $this->instance->where('id', $secureMeta->subscriber_id)->first();
-                }
-            }
+            $currentContact = $this->getContactBySecureHash(\FluentCrm\Framework\Support\Arr::get($_COOKIE, 'fc_hash_secure'));
         }
 
         return $currentContact;
@@ -192,6 +184,10 @@ class Contacts
 
     public function getContactBySecureHash($hash)
     {
+        if(!$hash) {
+            return null;
+        }
+
         $secureMeta = SubscriberMeta::where('value', $hash)->where('key', '_secure_hash')
             ->first();
 
@@ -199,7 +195,7 @@ class Contacts
             return $this->instance->where('id', $secureMeta->subscriber_id)->first();
         }
 
-        return false;
+        return null;
     }
 
     /**

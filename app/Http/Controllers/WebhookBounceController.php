@@ -16,11 +16,11 @@ use FluentCrm\Framework\Request\Request;
  */
 class WebhookBounceController extends Controller
 {
-    private $validServices = ['mailgun', 'pepipost', 'postmark', 'sendgrid', 'sparkpost'];
+    private $validServices = ['mailgun', 'pepipost', 'postmark', 'sendgrid', 'sparkpost', 'elasticemail'];
 
     public function handleBounce(Request $request, $serviceName, $securityCode)
     {
-        
+
         if (!in_array($serviceName, $this->validServices)) {
             // This is a custom bounce handler
             return apply_filters('fluent_crm_handle_bounce_' . $serviceName, [

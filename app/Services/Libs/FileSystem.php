@@ -25,7 +25,9 @@ class FileSystem
     {
         $uploadDir = wp_upload_dir();
 
-        return $uploadDir['basedir'] . FLUENTCRM_UPLOAD_DIR;
+        $fluentCrmUploadDir = apply_filters('fluent_crm/upload_folder_name', FLUENTCRM_UPLOAD_DIR);
+
+        return $uploadDir['basedir'] . $fluentCrmUploadDir;
     }
 
     /**
@@ -110,21 +112,24 @@ class FileSystem
      */
     public function _setCustomUploadDir($param)
     {
-        $param['url'] = $param['baseurl'] . FLUENTCRM_UPLOAD_DIR;
 
-        $param['path'] = $param['basedir'] . FLUENTCRM_UPLOAD_DIR;
+        $fluentCrmUploadDir = apply_filters('fluent_crm/upload_folder_name', FLUENTCRM_UPLOAD_DIR);
+
+        $param['url'] = $param['baseurl'] . $fluentCrmUploadDir;
+
+        $param['path'] = $param['basedir'] . $fluentCrmUploadDir;
 
         if (!is_dir($param['path'])) {
              mkdir($param['path'], 0755);
              file_put_contents(
-                 $param['basedir'].FLUENTCRM_UPLOAD_DIR.'/.htaccess',
+                 $param['basedir'].$fluentCrmUploadDir.'/.htaccess',
                  file_get_contents(__DIR__.'/Stubs/htaccess.stub')
              );
         }
 
-        if(!file_exists($param['basedir'].FLUENTCRM_UPLOAD_DIR.'/index.php')) {
+        if(!file_exists($param['basedir'].$fluentCrmUploadDir.'/index.php')) {
             file_put_contents(
-                $param['basedir'].FLUENTCRM_UPLOAD_DIR.'/index.php',
+                $param['basedir'].$fluentCrmUploadDir.'/index.php',
                 file_get_contents(__DIR__.'/Stubs/index.stub')
             );
         }
@@ -139,8 +144,7 @@ class FileSystem
      */
     public function _renameFileName($file)
     {
-        $prefix = 'fluentcrm-' . md5(uniqid(rand())) . '-fluentcrm-';
-
+        $prefix = 'fluentcrm-' . md5(wp_generate_uuid4()) . '-fluentcrm-';
         $file['name'] = $prefix . $file['name'];
 
         return $file;

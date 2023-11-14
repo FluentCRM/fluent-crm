@@ -52,7 +52,7 @@ class UsersController extends Controller
             'map', 'tags', 'lists', 'roles', 'update', 'new_status', 'double_optin_email', 'import_silently'
         ]);
 
-        $limit = apply_filters('fluentcrm_process_subscribers_per_request', 100);
+        $limit = apply_filters('fluent_crm/process_subscribers_per_request', 100);
         $page = absint($request->get('page', 1));
 
         $userQuery = new \WP_User_Query([

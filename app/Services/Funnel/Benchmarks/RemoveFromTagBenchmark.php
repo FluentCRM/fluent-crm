@@ -53,7 +53,8 @@ class RemoveFromTagBenchmark extends BaseBenchMark
                     'option_key'  => 'tags',
                     'is_multiple' => true,
                     'label'       => __('Select Tags', 'fluent-crm'),
-                    'placeholder' => __('Select a Tag', 'fluent-crm')
+                    'placeholder' => __('Select a Tag', 'fluent-crm'),
+                    'creatable' => true
                 ],
                 'select_type' => [
                     'label'      => __('Run When', 'fluent-crm'),

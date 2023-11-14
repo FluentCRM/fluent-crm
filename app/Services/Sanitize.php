@@ -3,6 +3,8 @@
 namespace FluentCrm\App\Services;
 
 
+use FluentCrm\Framework\Support\Arr;
+
 class Sanitize
 {
     public static function campaign($data)
@@ -61,7 +63,8 @@ class Sanitize
             'ip' => 'sanitize_text_field',
             'created_at' => 'sanitize_text_field',
             'updated_at' => 'sanitize_text_field',
-            'avatar' => 'sanitize_url'
+            'avatar' => 'esc_url_raw',
+            'company_id' => 'intval',
         ];
 
         foreach ($data as $key => $value) {
@@ -111,6 +114,39 @@ class Sanitize
             'status' => 'sanitize_text_field',
             'created_by' => 'intval',
             'updated_at' => 'sanitize_text_field'
+        ];
+
+        foreach ($data as $key => $value) {
+            if($value && isset($fieldMaps[$key]) && !is_array($value)) {
+                $data[$key] = call_user_func($fieldMaps[$key], $value);
+            }
+        }
+
+        return $data;
+    }
+
+    public static function company($data)
+    {
+        $fieldMaps = [
+            'name' => 'sanitize_text_field',
+            'description' => 'wp_kses_post',
+            'phone' => 'sanitize_text_field',
+            'email' => 'sanitize_email',
+            'owner_id' => 'intval',
+            'employees_number' => 'intval',
+            'industry' => 'sanitize_text_field',
+            'type' => 'sanitize_text_field',
+            'address_line_1' => 'sanitize_text_field',
+            'address_line_2' => 'sanitize_text_field',
+            'postal_code' => 'sanitize_text_field',
+            'city' => 'sanitize_text_field',
+            'state' => 'sanitize_text_field',
+            'country' => 'sanitize_text_field',
+            'website' => 'esc_url_raw',
+            'linkedin_url' => 'esc_url_raw',
+            'facebook_url' => 'esc_url_raw',
+            'twitter_url' => 'esc_url_raw',
+            'logo' => 'esc_url_raw',
         ];
 
         foreach ($data as $key => $value) {
