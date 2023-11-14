@@ -105,9 +105,95 @@ class ActiveCampaign
         return $this->make_request('list_field_view', array('ids' => 'all'));
     }
 
-    public function getContacts($args = ['ids' => 'all', 'full' => 1])
+    public function getContacts($args = ['offset' => 0, 'status' => -1])
     {
-        return $this->make_request('contact_list', $args);
+
+        $args = wp_parse_args(
+            $args,
+            array(
+                'offset'  => 0,
+                'status'  => $args['status'],
+                'include' => 'contactTags,contactLists,fieldValues',
+                'limit'   => 100,
+                'api_key' => $this->apiKey,
+            )
+        );
+
+        $subscribers = array();
+
+        $request  = add_query_arg( $args, untrailingslashit( $this->apiUrl ) . '/api/3/contacts' );
+        $response = wp_safe_remote_get( $request );
+
+        $error = $this->maybeError( $response );
+        if ( $error ) {
+            return $error;
+        }
+
+        $response = json_decode( wp_remote_retrieve_body( $response ) );
+
+        if ( ! empty( $response->contacts ) ) {
+
+            // Base subscriber data.
+
+            foreach ( $response->contacts as $contact ) {
+
+                $subscribers[ $contact->id ] = array(
+                    'first_name' => $contact->{'firstName'},
+                    'last_name'  => $contact->{'lastName'},
+                    'email'      => $contact->{'email'},
+                    'phone'      => $contact->{'phone'},
+                    'cdate'      => $contact->{'cdate'},
+                    'ip'         => $contact->{'ip'},
+                    'status'     => 1, // @todo this should be checked based on the list membership.
+                    'tags'       => array(),
+                    'lists'      => array(),
+                    'fields'     => array(),
+                );
+
+            }
+
+            // Fields.
+
+            if ( ! empty( $response->{'fieldValues'} ) ) {
+
+                foreach ( $response->{'fieldValues'} as $field ) {
+
+                    if ( false !== strpos( $field->value, '||' ) ) {
+                        $type = 'checkbox';
+                    } else {
+                        $type = 'text';
+                    }
+
+                    $subscribers[ $field->contact ]['fields'][] = array(
+                        'val'     => $field->value,
+                        'perstag' => $field->field,
+                        'type'    => $type,
+                    );
+                }
+            }
+
+            // Tags.
+
+            if ( ! empty( $response->{'contactTags'} ) ) {
+
+                foreach ( $response->{'contactTags'} as $tag ) {
+                    $subscribers[ $tag->contact ]['tags'][] = $tag->tag;
+                }
+            }
+
+
+            // Lists.
+
+            if ( ! empty( $response->{'contactLists'} ) ) {
+
+                foreach ( $response->{'contactLists'} as $list ) {
+                    $subscribers[ $list->contact ]['lists'][] = array( 'listid' => $list->list );
+                }
+            }
+        }
+
+        return $subscribers;
+
     }
 
     public function contactPaginator($args = ['limit' => 20, 'public' => 0])
