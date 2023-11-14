@@ -67,18 +67,12 @@ $router->prefix('subscribers')->withPolicy('SubscriberPolicy')->group(function (
 
     $router->get('{id}/notes', 'SubscriberController@getNotes')->int('id');
     $router->post('{id}/notes', 'SubscriberController@addNote')->int('id');
-
+    $router->put('{id}/notes/{note_id}', 'SubscriberController@updateNote')->int('id')->int('note_id');
+    $router->delete('{id}/notes/{note_id}', 'SubscriberController@deleteNote')->int('id')->int('note_id');
     $router->get('{id}/external_view', 'SubscriberController@getExternalView')->int('id');
+    $router->get('{id}/info-widgets', 'SubscriberController@getInfoWidgets')->int('id');
 
-    $router->put('{id}/notes/{note_id}', 'SubscriberController@updateNote')->where([
-        'id'      => 'int',
-        'note_id' => 'int'
-    ]);
-
-    $router->delete('{id}/notes/{note_id}', 'SubscriberController@deleteNote')->where([
-        'id'      => 'int',
-        'note_id' => 'int'
-    ]);
+    $router->get('search-contacts', 'SubscriberController@searchContacts');
 
 });
 
@@ -91,6 +85,7 @@ $router->prefix('campaigns')->withPolicy('CampaignPolicy')->group(function ($rou
     $router->get('emails/{email_id}/preview', 'CampaignController@previewEmail')->int('email_id');
 
     $router->post('estimated-contacts', 'CampaignController@getContactEstimation');
+    $router->post('update-single-campaign', 'CampaignController@updateSingleCampaignSimulate');
 
     $router->get('{id}', 'CampaignController@campaign')->int('id');
     $router->put('{id}', 'CampaignController@update')->int('id');
@@ -116,6 +111,7 @@ $router->prefix('campaigns')->withPolicy('CampaignPolicy')->group(function ($rou
 
 
     $router->get('{id}/status', 'CampaignController@getCampaignStatus')->int('id');
+    $router->get('{id}/overview_stats', 'CampaignController@getOverviewStats')->int('id');
     $router->get('{id}/link-report', 'CampaignAnalyticsController@getLinksReport')->int('id');
     $router->get('{id}/revenues', 'CampaignAnalyticsController@getRevenueReport')->int('id');
     $router->get('{id}/unsubscribers', 'CampaignAnalyticsController@getUnsubscribers')->int('id');
@@ -154,6 +150,9 @@ $router->prefix('funnels')->withPolicy('FunnelPolicy')->group(function ($router)
 
     $router->get('subscriber/{subscriber_id}/automations', 'FunnelController@subscriberAutomations');
 
+    $router->post('funnel/save-funnel-sequences', 'FunnelController@saveSequencesFallback');
+    $router->post('funnel/save-email-action-fallback', 'FunnelController@saveEmailActionFallback');
+
     $router->get('{id}', 'FunnelController@getFunnel')->int('id');
     $router->post('{id}/clone', 'FunnelController@cloneFunnel')->int('id');
     $router->put('{id}', 'FunnelController@updateFunnelProperty')->int('id');
@@ -170,8 +169,10 @@ $router->prefix('funnels')->withPolicy('FunnelPolicy')->group(function ($router)
 
 
     $router->get('{id}/email_reports', 'FunnelController@getEmailReports')->int('id');
-
     $router->put('{id}/subscribers/{subscriber_id}/status', 'FunnelController@updateSubscriptionStatus')->int('id')->int('subscriber_id');
+
+    $router->get('{id}/syncable-counts', 'FunnelController@getSyncableContactCounts')->int('id');
+    $router->post('{id}/sync-new-steps', 'FunnelController@syncNewSteps')->int('id');
 
 });
 
@@ -196,6 +197,7 @@ $router->prefix('reports')->withPolicy('ReportPolicy')->group(function ($router)
 
     $router->get('advanced-providers', 'ReportingController@getAdvancedReportProviders');
 
+    $router->get('ping', 'ReportingController@ping');
 });
 
 
@@ -259,16 +261,24 @@ $router->prefix('webhooks')->withPolicy('WebhookPolicy')->group(function ($route
 });
 
 /*
- * Imports
+ * Users
  */
-$router->prefix('import')->withPolicy('UsersPolicy')->group(function ($router) {
+$router->prefix('users')->withPolicy('UsersPolicy')->group(function ($router) {
 
-    $router->get('users', 'UsersController@index');
-    $router->post('users', 'UsersController@import');
-    $router->get('users/roles', 'UsersController@roles');
+    $router->get('/', 'UsersController@index');
+    $router->get('/roles', 'UsersController@roles');
+
+});
+
+/*
+ * Import
+ */
+$router->prefix('import')->withPolicy('ImportUserPolicy')->group(function ($router) {
 
     $router->post('csv-upload', 'CsvController@upload');
     $router->post('csv-import', 'CsvController@import');
+
+    $router->post('users', 'UsersController@import');
 
     $router->get('drivers', 'ImporterController@getDrivers');
     $router->get('drivers/{driver}', 'ImporterController@getDriver')->alphaNumDash('driver');
@@ -322,3 +332,27 @@ $router->prefix('migrators')->withPolicy('SettingsPolicy')->group(function ($rou
     $router->post('/summary', 'MigratorController@getImportSummary');
     $router->post('/import', 'MigratorController@handleImport');
 });
+
+$router->prefix('companies')->withPolicy('CompanyPolicy')->group(function ($router) {
+    $router->get('/', 'CompanyController@index');
+    $router->post('/', 'CompanyController@create');
+    $router->get('/{id}', 'CompanyController@find')->int('id');
+    $router->put('/{id}', 'CompanyController@update')->int('id');
+    $router->delete('/{id}', 'CompanyController@delete')->int('id');
+
+    $router->get('/search', 'CompanyController@searchCompanies');
+    $router->get('/search-unattached-contacts', 'CompanyController@searchUnattachedContacts');
+    $router->put('companies-property', 'CompanyController@updateProperty');
+    $router->post('attach-subscribers', 'CompanyController@attachSubscribers');
+    $router->post('detach-subscribers', 'CompanyController@detachSubscribers');
+    $router->post('do-bulk-action', 'CompanyController@handleBulkActions');
+
+    $router->get('{id}/notes', 'CompanyController@getNotes')->int('id');
+    $router->post('{id}/notes', 'CompanyController@addNote')->int('id');
+    $router->put('{id}/notes/{note_id}', 'CompanyController@updateNote')->int('id')->int('note_id');
+    $router->delete('{id}/notes/{note_id}', 'CompanyController@deleteNote')->int('id')->int('note_id');
+
+    $router->post('csv-import', 'CsvController@importCompanies');
+
+});
+

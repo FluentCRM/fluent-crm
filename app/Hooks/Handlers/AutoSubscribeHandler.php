@@ -86,7 +86,7 @@ class AutoSubscribeHandler
 
         $settings = (new AutoSubscribe())->getCommentSettings();
 
-        $settings = apply_filters('fluentcrm_comment_form_subscribe_settings', $settings);
+        $settings = apply_filters('fluent_crm/comment_form_subscribe_settings', $settings);
 
         if (Arr::get($settings, 'status') != 'yes') {
             return $buttonHtml;
@@ -265,4 +265,5 @@ class AutoSubscribeHandler
 
         return Helper::deleteContacts([$subscriber->id]);
     }
+
 }

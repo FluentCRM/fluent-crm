@@ -5,10 +5,22 @@ namespace FluentCrm\App\Services;
 use FluentCrm\App\Models\Lists;
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\UrlStores;
+use FluentCrm\App\Models\Webhook;
 use FluentCrm\Framework\Support\Arr;
 
 class Helper
 {
+    public static function getLinksFromString($string)
+    {
+        preg_match_all('/<a[^>]+(href\=["|\'](http.*?)["|\'])/m', $string, $urls);
+
+        if (!empty($urls[2])) {
+            return $urls[2];
+        }
+
+        return [];
+    }
+
     public static function urlReplaces($string)
     {
         preg_match_all('/<a[^>]+(href\=["|\'](http.*?)["|\'])/m', $string, $urls);
@@ -26,10 +38,15 @@ class Helper
         return $formatted;
     }
 
-    public static function attachUrls($html, $campaignUrls, $insertId)
+    public static function attachUrls($html, $campaignUrls, $insertId, $hash = false)
     {
         foreach ($campaignUrls as $src => $url) {
-            $campaignUrls[$src] = 'href="' . $url . '&mid=' . $insertId . '"';
+            $url .= '&mid=' . $insertId;
+            if ($hash) {
+                $url .= '&fch=' . substr($hash, 0, 8);
+            }
+
+            $campaignUrls[$src] = 'href="' . $url . '"';
         }
         return str_replace(array_keys($campaignUrls), array_values($campaignUrls), $html);
     }
@@ -39,7 +56,7 @@ class Helper
         return wp_generate_uuid4();
     }
 
-    public static function injectTrackerPixel($emailBody, $hash)
+    public static function injectTrackerPixel($emailBody, $hash, $emailId = null)
     {
         if (!$hash) {
             return $emailBody;
@@ -52,7 +69,8 @@ class Helper
         $trackImageUrl = add_query_arg([
             'fluentcrm' => 1,
             'route'     => 'open',
-            '_e_hash'   => $hash
+            '_e_hash'   => $hash,
+            '_e_id' => $emailId
         ], self::getSiteUrl());
         $trackPixelHtml = '<img src="' . esc_url($trackImageUrl) . '" alt="" />';
 
@@ -81,7 +99,7 @@ class Helper
             ],
         ];
 
-        if (defined('WC_PLUGIN_FILE') || class_exists('\Easy_Digital_Downloads')) {
+        if (self::getPurchaseHistoryProviders()) {
             $sections['subscriber_purchases'] = [
                 'name'    => 'subscriber_purchases',
                 'title'   => __('Purchase History', 'fluent-crm'),
@@ -117,7 +135,7 @@ class Helper
 
     public static function getDefaultEmailTemplate()
     {
-        return 'simple';
+        return apply_filters('fluent_crm/default_email_design_template', 'simple');
     }
 
     public static function getGlobalSmartCodes()
@@ -162,12 +180,14 @@ class Helper
         $smartCodes[] = [
             'key'        => 'general',
             'title'      => __('General', 'fluent-crm'),
-            'shortcodes' => apply_filters('fluentcrm_general_smartcodes', [
+            'shortcodes' => apply_filters('fluent_crm/general_smartcodes', [
                 '{{crm.business_name}}'                              => __('Business Name', 'fluent-crm'),
                 '{{crm.business_address}}'                           => __('Business Address', 'fluent-crm'),
                 '{{wp.admin_email}}'                                 => __('Admin Email', 'fluent-crm'),
                 '{{wp.url}}'                                         => __('Site URL', 'fluent-crm'),
                 '{{other.date.+2 days}}'                             => __('Dynamic Date (ex: +2 days from now)', 'fluent-crm'),
+                '{{other.date_format.D, d M, Y}}'                    => __('Custom Date Format (Any PHP Date Format)', 'fluent-crm'),
+                '{{other.latest_post.title}}'                        => __('Latest Post Title (Published)', 'fluent-crm'),
                 '##crm.unsubscribe_url##'                            => __('Unsubscribe URL', 'fluent-crm'),
                 '##crm.manage_subscription_url##'                    => __('Manage Subscription URL', 'fluent-crm'),
                 '##web_preview_url##'                                => __('View On Browser URL', 'fluent-crm'),
@@ -176,12 +196,12 @@ class Helper
             ])
         ];
 
-        return $smartCodes;
+        return apply_filters('fluent_crm/smartcode_groups', $smartCodes);
     }
 
     public static function getExtendedSmartCodes()
     {
-        return array_values(apply_filters('fluentcrm_extended_general_smart_codes', []));
+        return array_values(apply_filters('fluent_crm/extended_smart_codes', []));
     }
 
     public static function getDoubleOptinSettings()
@@ -215,6 +235,7 @@ class Helper
 
         return [
             'email_subject'           => $subject,
+            'email_pre_header'        => '',
             'design_template'         => 'simple',
             'email_body'              => '<h2>Please Confirm Subscription</h2><p><a style="color: #ffffff; background-color: #454545; font-size: 16px; border-radius: 5px; text-decoration: none; font-weight: normal; font-style: normal; padding: 0.8rem 1rem; border-color: #0072ff;" href="#activate_link#">Yes, subscribe me to the mailing list</a></p><p>&nbsp;</p><p>If you received this email by mistake, simply delete it. You won\'t be subscribed if you don\'t click the confirmation link above.</p><p>For questions about this list, please contact:<br />' . $businessEmail . '</p>',
             'after_confirmation_type' => 'message',
@@ -226,15 +247,20 @@ class Helper
     public static function getEmailDesignTemplates()
     {
         $defaultDesignConfig = [
-            'content_width'        => 700,
-            'headings_font_family' => "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
-            'text_color'           => '#202020',
-            'link_color'           => '',
-            'headings_color'       => '#202020',
-            'body_bg_color'        => '#FAFAFA',
-            'content_bg_color'     => '#FFFFFF',
-            'footer_text_color'    => '#202020',
-            'content_font_family'  => "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+            'content_width'         => 700,
+            'headings_font_family'  => "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+            'text_color'            => '#202020',
+            'link_color'            => '',
+            'body_bg_color'         => '#FAFAFA',
+            'content_bg_color'      => '#FFFFFF',
+            'footer_text_color'     => '#202020',
+            'content_font_family'   => "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+            'paragraph_color'       => '',
+            'paragraph_font_size'   => '',
+            'paragraph_font_family' => '',
+            'paragraph_line_height' => '',
+            'headings_color'        => '#202020',
+            'heading_font_family'   => '',
         ];
 
 
@@ -295,7 +321,7 @@ class Helper
         if (!defined('FLUENTCAMPAIGN')) {
             $templates['visual_builder'] = [
                 'id'            => 'visual_builder',
-                'label'         => __('Visual Builder', 'fluentcampaign-pro'),
+                'label'         => __('Visual Builder', 'fluent-crm'),
                 'image'         => fluentCrmMix('images/drag-drop.png'),
                 'config'        => $classicConfig,
                 'use_gutenberg' => false,
@@ -325,17 +351,25 @@ class Helper
     public static function getActivatedFeatures()
     {
         return [
-            'fluentcampaign' => defined('FLUENTCAMPAIGN_FRAMEWORK_VERSION')
+            'fluentcampaign'       => defined('FLUENTCAMPAIGN_FRAMEWORK_VERSION'),
+            'company_module'       => self::isCompanyEnabled(),
+            'email_open_tracking'  => !apply_filters('fluentcrm_disable_email_open_tracking', false),
+            'email_click_tracking' => apply_filters('fluent_crm/track_click', true),
         ];
     }
 
     public static function getContactPrefixes($withKeyed = false)
     {
+        /*
+         * deprecated, please use fluent_crm/contact_name_prefixes instead
+         */
         $prefixes = apply_filters('fluentcrm_contact_name_prefixes', [
             'Mr',
             'Mrs',
             'Ms'
         ]);
+
+        $prefixes = apply_filters('fluent_crm/contact_name_prefixes', $prefixes);
 
         if ($withKeyed) {
             $keyedNames = [];
@@ -359,6 +393,14 @@ class Helper
             if (empty($settings['pref_form'])) {
                 $settings['pref_form'] = 'no';
                 $settings['pref_general'] = ['prefix', 'first_name', 'last_name'];
+                $settings['pref_custom'] = [];
+            }
+
+            if (!isset($settings['pref_general'])) {
+                $settings['pref_general'] = [];
+            }
+
+            if (!isset($settings['pref_custom'])) {
                 $settings['pref_custom'] = [];
             }
 
@@ -398,12 +440,12 @@ class Helper
 
         if (defined('WPPAYFORM_VERSION')) {
             $validProviders['payform'] = [
-                'title' => __('WPPayForm Purchase History', 'fluent-crm'),
-                'name'  => __('WP Pay Forms', 'fluent-crm')
+                'title' => __('Paymattic Purchase History', 'fluent-crm'),
+                'name'  => __('Paymattic', 'fluent-crm')
             ];
         }
 
-        return apply_filters('fluentcrm_purchase_history_providers', $validProviders);
+        return apply_filters('fluent_crm/purchase_history_providers', $validProviders);
     }
 
     public static function getThemePrefScheme()
@@ -655,6 +697,10 @@ class Helper
             $user = get_user_by('ID', $user);
         }
 
+        if (!$user) {
+            return [];
+        }
+
         $subscriber = array_filter([
             'user_id'    => $user->ID,
             'first_name' => $user->first_name,
@@ -754,8 +800,16 @@ class Helper
 
     public static function hasComplianceText($text)
     {
-        if (apply_filters('fluencrm_disable_check_compliance_string', false, $text)) {
-            return true;
+        /*
+         * @deprecated fluencrm_disable_check_compliance_string since 2.8.33
+         * please use fluent_crm/disable_check_compliance_string instead
+         */
+
+        $result  = apply_filters_deprecated('fluencrm_disable_check_compliance_string', [false, $text], '2.8.33', 'fluent_crm/disable_check_compliance_string');
+        $result = apply_filters('fluent_crm/disable_check_compliance_string', $result, $text);
+
+        if ($result) {
+            return false;
         }
 
         $lookUpTexts = [
@@ -781,7 +835,7 @@ class Helper
         if ($disabled) {
             return;
         }
-        if (apply_filters('fluentcrm_disable_emoji_to_image', true)) {
+        if (apply_filters('fluent_crm/disable_emoji_to_image', true)) {
             remove_filter('wp_mail', 'wp_staticize_emoji_for_email');
         }
         $disabled = true;
@@ -945,7 +999,7 @@ class Helper
                         'component'   => 'options_selector',
                         'option_key'  => 'lists',
                         'is_multiple' => true,
-                    ],
+                    ]
                 ],
             ],
             'activities' => [
@@ -1024,6 +1078,19 @@ class Helper
             ]
         ];
 
+        if (Helper::isCompanyEnabled()) {
+            $groups['segment']['children'][] = [
+                'label'              => __('Company', 'fluent-crm'),
+                'value'              => 'companies',
+                'type'               => 'selections',
+                'component'          => 'ajax_selector',
+                'option_key'         => 'companies',
+                'is_multiple'        => true,
+                'is_singular_value'  => true,
+                'experimental_cache' => true
+            ];
+        }
+
         if ($customFields = fluentcrm_get_custom_contact_fields()) {
             // form data for custom fields in groups
             $children = [];
@@ -1040,7 +1107,7 @@ class Helper
                     $item['type'] = 'dates';
                     $item['date_type'] = 'date';
                     $item['value_format'] = 'yyyy-MM-dd';
-                } else if($item['type'] == 'date_time') {
+                } else if ($item['type'] == 'date_time') {
                     $item['type'] = 'dates';
                     $item['has_time'] = 'yes';
                     $item['date_type'] = 'datetime';
@@ -1363,7 +1430,8 @@ class Helper
         $defaults = [
             'anonymize_ip'           => 'no',
             'delete_contact_on_user' => 'no',
-            'personal_data_export'   => 'yes'
+            'personal_data_export'   => 'yes',
+            'one_click_unsubscribe' => 'no'
         ];
 
         $settings = get_option('_fluentcrm_compliance_settings', []);
@@ -1395,16 +1463,23 @@ class Helper
             'campaign_group_by_month'  => 'no',
             'campaign_search'          => '',
             'campaign_max_number'      => 50,
-            'classic_date_time'        => 'no'
+            'classic_date_time'        => 'no',
+            'full_navigation'          => 'no',
+            'company_module'           => 'no',
+            'company_auto_logo'        => 'no',
+            'disable_visual_ai'         => 'no'
         ];
 
         $settings = get_option('_fluentcrm_experimental_settings', []);
+
         if (!$settings || !is_array($settings)) {
             $settings = $defaults;
             return $settings;
         }
 
-        return wp_parse_args($settings, $defaults);
+        $settings = wp_parse_args($settings, $defaults);
+
+        return $settings;
     }
 
     public static function sanitizeHtml($html)
@@ -1463,9 +1538,240 @@ class Helper
             $tags = array_merge($tags, $svg_args);
         }
 
-        $tags = apply_filters('fluentcrm_allowed_html_tags', $tags);
+        $tags = apply_filters('fluent_crm/allowed_html_tags', $tags);
 
         return wp_kses($html, $tags);
+    }
+
+    public static function hasConditionOnString($string)
+    {
+        return strpos($string, 'conditional-group') || strpos($string, 'fc-cond-blocks') || strpos($string, 'fc_vis_cond');
+    }
+
+    public static function getEmailFooterContent($campaign = null)
+    {
+        if ($campaign && Arr::get($campaign->settings, 'footer_settings.custom_footer') == 'yes' && Arr::get($campaign->settings, 'footer_settings.footer_content')) {
+            $emailFooter = Arr::get($campaign->settings, 'footer_settings.footer_content');
+        } else {
+            $emailFooter = Arr::get(self::getGlobalEmailSettings(), 'email_footer', '');
+        }
+
+        return $emailFooter;
+    }
+
+    public static function isCompanyEnabled()
+    {
+        return self::isExperimentalEnabled('company_module');
+    }
+
+    public static function companyCategories()
+    {
+        return apply_filters('fluent_crm/company_categories', [
+            'Accounting',
+            'Airlines/Aviation',
+            'Alternative Dispute Resolution',
+            'Alternative Medicine',
+            'Animation',
+            'Apparel & Fashion',
+            'Architecture & Planning',
+            'Arts and Crafts',
+            'Automotive',
+            'Aviation & Aerospace',
+            'Banking',
+            'Biotechnology',
+            'Broadcast Media',
+            'Building Materials',
+            'Business Supplies and Equipment',
+            'Capital Markets',
+            'Chemicals',
+            'Civic & Social Organization',
+            'Civil Engineering',
+            'Commercial Real Estate',
+            'Computer & Network Security',
+            'Computer Games',
+            'Computer Hardware',
+            'Computer Networking',
+            'Computer Software',
+            'Internet',
+            'Construction',
+            'Consumer Electronics',
+            'Consumer Goods',
+            'Consumer Services',
+            'Cosmetics',
+            'Dairy',
+            'Defense & Space',
+            'Design',
+            'Education Management',
+            'E-Learning',
+            'Electrical/Electronic Manufacturing',
+            'Entertainment',
+            'Environmental Services',
+            'Events Services',
+            'Executive Office',
+            'Facilities Services',
+            'Farming',
+            'Financial Services',
+            'Fine Art',
+            'Fishery',
+            'Food & Beverages',
+            'Food Production',
+            'Fund-Raising',
+            'Furniture',
+            'Gambling & Casinos',
+            'Glass, Ceramics & Concrete',
+            'Government Administration',
+            'Government Relations',
+            'Graphic Design',
+            'Health, Wellness and Fitness',
+            'Higher Education',
+            'Hospital & Health Care',
+            'Hospitality',
+            'Human Resources',
+            'Import and Export',
+            'Individual & Family Services',
+            'Industrial Automation',
+            'Information Services',
+            'Information Technology and Services',
+            'Insurance',
+            'International Affairs',
+            'International Trade and Development',
+            'Investment Banking',
+            'Investment Management',
+            'Judiciary',
+            'Law Enforcement',
+            'Law Practice',
+            'Legal Services',
+            'Legislative Office',
+            'Leisure, Travel & Tourism',
+            'Libraries',
+            'Logistics and Supply Chain',
+            'Luxury Goods & Jewelry',
+            'Machinery',
+            'Management Consulting',
+            'Maritime',
+            'Market Research',
+            'Marketing and Advertising',
+            'Mechanical or Industrial Engineering',
+            'Media Production',
+            'Medical Devices',
+            'Medical Practice',
+            'Mental Health Care',
+            'Military',
+            'Mining & Metals',
+            'Motion Pictures and Film',
+            'Museums and Institutions',
+            'Music',
+            'Nanotechnology',
+            'Newspapers',
+            'Non-Profit Organization Management',
+            'Oil & Energy',
+            'Online Media',
+            'Outsourcing/Offshoring',
+            'Package/Freight Delivery',
+            'Packaging and Containers',
+            'Paper & Forest Products',
+            'Performing Arts',
+            'Pharmaceuticals',
+            'Philanthropy',
+            'Photography',
+            'Plastics',
+            'Political Organization',
+            'Primary/Secondary Education',
+            'Printing',
+            'Professional Training & Coaching',
+            'Program Development',
+            'Public Policy',
+            'Public Relations and Communications',
+            'Public Safety',
+            'Publishing',
+            'Railroad Manufacture',
+            'Ranching',
+            'Real Estate',
+            'Recreational Facilities and Services',
+            'Religious Institutions',
+            'Renewables & Environment',
+            'Research',
+            'Restaurants',
+            'Retail',
+            'Security and Investigations',
+            'Semiconductors',
+            'Shipbuilding',
+            'Sporting Goods',
+            'Sports',
+            'Staffing and Recruiting',
+            'Supermarkets',
+            'Telecommunications',
+            'Textiles',
+            'Think Tanks',
+            'Tobacco',
+            'Translation and Localization',
+            'Transportation/Trucking/Railroad',
+            'Utilities',
+            'Venture Capital & Private Equity',
+            'Veterinary',
+            'Warehousing',
+            'Wholesale',
+            'Wine and Spirits',
+            'Wireless',
+            'Writing and Editing'
+        ]);
+    }
+
+    public static function companyTypes()
+    {
+        return apply_filters('fluent_crm/company_types', [
+            'Prospect',
+            'Partner',
+            'Reseller',
+            'Vendor',
+            'Other'
+        ]);
+    }
+
+    public static function getCompanyProfileSections()
+    {
+        $sections = [
+            'overview'   => [
+                'name'    => 'view_company',
+                'title'   => __('Contacts', 'fluent-crm'),
+                'handler' => 'route'
+            ],
+            'activities' => [
+                'name'    => 'company_activities',
+                'title'   => __('Notes & Activities', 'fluent-crm'),
+                'handler' => 'route'
+            ],
+        ];
+
+        return apply_filters('fluent_crm/company_profile_sections', $sections);
+    }
+
+    public static function maybeParseAndFilterWebhookData(Webhook $webhook, $postData, $key)
+    {
+        $data = Arr::get($webhook->value, $key, []);
+        if (!empty($postData[$key])) {
+            $postedData = Arr::get($postData, $key, []);
+
+            if (is_string($postedData)) {
+                $postedData = explode(',', $postedData);
+                $postedData = map_deep($postedData, 'intval');
+            }
+
+            $newData = [];
+            foreach ($postedData as $item) {
+                if (is_numeric($item)) {
+                    $newData[] = $item;
+                }
+            }
+
+            if (!empty($newData)) {
+                $data = $newData;
+            }
+
+            $data = array_filter($data);
+        }
+
+        return $data;
     }
 
 }

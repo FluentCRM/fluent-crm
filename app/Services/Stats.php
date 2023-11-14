@@ -63,17 +63,14 @@ class Stats
             ];
         }
 
-        return apply_filters('fluentcrm_dashboard_stats', $data);
+        return apply_filters('fluent_crm/dashboard_stats', $data);
     }
 
     public function getQuickLinks()
     {
-        $urlBase = apply_filters(
-            'fluentcrm_menu_url_base',
-            admin_url('admin.php?page=fluentcrm-admin#/')
-        );
+        $urlBase = fluentcrm_menu_url_base();
 
-        return apply_filters('fluentcrm_quick_links', [
+        $quickLinks = [
             [
                 'title' => __('View Contacts', 'fluent-crm'),
                 'url'   => $urlBase . 'subscribers',
@@ -120,7 +117,17 @@ class Stats
                 'icon' => 'el-icon-video-camera',
                 'is_external' => true
             ]
-        ]);
+        ];
+
+        if(defined('FLUENTMAIL_PLUGIN_FILE')) {
+            $quickLinks[] = [
+                'title' => __('FluentSMTP', 'fluent-crm'),
+                'url'   => admin_url('options-general.php?page=fluent-mail'),
+                'icon'  => 'el-icon-envelope'
+            ];
+        }
+
+        return apply_filters('fluent_crm/quick_links', $quickLinks);
     }
 
     public function getOnboardingStat()

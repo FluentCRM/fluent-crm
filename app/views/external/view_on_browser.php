@@ -11,12 +11,12 @@
         <link rel='stylesheet' href='<?php echo esc_url($asset); ?>' media='all'/>
     <?php endforeach; ?>
     <?php
-    do_action('fluentcrm_view_on_browser_head');
+    do_action('fluent_crm/view_on_browser_head', $email);
     ?>
 </head>
 <body class="fluentcrm_web_body">
 <div class="fluentcrm_web_view_wrapper">
-    <?php do_action('fluentcrm_view_on_browser_after_email_heading', $email);; ?>
+    <?php do_action('fluent_crm/view_on_browser_before_heading', $email); ?>
 
     <div class="fluentcrm_web_view_header">
         <div class="fluentcrm_web_logo">
@@ -26,24 +26,24 @@
             <?php endif; ?>
         </div>
         <div class="fluentcrm_web_heading">
-            <h1><?php echo esc_attr($email_heading); ?></h1>
+            <h1><?php echo wp_kses_post($email_heading); ?></h1>
         </div>
     </div>
 
-    <?php do_action('fluentcrm_view_on_browser_before_email_body');; ?>
+    <?php do_action('fluent_crm/view_on_browser_before_email_body', $email); ?>
 
     <div class="fluentcrm_email_wrapper">
-        <?php echo wp_kses_post($email_body); ?>
+        <?php echo $email_body; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
     </div>
 
-    <?php do_action('fluentcrm_view_on_browser_after_email_body');; ?>
+    <?php do_action('fluent_crm/view_on_browser_after_email_body', $email); ?>
 
     <div class="fluentcrm_email_footer">
-        <?php echo wp_kses_post($footer_text); ?>
+        <?php echo $footer_text; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
     </div>
 </div>
 <?php
-do_action('fluentcrm_view_on_browser_footer', $email);
+do_action('fluent_crm/view_on_browser_footer', $email);
 ?>
 </body>
 </html>

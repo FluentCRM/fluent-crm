@@ -39,7 +39,8 @@ class DetachTagAction extends BaseAction
                     'option_key' => 'tags',
                     'is_multiple' => true,
                     'label'       => __('Select Tags', 'fluent-crm'),
-                    'placeholder' => __('Select Tag', 'fluent-crm')
+                    'placeholder' => __('Select Tag', 'fluent-crm'),
+                    'creatable' => true
                 ]
             ]
         ];

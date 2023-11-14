@@ -23,6 +23,8 @@ class SequencePoints
 
     private $nextSequenceExecutionTime = false;
 
+    public $hasEndSequence = false;
+
     public function __construct($funnel, $funnelSubscriber = false)
     {
         $this->funnel = $funnel;
@@ -49,6 +51,7 @@ class SequencePoints
                 $query->where('parent_id', $this->lastSequence->parent_id)
                     ->where('condition_type', $this->lastSequence->condition_type);
             }
+
             $sequences = $query->get();
 
             if ($isInChild && $sequences->isEmpty()) {
@@ -79,9 +82,10 @@ class SequencePoints
         $conditionalBlock = false;
         $inWaitTimes = false;
 
+        $hasEndSequence = false;
 
         foreach ($sequences as $sequence) {
-            if ($this->requiredBenchMark || $conditionalBlock) {
+            if ($this->requiredBenchMark || $conditionalBlock || $hasEndSequence) {
                 continue;
             }
 
@@ -95,7 +99,6 @@ class SequencePoints
 
             if ($sequence->action_name == 'fluentcrm_wait_times' && !$inWaitTimes) {
                 $inWaitTimes = true;
-
                 $seconds = FunnelHelper::getCurrentDelayInSeconds($sequence->settings);
                 $this->nextSequenceExecutionTime = date('Y-m-d H:i:s', current_time('timestamp') + $seconds);
             }
@@ -116,6 +119,11 @@ class SequencePoints
 
             if ($sequence->c_delay == $firstSequence->c_delay) {
                 $immediateSequences[] = $sequence;
+
+                if($sequence->action_name == 'end_this_funnel') {
+                    $hasEndSequence = true;
+                }
+
             } else {
                 if (!$this->nextSequence) {
                     $this->hasNext = true;
@@ -140,8 +148,9 @@ class SequencePoints
                 $sequences = FunnelSequence::where('funnel_id', $this->funnel->id)
                     ->where('sequence', '>', $parentSequence->sequence)
                     ->where(function ($q) {
-                        $q->whereNull('parent_id');
-                        $q->orWhere('parent_id', '0');
+                        $q->whereNull('parent_id')
+                            ->orWhere('parent_id', '0');
+                        return $q;
                     })
                     ->orderBy('sequence', 'ASC')
                     ->get();
@@ -163,7 +172,7 @@ class SequencePoints
                 $conditionalBlock = false;
 
                 foreach ($sequences as $sequence) {
-                    if ($this->requiredBenchMark || $conditionalBlock) {
+                    if ($this->requiredBenchMark || $conditionalBlock || $hasEndSequence) {
                         continue;
                     }
 
@@ -183,6 +192,9 @@ class SequencePoints
 
                     if ($sequence->c_delay == $firstSequence->c_delay) {
                         $this->immediateSequences[] = $sequence;
+                        if($sequence->action_name == 'end_this_funnel') {
+                            $hasEndSequence = true;
+                        }
                     } else {
                         if (!$this->nextSequence) {
                             $this->hasNext = true;
@@ -200,6 +212,7 @@ class SequencePoints
             $this->nextSequence->execution_date_time = $this->nextSequenceExecutionTime;
         }
 
+        $this->hasEndSequence = $hasEndSequence;
     }
 
     public function getCurrentSequences()

@@ -39,7 +39,8 @@ class DetachListAction extends BaseAction
                     'option_key' => 'lists',
                     'is_multiple' => true,
                     'label'       => __('Select Lists', 'fluent-crm'),
-                    'placeholder' => __('Select List', 'fluent-crm')
+                    'placeholder' => __('Select List', 'fluent-crm'),
+                    'creatable' => true
                 ]
             ]
         ];

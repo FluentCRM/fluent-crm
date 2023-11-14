@@ -24,7 +24,6 @@ class Tags
         'paginate'
     ];
 
-
     public function importBulk($tags)
     {
         $newTags = [];
@@ -48,7 +47,14 @@ class Tags
                 ],
                 ['slug' => $tag['slug']]
             );
-            do_action('fluentcrm_list_created', $tag->id);
+
+            if($tag->wasRecentlyCreated) {
+                do_action('fluentcrm_tag_created', $tag->id);
+                do_action('fluent_crm/tag_created', $tag);
+            } else {
+                do_action('fluentcrm_tag_updated', $tag->id);
+                do_action('fluent_crm/tag_updated', $tag);
+            }
 
             $newTags[] = $tag;
         }

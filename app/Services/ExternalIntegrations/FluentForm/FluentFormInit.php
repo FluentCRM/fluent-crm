@@ -9,43 +9,51 @@ class FluentFormInit
 {
     public function init()
     {
-        new \FluentCrm\App\Services\ExternalIntegrations\FluentForm\Bootstrap(wpFluentForm());
-        add_filter('fluentform_single_entry_widgets', array($this, 'pushContactWidget'), 10, 2);
+        if (defined('FLUENTFORM_FRAMEWORK_UPGRADE')) {
+            new \FluentCrm\App\Services\ExternalIntegrations\FluentForm\Bootstrap();
+        }
+
+        add_filter('fluentform/submissions_widgets', array($this, 'pushContactWidget'), 10, 3);
     }
 
-    public function pushContactWidget($widgets, $entryData)
+    public function pushContactWidget($widgets, $resources, $submission)
     {
-        $userId = $entryData['submission']->user_id;
-        if($userId) {
-            $maybeEmail = Arr::get($entryData['submission']->user, 'email');
-            if(!$maybeEmail) {
-                $maybeEmail = $userId;
+        $userId = $submission->user_id;
+
+        if (!$userId) {
+            $userInputs = json_decode($submission->response, true);
+
+            if (!$userInputs) {
+                return $widgets;
             }
-        } else {
-            $userInputs = $entryData['submission']->user_inputs;
+
             $maybeEmail = Arr::get($userInputs, 'email');
-            if(!$maybeEmail) {
-                $emailField = Helper::getFormMeta($entryData['submission']->form_id, '_primary_email_field');
-                if(!$emailField) {
+
+            if (!$maybeEmail) {
+                $emailField = Helper::getFormMeta($submission->form_id, '_primary_email_field');
+                if (!$emailField) {
                     return $widgets;
                 }
                 $maybeEmail = Arr::get($userInputs, $emailField);
             }
+        } else {
+            $maybeEmail = $userId;
         }
 
-        if(!$maybeEmail) {
+        if (!$maybeEmail) {
             return $widgets;
         }
 
         $profileHtml = fluentcrm_get_crm_profile_html($maybeEmail, true);
-        if(!$profileHtml) {
+        if (!$profileHtml) {
             return $widgets;
         }
 
         $widgets['fluent_crm'] = [
-            'title' => __('FluentCRM Profile', 'fluent-crm'),
+            'title'   => __('FluentCRM Profile', 'fluent-crm'),
             'content' => $profileHtml
         ];
         return $widgets;
     }
+    
 }

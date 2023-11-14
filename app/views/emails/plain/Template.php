@@ -14,7 +14,7 @@
 <link rel="profile" href="https://gmpg.org/xfn/11">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-<?php do_action('fluentform_email_header', 'plain'); ?>
+<?php do_action('fluent_crm/email_header', 'plain'); ?>
 <?php include(FLUENTCRM_PLUGIN_PATH.'app/views/emails/common-style.php'); ?>
 </head>
 <body class="fc_plain_template" style="background: none no-repeat center/cover;height: 100%;margin: 0;padding: 0;width: 100%;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;background-image: none;background-repeat: no-repeat;background-position: center;background-size: cover;">
@@ -51,7 +51,9 @@
 <tbody class="mcnTextBlockOuter">
 <tr>
 <td class="fc_email_body" align="left" valign="top" style="padding-top: 20px;padding-right: 20px;padding-bottom: 10px;padding-left: 20px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;word-break: break-word;font-size: 16px;line-height: 180%;text-align: left;color:inherit;">
-<?php echo $email_body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+    <div>
+        <?php echo $email_body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+    </div>
 </td>
 </tr>
 </tbody>

@@ -3,10 +3,12 @@
 namespace FluentCrm\App\Hooks\Handlers;
 
 use FluentCrm\App\Models\Lists;
+use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\Tag;
 use FluentCrm\App\Services\Helper;
 use FluentCrm\App\Services\PermissionManager;
 use FluentCrm\App\Services\TransStrings;
+use FluentCrm\Framework\Support\Arr;
 
 /**
  * Admin Menu Class
@@ -22,12 +24,15 @@ class AdminMenu
 
     public function init()
     {
+
         add_action('admin_menu', array($this, 'addMenu'));
 
         if (isset($_GET['page']) && $_GET['page'] == 'fluentcrm-admin' && is_admin()) {
             $this->mayBeRedirect();
-            add_action('admin_enqueue_scripts', array($this, 'loadAssets'));
+            $this->maybeInitExperimentalNavigation();
+            add_action('admin_enqueue_scripts', array($this, 'loadAssets'), 1);
         }
+
     }
 
     public function addMenu()
@@ -73,6 +78,38 @@ class AdminMenu
             array($this, 'render')
         );
 
+        if (in_array('fcrm_read_contacts', $permissions)) {
+            if (Helper::isCompanyEnabled()) {
+                add_submenu_page(
+                    'fluentcrm-admin',
+                    __('Companies', 'fluent-crm'),
+                    __('Companies', 'fluent-crm'),
+                    ($isAdmin) ? $dashboardPermission : 'fcrm_manage_contact_cats',
+                    'fluentcrm-admin#/contact-groups/companies',
+                    array($this, 'render')
+                );
+            }
+
+            add_submenu_page(
+                'fluentcrm-admin',
+                __('Lists', 'fluent-crm'),
+                __('Lists', 'fluent-crm'),
+                ($isAdmin) ? $dashboardPermission : 'fcrm_manage_contact_cats',
+                'fluentcrm-admin#/contact-groups/lists',
+                array($this, 'render')
+            );
+
+            add_submenu_page(
+                'fluentcrm-admin',
+                __('Tags', 'fluent-crm'),
+                __('Tags', 'fluent-crm'),
+                ($isAdmin) ? $dashboardPermission : 'fcrm_manage_contact_cats',
+                'fluentcrm-admin#/contact-groups/tags',
+                array($this, 'render')
+            );
+
+        }
+
         if (in_array('fcrm_read_emails', $permissions)) {
             add_submenu_page(
                 'fluentcrm-admin',
@@ -85,10 +122,28 @@ class AdminMenu
 
             add_submenu_page(
                 'fluentcrm-admin',
+                __('Recurring Campaigns', 'fluent-crm'),
+                __('Recurring Campaigns', 'fluent-crm'),
+                ($isAdmin) ? $dashboardPermission : 'fcrm_read_emails',
+                'fluentcrm-admin#/email/recurring-campaigns',
+                array($this, 'render')
+            );
+
+            add_submenu_page(
+                'fluentcrm-admin',
                 __('Email Sequences', 'fluent-crm'),
                 __('Email Sequences', 'fluent-crm'),
                 ($isAdmin) ? $dashboardPermission : 'fcrm_read_emails',
                 'fluentcrm-admin#/email/sequences',
+                array($this, 'render')
+            );
+
+            add_submenu_page(
+                'fluentcrm-admin',
+                __('Email Templates', 'fluent-crm'),
+                __('Email Templates', 'fluent-crm'),
+                ($isAdmin) ? $dashboardPermission : 'fcrm_read_emails',
+                'fluentcrm-admin#/email/templates',
                 array($this, 'render')
             );
         }
@@ -188,7 +243,7 @@ class AdminMenu
             $this->version
         );
 
-        $urlBase = apply_filters('fluentcrm_menu_url_base', admin_url('admin.php?page=fluentcrm-admin#/'));
+        $urlBase = fluentcrm_menu_url_base();
 
         $menuItems = $this->getMenuItems($urlBase);
 
@@ -203,7 +258,7 @@ class AdminMenu
     {
         add_filter('admin_footer_text', function ($content) {
             $url = 'https://fluentcrm.com';
-            return sprintf(wp_kses(__('Thank you for using <a href="%s">FluentCRM</a>', 'fluent-crm'), array('a' => array('href' => array()))), esc_url($url));
+            return sprintf(wp_kses(__('Thank you for using <a href="%s">FluentCRM</a>.', 'fluent-crm'), array('a' => array('href' => array()))), esc_url($url)) . '<span title="based on your WP timezone settings" style="margin-left: 10px;" data-timestamp="' . current_time('timestamp') . '" id="fc_server_timestamp"></span>';
         });
 
         add_filter('update_footer', function ($text) {
@@ -217,7 +272,7 @@ class AdminMenu
     public function getMenuItems($urlBase = false)
     {
         if (!$urlBase) {
-            $urlBase = apply_filters('fluentcrm_menu_url_base', admin_url('admin.php?page=fluentcrm-admin#/'));
+            $urlBase = fluentcrm_menu_url_base();
         }
 
         $permissions = PermissionManager::currentUserPermissions();
@@ -232,33 +287,48 @@ class AdminMenu
 
         if (in_array('fcrm_read_contacts', $permissions)) {
             $contactMenu = [
-                'key'       => 'contacts',
-                'label'     => __('Contacts', 'fluent-crm'),
-                'permalink' => $urlBase . 'subscribers',
-                'sub_items' => [
+                'key'          => 'contacts',
+                'label'        => __('Contacts', 'fluent-crm'),
+                'permalink'    => $urlBase . 'subscribers',
+                'layout_class' => 'fc_2_col_menu',
+                'sub_items'    => [
                     [
-                        'key'       => 'all_contacts',
-                        'label'     => __('All Contacts', 'fluent-crm'),
-                        'permalink' => $urlBase . 'subscribers'
+                        'key'         => 'all_contacts',
+                        'label'       => __('All Contacts', 'fluent-crm'),
+                        'permalink'   => $urlBase . 'subscribers',
+                        'description' => __('Browse all your subscribers and customers', 'fluent-crm')
                     ]
                 ]
             ];
 
             if (in_array('fcrm_manage_contact_cats', $permissions)) {
+
+                if (Helper::isCompanyEnabled()) {
+                    $contactMenu['sub_items'][] = [
+                        'key'         => 'companies',
+                        'label'       => __('Companies', 'fluent-crm'),
+                        'permalink'   => $urlBase . 'contact-groups/companies',
+                        'description' => __('Browse and Manage contact business/companies', 'fluent-crm')
+                    ];
+                }
+
                 $contactMenu['sub_items'][] = [
-                    'key'       => 'lists',
-                    'label'     => __('Lists', 'fluent-crm'),
-                    'permalink' => $urlBase . 'contact-groups/lists'
+                    'key'         => 'lists',
+                    'label'       => __('Lists', 'fluent-crm'),
+                    'permalink'   => $urlBase . 'contact-groups/lists',
+                    'description' => __('Browse and Manage your lists associate with contact', 'fluent-crm')
                 ];
                 $contactMenu['sub_items'][] = [
-                    'key'       => 'tags',
-                    'label'     => __('Tags', 'fluent-crm'),
-                    'permalink' => $urlBase . 'contact-groups/tags'
+                    'key'         => 'tags',
+                    'label'       => __('Tags', 'fluent-crm'),
+                    'permalink'   => $urlBase . 'contact-groups/tags',
+                    'description' => __('Browse and Manage your tags associate with contact', 'fluent-crm')
                 ];
                 $contactMenu['sub_items'][] = [
-                    'key'       => 'dynamic_segments',
-                    'label'     => __('Segments', 'fluent-crm'),
-                    'permalink' => $urlBase . 'contact-groups/dynamic-segments'
+                    'key'         => 'dynamic_segments',
+                    'label'       => __('Segments', 'fluent-crm'),
+                    'permalink'   => $urlBase . 'contact-groups/dynamic-segments',
+                    'description' => __('Manage your dynamic contact segments', 'fluent-crm')
                 ];
             }
 
@@ -267,31 +337,42 @@ class AdminMenu
 
         if (in_array('fcrm_read_emails', $permissions)) {
             $campaignMenu = [
-                'key'       => 'campaigns',
-                'label'     => __('Emails', 'fluent-crm'),
-                'permalink' => $urlBase . 'email/campaigns'
+                'key'          => 'campaigns',
+                'label'        => __('Emails', 'fluent-crm'),
+                'permalink'    => $urlBase . 'email/campaigns',
+                'layout_class' => 'fc_2_col_menu'
             ];
 
             $campaignMenu['sub_items'] = [
                 [
-                    'key'       => 'all_campaigns',
-                    'label'     => __('All Campaigns', 'fluent-crm'),
-                    'permalink' => $urlBase . 'email/campaigns'
+                    'key'         => 'all_campaigns',
+                    'label'       => __('All Campaigns', 'fluent-crm'),
+                    'permalink'   => $urlBase . 'email/campaigns',
+                    'description' => __('Send Email Broadcast to your selected subscribers by tags, lists or segment', 'fluent-crm')
                 ],
                 [
-                    'key'       => 'email_sequences',
-                    'label'     => __('Email Sequences', 'fluent-crm'),
-                    'permalink' => $urlBase . 'email/sequences'
+                    'key'         => 'recurring_campaigns',
+                    'label'       => __('Recurring Campaigns', 'fluent-crm'),
+                    'permalink'   => $urlBase . 'email/recurring-campaigns',
+                    'description' => __('Send automated daily or weekly emails of your dynamic data like new blog posts', 'fluent-crm')
                 ],
                 [
-                    'key'       => 'email_templates',
-                    'label'     => __('Email Templates', 'fluent-crm'),
-                    'permalink' => $urlBase . 'email/templates'
+                    'key'         => 'email_sequences',
+                    'label'       => __('Email Sequences', 'fluent-crm'),
+                    'permalink'   => $urlBase . 'email/sequences',
+                    'description' => __('Create Multiple Emails and Send in order as a Drip Email Campaign', 'fluent-crm')
                 ],
                 [
-                    'key'       => 'all_emails',
-                    'label'     => __('All Emails', 'fluent-crm'),
-                    'permalink' => $urlBase . 'email/all-emails'
+                    'key'         => 'email_templates',
+                    'label'       => __('Email Templates', 'fluent-crm'),
+                    'permalink'   => $urlBase . 'email/templates',
+                    'description' => __('Create email templates to use as a starting point in your emails', 'fluent-crm')
+                ],
+                [
+                    'key'         => 'all_emails',
+                    'label'       => __('All Emails', 'fluent-crm'),
+                    'permalink'   => $urlBase . 'email/all-emails',
+                    'description' => __('Find all the emails that are being sent or scheduled by FluentCRM', 'fluent-crm')
                 ]
             ];
 
@@ -344,7 +425,7 @@ class AdminMenu
          * Filter FluentCRM menu items
          * @param array $menuItems
          */
-        return apply_filters('fluentcrm_menu_items', $menuItems);
+        return apply_filters('fluent_crm/menu_items', $menuItems);
 
     }
 
@@ -364,9 +445,18 @@ class AdminMenu
             return;
         }
 
+        /*
+         * LearnPress loads all their JS weired way on every Admin Pages
+         */
+        if (defined('LEARNPRESS_VERSION')) {
+            add_filter('learn-press/admin-default-scripts', function ($scripts) {
+                return [];
+            });
+        }
+
         add_action('wp_print_scripts', function () {
 
-            $isSkip = apply_filters('fluentcrm_skip_no_conflict', false);
+            $isSkip = apply_filters('fluent_crm/skip_no_conflict', false);
 
             if ($isSkip) {
                 return;
@@ -392,6 +482,10 @@ class AdminMenu
             $pluginUrl = str_replace(['http:', 'https:'], '', $pluginUrl);
 
             foreach ($wp_scripts->queue as $script) {
+                if (empty($wp_scripts->registered[$script]) || empty($wp_scripts->registered[$script]->src)) {
+                    continue;
+                }
+
                 $src = $wp_scripts->registered[$script]->src;
                 $isMatched = (strpos($src, $pluginUrl) !== false) && !preg_match('/' . $approvedSlugs . '/', $src);
                 if (!$isMatched) {
@@ -400,32 +494,43 @@ class AdminMenu
                 wp_dequeue_script($wp_scripts->registered[$script]->handle);
             }
 
-        }, 1);
+        });
 
         $this->loadCssJs();
     }
 
     public function loadCssJs()
     {
+        wp_enqueue_script('fluentcrm_global_admin.js', fluentCrmMix('admin/js/global_admin.js'), array('jquery', 'lodash'), $this->version);
+
         $app = FluentCrm();
 
         $this->emailBuilderBlockInit();
 
-        wp_enqueue_script('fluentcrm_admin_app_boot', fluentCrmMix('admin/js/boot.js'), array('jquery', 'moment'), $this->version);
-
-        wp_enqueue_script('fluentcrm_global_admin.js', fluentCrmMix('admin/js/global_admin.js'), array('jquery'), $this->version);
+        wp_enqueue_script('fluentcrm_admin_app_boot', fluentCrmMix('admin/js/boot.js'), array('moment'), $this->version);
 
         /**
          * Action Hook when global admin scripts are loaded
          */
-        do_action('fluentcrm_global_appjs_loaded');
+        do_action('fluent_crm/global_appjs_loaded');
 
         if (Helper::isExperimentalEnabled('quick_contact_navigation')) {
             wp_enqueue_script('fluentcrm-contact_navigations', fluentCrmMix('admin/js/contact-navigations.js'), [], FLUENTCRM_PLUGIN_VERSION, true);
             add_action('admin_footer', function () {
                 echo '<div ref="fluent_contact_nav" id="fluent_contact_nav"><fluent-contact-nav v-if="appReady" @prev="goPrev()" @next="goNext()" :subscriber="subscriber"></fluent-contact-nav></div>';
-            });
+            }, 99999);
         }
+
+        add_action('admin_footer', function () {
+            ?>
+            <script>
+                if (_ && _.noConflict) {
+                    _.noConflict();
+                    console.log('noConflict lodash');
+                }
+            </script>
+            <?php
+        }, 99999);
 
         $this->loadCss();
 
@@ -473,36 +578,35 @@ class AdminMenu
 
         $currentUser = wp_get_current_user();
 
-        return array(
-            'images_url'                  => fluentCrmMix('images'),
-            'ajaxurl'                     => admin_url('admin-ajax.php'),
-            'slug'                        => FLUENTCRM,
-            'rest'                        => $this->getRestInfo($app),
-            'countries'                   => apply_filters('fluentcrm_countries', []),
-            'subscriber_statuses'         => fluentcrm_subscriber_statuses(),
-            'contact_types'               => fluentcrm_contact_types(),
-            'purchase_providers'          => Helper::getPurchaseHistoryProviders(),
-            'form_submission_providers'   => apply_filters('fluentcrm_form_submission_providers', []),
-            'support_tickets_providers'   => apply_filters('fluentcrm-support_tickets_providers', []),
-            'activity_types'              => fluentcrm_activity_types(),
-            'profile_sections'            => Helper::getProfileSections(),
-            'globalSmartCodes'            => Helper::getGlobalSmartCodes(),
-            'extendedSmartCodes'          => Helper::getExtendedSmartCodes(),
-            'addons'                      => Helper::getActivatedFeatures(),
-            'email_template_designs'      => Helper::getEmailDesignTemplates(),
-            'contact_prefixes'            => Helper::getContactPrefixes(),
-            'contact_custom_fields'       => fluentcrm_get_custom_contact_fields(),
-            'server_time'                 => current_time('mysql'),
-            'crm_pro_url'                 => 'https://fluentcrm.com/?utm_source=plugin&utm_medium=admin&utm_campaign=promo',
-            'require_verify_request'      => apply_filters('fluentcrm_is_require_verify', false),
-            'trans'                       => TransStrings::getStrings(),
-            'available_tags'              => $formattedTags,
-            'available_lists'             => $formattedLists,
-            'has_fluentsmtp'              => defined('FLUENTMAIL'),
-            'disable_fluentmail_suggest'  => apply_filters('fluentcrm_fluentmail_suggest', defined('FLUENTMAIL')),
-            'verified_senders'            => $this->getVerifiedSenders(),
-            'has_smart_link'              => $this->hasSmartLink(),
-            'auth'                        => [
+        $activatedFeatures = Helper::getActivatedFeatures();
+
+        $data = array(
+            'images_url'                          => fluentCrmMix('images'),
+            'ajaxurl'                             => admin_url('admin-ajax.php'),
+            'slug'                                => FLUENTCRM,
+            'rest'                                => $this->getRestInfo($app),
+            'countries'                           => apply_filters('fluent_crm/countries', []),
+            'contact_types'                       => fluentcrm_contact_types(),
+            'purchase_providers'                  => Helper::getPurchaseHistoryProviders(),
+            'form_submission_providers'           => apply_filters('fluent_crm/form_submission_providers', []),
+            'support_tickets_providers'           => apply_filters('fluentcrm-support_tickets_providers', []),
+            'activity_types'                      => fluentcrm_activity_types(),
+            'profile_sections'                    => Helper::getProfileSections(),
+            'globalSmartCodes'                    => Helper::getGlobalSmartCodes(),
+            'extendedSmartCodes'                  => Helper::getExtendedSmartCodes(),
+            'addons'                              => $activatedFeatures,
+            'email_template_designs'              => Helper::getEmailDesignTemplates(),
+            'contact_prefixes'                    => Helper::getContactPrefixes(),
+            'contact_custom_fields'               => fluentcrm_get_custom_contact_fields(),
+            'server_time'                         => current_time('mysql'),
+            'crm_pro_url'                         => 'https://fluentcrm.com/?utm_source=plugin&utm_medium=admin&utm_campaign=promo',
+            'require_verify_request'              => apply_filters('fluentcrm_is_require_verify', false),
+            'trans'                               => TransStrings::getStrings(),
+            'has_fluentsmtp'                      => defined('FLUENTMAIL'),
+            'disable_fluentmail_suggest'          => apply_filters('fluent_crm/fluentmail_suggest', defined('FLUENTMAIL')),
+            'verified_senders'                    => $this->getVerifiedSenders(),
+            'has_smart_link'                      => $this->hasSmartLink(),
+            'auth'                                => [
                 'permissions' => PermissionManager::currentUserPermissions(),
                 'first_name'  => $currentUser->first_name,
                 'last_name'   => $currentUser->last_name,
@@ -510,11 +614,11 @@ class AdminMenu
                 'avatar'      => get_avatar($currentUser->user_email, 128),
                 'user_id'     => $currentUser->ID
             ],
-            'is_rtl'                      => fluentcrm_is_rtl(),
-            'icons'                       => [
+            'is_rtl'                              => fluentcrm_is_rtl(),
+            'icons'                               => [
                 'trigger_icon' => 'fc-icon-trigger',
             ],
-            'funnel_cat_icons'            => apply_filters('fluentcrm_funnel_icons', [
+            'funnel_cat_icons'                    => apply_filters('fluent_crm/funnel_icons', [
                 'wordpresstriggers'    => 'fc-icon-wordpress',
                 'woocommerce'          => 'fc-icon-woo',
                 'lifterlms'            => 'fc-icon-lifter_lms',
@@ -525,13 +629,32 @@ class AdminMenu
                 'restrictcontentpro'   => 'fc-icon-restric_content',
                 'tutorlms'             => 'fc-icon-tutorlms',
                 'wishlistmember'       => 'fc-icon-wishlist',
+                'surecart'             => 'el-icon-shopping-cart-2'
             ]),
-            'advanced_filter_options'     => Helper::getAdvancedFilterOptions(),
-            'advanced_filter_suggestions' => apply_filters('fluentcrm_advanced_filter_suggestions', []),
-            'commerce_provider'           => apply_filters('fluentcrm_commerce_provider', ''),
-            'commerce_currency_sign'      => apply_filters('fluentcrm_currency_sign', ''),
-            'disable_time_diff'           => Helper::isExperimentalEnabled('classic_date_time')
+            'advanced_filter_options'             => Helper::getAdvancedFilterOptions(),
+            'advanced_filter_suggestions'         => apply_filters('fluentcrm_advanced_filter_suggestions', []),
+            'commerce_provider'                   => apply_filters('fluentcrm_commerce_provider', ''),
+            'commerce_currency_sign'              => apply_filters('fluentcrm_currency_sign', ''),
+            'disable_time_diff'                   => Helper::isExperimentalEnabled('classic_date_time'),
+            'disable_ai'                          => Helper::isExperimentalEnabled('disable_visual_ai'),
+            'app_version'                         => FLUENTCRM_PLUGIN_VERSION,
+            'available_tags'                      => $formattedTags,
+            'available_lists'                     => $formattedLists,
+            'available_contact_statuses'          => fluentcrm_subscriber_statuses(true),
+            'available_contact_editable_statuses' => fluentcrm_subscriber_editable_statuses(true),
+            'available_contact_types'             => fluentcrm_contact_types(true),
+            'available_custom_fields'             => fluentcrm_get_option('contact_custom_fields', []),
+            'contact_sample_csv'                  => fluentCrmMix('sample.csv'),
+            'global_email_footer'                 => Helper::getEmailFooterContent()
         );
+
+        if (Arr::get($activatedFeatures, 'company_module')) {
+            $data['company_categories'] = Helper::companyCategories();
+            $data['company_types'] = Helper::companyTypes();
+            $data['company_profile_sections'] = Helper::getCompanyProfileSections();
+        }
+
+        return $data;
     }
 
     public function loadCss()
@@ -629,7 +752,20 @@ class AdminMenu
                 array(),
                 $version
             );
+//            wp_enqueue_script(
+//                'fc_block_product',
+//                fluentCrmMix($assetFolder . '/product-index.js'),
+//                array(),
+//                $version
+//            );
         }
+
+        wp_enqueue_script(
+            'fc_block_latest_post',
+            fluentCrmMix($assetFolder . '/latest-post-index.js'),
+            array(),
+            $version
+        );
 
         // Inline the Editor Settings.
         $settings = $this->emailBuilderSettings();
@@ -659,6 +795,10 @@ class AdminMenu
 
     private function emailBuilderSettings()
     {
+        $coreSettings = get_block_editor_settings([], 'post');
+        $wordpressCoreTypography = $coreSettings['__experimentalFeatures']['typography'];
+        $coreExperimentalSpacing = $coreSettings['__experimentalFeatures']['spacing'];
+
         /**
          * Filter for the email builder email sizes.
          * @param array $sizes
@@ -710,6 +850,11 @@ class AdminMenu
             $allowedBlocks[] = 'fluentcrm/woo-product';
         }
 
+        if (defined('FLUENTCAMPAIGN')) {
+            $allowedBlocks[] = 'fluent-crm/latest-posts';
+            $allowedBlocks[] = 'fluent-crm/products';
+        }
+
         $allowedBlocks = apply_filters('fluent_crm/allowed_block_types', $allowedBlocks);
         $themePref = Helper::getThemePrefScheme();
 
@@ -743,19 +888,8 @@ class AdminMenu
                     ],
                     'text'             => true
                 ],
-                'spacing'         => [
-                    'blockGap' => null,
-                    'margin'   => true
-                ],
-                'typography'      => [
-                    'dropCap'        => false,
-                    'fontStyle'      => true,
-                    'fontWeight'     => true,
-                    'letterSpacing'  => true,
-                    'textDecoration' => true,
-                    'textTransform'  => true,
-                    'fontSize'       => true
-                ],
+                'spacing'         => $coreExperimentalSpacing,
+                'typography'      => $wordpressCoreTypography,
                 'blocks'          => [
                     'core/button' => [
                         'border'     => [
@@ -786,11 +920,7 @@ class AdminMenu
             $settings['colors'] = [];
         }
 
-        if ($themePref['font_sizes']) {
-            $settings['fontSizes'] = $themePref['font_sizes'];
-        } else {
-            $settings['fontSizes'] = [];
-        }
+        $settings['fontSizes'] = Arr::get($themePref, 'font_sizes', []);
 
         return $settings;
     }
@@ -813,7 +943,7 @@ class AdminMenu
          * Filter the verified email senders
          * @param array $verifiedSenders
          */
-        return apply_filters('fluentcrm_verfied_email_senders', $verifiedSenders);
+        return apply_filters('fluent_crm/verfied_email_senders', $verifiedSenders);
     }
 
     private function hasSmartLink()
@@ -831,5 +961,392 @@ class AdminMenu
         }
 
         return false;
+    }
+
+    public function maybeInitExperimentalNavigation()
+    {
+        if (!Helper::isExperimentalEnabled('full_navigation')) {
+            return;
+        }
+
+        add_action('admin_print_styles', function () {
+            ?>
+            <style>
+                html.wp-toolbar {
+                    padding-top: 0px !important;
+                }
+
+                #wpadminbar {
+                    display: none !important;
+                    height: 0 !important;
+                    visibility: hidden !important;
+                }
+
+                #adminmenumain {
+                    display: none !important;
+                    height: 0 !important;
+                    visibility: hidden !important;
+                }
+
+                .fc_full_navigation #wpbody {
+                    padding-left: 200px;
+                }
+
+                #wpbody {
+                    padding-top: 0 !important;
+                }
+
+                .fc_full_navigation .fc_full_menu_wrap a:hover {
+                    color: white;
+                }
+
+                #wpcontent, #wpfooter {
+                    margin-left: 0 !important;
+                }
+
+                #wpfooter {
+                    padding-left: 220px !important;
+                }
+
+                .fc_full_navigation .fc_full_menu_wrap {
+                    position: fixed;
+                    width: 200px;
+                    left: 0;
+                    top: 0;
+                    bottom: 0;
+                    background-color: #1e1e1e;
+                    color: white;
+                    z-index: 999999;
+                }
+
+                .fc-navigation-header a, .fc_backto_wp a {
+                    display: flex;
+                    align-items: center;
+                    border: none;
+                    border-radius: 0;
+                    height: auto;
+                    gap: 10px;
+                    color: #ccc;
+                    font-weight: 600;
+                }
+
+                .fc-navigation-header {
+                    padding: 10px;
+                }
+
+                .fc-navigation-header a svg {
+                    fill: white;
+                    width: 36px;
+                    height: 36px;
+                }
+
+                .fc_backto_wp {
+                    margin: 15px 15px;
+                }
+
+                .fc_backto_wp a:hover {
+                    color: white;
+                }
+
+                .fc_backto_wp a svg {
+                    fill: white;
+                    width: 16px;
+                    height: 16px;
+                }
+
+                .fc_menu_items {
+                    margin-left: 10px;
+                    max-height: calc(100vh - 110px);
+                    overflow: auto;
+                }
+
+                .fc_menu_items li {
+                    list-style: none;
+                    padding: 0 10px 0 0;
+                    margin-bottom: 0;
+                    display: block;
+                }
+
+                .fc_menu_items a {
+                    color: #ccc;
+                    text-decoration: none;
+                    padding: 6px 10px;
+                    display: block;
+                }
+
+                .fc_menu_items a:hover {
+                    color: white;
+                }
+
+                .fc_menu_items a.active_item {
+                    background-color: var(--wp-admin-theme-color, #007cba);
+                    color: rgb(255, 255, 255);
+                    border-radius: 2px;
+                }
+
+                .fc_menu_items h3 {
+                    color: white;
+                    padding: 0 5px;
+                    margin: 8px 0;
+                }
+
+                ul.fc_sub_items {
+                    padding-left: 15px;
+                    margin-bottom: 5px;
+                }
+
+                .fc_hide_full_menu .fc_full_menu_wrap {
+                    display: none !important;
+                }
+
+                .fc_hide_full_menu #adminmenumain {
+                    display: block !important;
+                    height: auto !important;
+                    visibility: visible !important;
+                }
+
+                .fc_hide_full_menu #adminmenu {
+                    margin: 0;
+                    width: 200px;
+                }
+
+                .fc_hide_full_menu #adminmenumain #adminmenuwrap {
+                    width: 200px;
+                }
+
+                .fc_hide_full_menu #adminmenumain .wp-submenu.wp-submenu-wrap {
+                    width: 100%;
+                }
+
+
+                @media all and (max-width: 768px) {
+                    .fc_full_menu_wrap {
+                        height: 56px;
+                        overflow: hidden;
+                        width: 56px !important;
+                    }
+
+                    #fc_site_heading span {
+                        display: none;
+                    }
+
+                    .fc_full_navigation #wpbody {
+                        padding-left: 0px;
+                    }
+
+                    .fluentcrm_menu_logo_holder {
+                        margin-left: 60px;
+                    }
+
+                    .fc_full_menu_open.fc_full_menu_wrap {
+                        width: 200px !important;
+                        height: 100vh;
+                        overflow: auto;
+                    }
+                }
+
+            </style>
+            <?php
+        });
+
+        add_filter('admin_body_class', function ($classes) {
+            return $classes . ' fc_full_navigation';
+        });
+
+        add_action('in_admin_header', function () {
+            $app = FluentCrm();
+
+            $urlBase = fluentcrm_menu_url_base();
+
+            $permissions = PermissionManager::currentUserPermissions();
+
+            if (!$permissions) {
+                return;
+            }
+
+            $dashboardPermission = 'fcrm_view_dashboard';
+            $isAdmin = false;
+            if (in_array('administrator', $permissions)) {
+                $dashboardPermission = 'manage_options';
+                $isAdmin = true;
+            }
+
+            $contactsMenu = [
+                'subscribers'      => [
+                    'key'   => 'subscribers',
+                    'title' => 'All Contacts',
+                    'uri'   => $urlBase . 'subscribers'
+                ],
+                'companies'        => [
+                    'key'   => 'companies',
+                    'title' => 'Companies',
+                    'uri'   => $urlBase . 'contact-groups/companies'
+                ],
+                'lists'            => [
+                    'key'   => 'lists',
+                    'title' => 'Lists',
+                    'uri'   => $urlBase . 'contact-groups/lists'
+                ],
+                'tags'             => [
+                    'key'   => 'tags',
+                    'title' => 'Tags',
+                    'uri'   => $urlBase . 'contact-groups/tags'
+                ],
+                'dynamic_segments' => [
+                    'key'   => 'dynamic_segments',
+                    'title' => 'Dynamic Segments',
+                    'uri'   => $urlBase . 'contact-groups/dynamic-segments'
+                ]
+            ];
+
+            if (!Helper::isCompanyEnabled()) {
+                unset($contactsMenu['companies']);
+            }
+
+            $sideBarMenus = [
+                [
+                    'key'        => 'dashboard',
+                    'page_title' => __('Dashboard', 'fluent-crm'),
+                    'menu_title' => __('Dashboard', 'fluent-crm'),
+                    'capability' => $dashboardPermission,
+                    'uri'        => $urlBase
+                ],
+                [
+                    'is_parent'  => true,
+                    'page_title' => __('Contacts', 'fluent-crm'),
+                    'menu_title' => __('Contacts', 'fluent-crm'),
+                    'capability' => ($isAdmin) ? $dashboardPermission : 'fcrm_read_contacts',
+                    'children'   => array_values($contactsMenu)
+                ],
+                [
+                    'is_parent'  => true,
+                    'page_title' => __('Emails', 'fluent-crm'),
+                    'menu_title' => __('Emails', 'fluent-crm'),
+                    'capability' => ($isAdmin) ? $dashboardPermission : 'fcrm_read_emails',
+                    'children'   => [
+                        [
+                            'key'   => 'campaigns',
+                            'title' => 'Email Campaigns',
+                            'uri'   => $urlBase . 'email/campaigns'
+                        ],
+                        [
+                            'key'   => 'recurring_campaigns',
+                            'title' => 'Recurring Campaigns',
+                            'uri'   => $urlBase . 'email/recurring-campaigns'
+                        ],
+                        [
+                            'key'   => 'email-sequences',
+                            'title' => 'Email Sequences',
+                            'uri'   => $urlBase . 'email/sequences'
+                        ],
+                        [
+                            'key'   => 'templates',
+                            'title' => 'Email Templates',
+                            'uri'   => $urlBase . 'email/templates'
+                        ],
+                        [
+                            'key'   => 'all_emails',
+                            'title' => 'All Email Activities',
+                            'uri'   => $urlBase . 'email/all-emails'
+                        ]
+                    ]
+                ],
+                [
+                    'key'        => 'forms',
+                    'page_title' => __('Forms', 'fluent-crm'),
+                    'menu_title' => __('Forms', 'fluent-crm'),
+                    'capability' => ($isAdmin) ? $dashboardPermission : 'fcrm_manage_forms',
+                    'uri'        => $urlBase . 'forms'
+                ],
+                [
+                    'key'        => 'funnels',
+                    'page_title' => __('Automations', 'fluent-crm'),
+                    'menu_title' => __('Automations', 'fluent-crm'),
+                    'capability' => $dashboardPermission,
+                    'uri'        => $urlBase . 'funnels'
+                ],
+                [
+                    'key'        => 'reports',
+                    'page_title' => __('Reports', 'fluent-crm'),
+                    'menu_title' => __('Reports', 'fluent-crm'),
+                    'capability' => $dashboardPermission,
+                    'uri'        => $urlBase . 'reports'
+                ],
+                [
+                    'key'        => 'settings',
+                    'page_title' => __('Settings', 'fluent-crm'),
+                    'menu_title' => __('Settings', 'fluent-crm'),
+                    'capability' => ($isAdmin) ? $dashboardPermission : 'fcrm_manage_settings',
+                    'uri'        => $urlBase . 'settings'
+                ],
+                [
+                    'key'        => 'addons',
+                    'page_title' => __('Addons', 'fluent-crm'),
+                    'menu_title' => __('Addons', 'fluent-crm'),
+                    'capability' => ($isAdmin) ? $dashboardPermission : 'fcrm_manage_settings',
+                    'uri'        => $urlBase . 'add-ons'
+                ],
+                [
+                    'key'        => 'documentation',
+                    'page_title' => __('Help', 'fluent-crm'),
+                    'menu_title' => __('Help', 'fluent-crm'),
+                    'capability' => ($isAdmin) ? $dashboardPermission : 'fcrm_manage_settings',
+                    'uri'        => $urlBase . 'documentation'
+                ]
+            ];
+
+            $app['view']->render('admin.experimental_menu', [
+                'menu_items' => apply_filters('fluent_crm/full_sidebar_menu_items', $sideBarMenus)
+            ]);
+
+        });
+
+        add_action('admin_footer', function () {
+            ?>
+            <script>
+                document.addEventListener('fc_route_changed', function (e) {
+                    jQuery('.fc_menu_items li a').removeClass('active_item');
+                    let targetClassName = e.detail.route_to.name;
+
+                    if (e.detail.route_to.meta.active_menu == 'settings') {
+                        targetClassName = 'settings';
+                    }
+
+                    if (!jQuery('.fc_menu_items li a.fc_key_' + targetClassName).length) {
+                        targetClassName = e.detail.route_to.meta.parent || e.detail.route_to.meta.active_menu;
+                    }
+
+                    jQuery('.fc_menu_items li a.fc_key_' + targetClassName).addClass('active_item');
+
+                    jQuery('.fc_full_menu_wrap').removeClass('fc_full_menu_open');
+                });
+
+                document.addEventListener("DOMContentLoaded", () => {
+                    document.getElementById('fc_site_heading').addEventListener('click', function (e) {
+                        var width = window.innerWidth
+                            || document.documentElement.clientWidth
+                            || document.body.clientWidth;
+
+                        if (width > 768) {
+                            return;
+                        }
+                        e.preventDefault();
+
+                        jQuery('.fc_full_menu_wrap').toggleClass('fc_full_menu_open');
+
+                    }, false);
+
+                    jQuery('.fc_nav_header_title').on('click', function (e) {
+                        if (window.innerWidth > 700) {
+                            e.preventDefault();
+                            jQuery('body').toggleClass('fc_hide_full_menu');
+                        }
+                    });
+
+                });
+
+            </script>
+            <?php
+        }, 100);
     }
 }

@@ -7,8 +7,10 @@ use FluentCrm\App\Models\Funnel;
 use FluentCrm\App\Models\FunnelCampaign;
 use FluentCrm\App\Models\FunnelSequence;
 use FluentCrm\App\Models\FunnelSubscriber;
+use FluentCrm\App\Services\Funnel\Actions\ApplyCompanyAction;
 use FluentCrm\App\Services\Funnel\Actions\ApplyListAction;
 use FluentCrm\App\Services\Funnel\Actions\ApplyTagAction;
+use FluentCrm\App\Services\Funnel\Actions\DetachCompanyAction;
 use FluentCrm\App\Services\Funnel\Actions\DetachListAction;
 use FluentCrm\App\Services\Funnel\Actions\DetachTagAction;
 use FluentCrm\App\Services\Funnel\Actions\SendEmailAction;
@@ -22,6 +24,7 @@ use FluentCrm\App\Services\Funnel\FunnelProcessor;
 use FluentCrm\App\Services\Funnel\SequencePoints;
 use FluentCrm\App\Services\Funnel\Triggers\FluentFormSubmissionTrigger;
 use FluentCrm\App\Services\Funnel\Triggers\UserRegistrationTrigger;
+use FluentCrm\App\Services\Helper;
 use FluentCrm\App\Services\PermissionManager;
 use FluentCrm\App\Services\Sanitize;
 use FluentCrm\Framework\Support\Arr;
@@ -56,21 +59,7 @@ class FunnelHandler
         $triggers = array_unique($triggers);
 
         if ($triggers) {
-
-            // Maybe trigger name changed
-            $migrationMaps = [
-                'recurring-transaction-expired' => 'mepr-event-transaction-expired'
-            ];
-
             foreach ($triggers as $triggerName) {
-
-                /*
-                 * For MemberPress migration. We will remove after October 2022
-                 */
-                if (defined('MEPR_PLUGIN_SLUG') && isset($migrationMaps[$triggerName])) {
-                    $triggerName = $migrationMaps[$triggerName];
-                }
-
                 $argNum = apply_filters('fluentcrm_funnel_arg_num_' . $triggerName, 1);
                 add_action($triggerName, function () use ($triggerName, $argNum) {
                     $this->mapTriggers($triggerName, func_get_args(), $argNum);
@@ -82,7 +71,6 @@ class FunnelHandler
                     $this->mapTriggers('edd_update_payment_status', [$paymentId, 'publish', 'pending'], 3);
                 });
             }
-
         }
 
         add_action('fluentcrm_process_scheduled_tasks_init', function () {
@@ -99,7 +87,6 @@ class FunnelHandler
             update_option('_fc_last_funnel_processor', time(), 'no');
             (new FunnelProcessor())->followUpSequenceActions();
             update_option('_fc_last_funnel_processor', false, 'no');
-
         });
     }
 
@@ -178,6 +165,10 @@ class FunnelHandler
 
     private function initBlockActions()
     {
+        if (Helper::isCompanyEnabled()) {
+            new ApplyCompanyAction();
+            new DetachCompanyAction();
+        }
         new ApplyListAction();
         new ApplyTagAction();
         new DetachListAction();

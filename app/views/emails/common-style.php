@@ -1,13 +1,18 @@
 <?php
-$width = $config['content_width'];
-$hFont = $config['headings_font_family'];
-$mainColor = $config['text_color'];
-$hColor = $config['headings_color'];
-$linkColor = $config['link_color'];
+$width       = $config['content_width'];
+$hFont       = $config['heading_font_family'];
+$hColor      = $config['headings_color'];
+$mainColor   = $config['text_color'];
+$linkColor   = $config['link_color'];
 $bodBgyColor = $config['body_bg_color'];
-$contentBg = $config['content_bg_color'];
+$contentBg   = $config['content_bg_color'];
 $footerColor = $config['footer_text_color'];
-$mainFont = $config['content_font_family'];
+$mainFont    = $config['content_font_family'];
+
+$pColor      = $config['paragraph_color'];
+$pSize       = $config['paragraph_font_size'];
+$pFontFamily = $config['paragraph_font_family'];
+$pLHeight    = $config['paragraph_line_height'];
 
 $alignLeft = 'left';
 $alignRight = 'right';
@@ -63,6 +68,9 @@ if(fluentcrm_is_rtl()) {
         color: <?php echo esc_attr($linkColor); ?>;
     }
     <?php endif; ?>
+    a {
+        text-decoration: underline;
+    }
 
     <?php if($mainFont): ?>
     #templateFooter {
@@ -81,12 +89,26 @@ if(fluentcrm_is_rtl()) {
         <?php endif; ?>
     }
 
+    .fcTextContentBody p {
+        <?php if ($pColor): ?>
+        color: <?php echo esc_attr($pColor) ?>;
+        <?php endif; ?>
+        <?php if ($pSize): ?>
+        font-size: <?php echo sanitize_text_field($pSize) ?>px;
+        <?php endif; ?>
+        <?php if ($pFontFamily): ?>
+        font-family: <?php echo sanitize_text_field($pFontFamily) ?>;
+        <?php endif; ?>
+        <?php if ($pLHeight): ?>
+        line-height: <?php echo sanitize_text_field($pLHeight) ?>px;
+        <?php endif; ?>
+    }
     .fcTextContentBody h1, .fcTextContentBody h2, .fcTextContentBody h3, .fcTextContentBody h4, .fcTextContentBody h5, .fcTextContentBody h6 {
         <?php if($hFont): ?>
         font-family: <?php echo sanitize_text_field($hFont); ?>;
         <?php endif; ?>
         <?php if($hColor): ?>
-        color: <?php echo esc_html($hColor); ?>;
+        color: <?php echo esc_attr($hColor); ?>;
         <?php endif; ?>
     }
 
@@ -106,8 +128,12 @@ if(fluentcrm_is_rtl()) {
         border-radius: 50%;
     }
 
+    .wp-block-image {
+        /*margin: 7px 0;*/
+    }
+
     .wp-block-image img {
-        margin: 0;
+        display: block;
         padding: 0;
     }
 
@@ -200,6 +226,19 @@ if(fluentcrm_is_rtl()) {
         outline: none;
         text-decoration: none;
         max-width: 100%;
+        display: block;
+    }
+
+    ul {
+        margin: 7px 0;
+    }
+    ul li {
+        margin: 7px 0;
+        padding-bottom: 10px;
+    }
+
+    pre {
+        margin: 7px 0;
     }
 
     .fcPreviewText {
@@ -283,7 +322,7 @@ if(fluentcrm_is_rtl()) {
         font-style: normal;
         line-height: 140%;
         letter-spacing: normal;
-        margin: 15px 0px;
+        margin: 7px 0px;
     }
 
     h2 {
@@ -291,7 +330,7 @@ if(fluentcrm_is_rtl()) {
         font-style: normal;
         line-height: 140%;
         letter-spacing: normal;
-        margin: 15px 0px;
+        margin: 7px 0px;
     }
 
     h3 {
@@ -299,7 +338,8 @@ if(fluentcrm_is_rtl()) {
         font-style: normal;
         line-height: 140%;
         letter-spacing: normal;
-        margin: 15px 0px;
+        margin: 7px 0px;
+        /*padding: 15px 0;*/
     }
 
     h4 {
@@ -308,7 +348,12 @@ if(fluentcrm_is_rtl()) {
         font-weight: bold;
         line-height: 125%;
         letter-spacing: normal;
-        margin: 15px 0px;
+        margin: 7px 0px;
+        /*padding: 15px 0;*/
+    }
+    h5,h6 {
+        margin: 7px 0;
+        line-height: 180%;
     }
 
     #templateHeader .fcTextContent, #templateHeader .fcTextContent p {
@@ -377,7 +422,7 @@ if(fluentcrm_is_rtl()) {
         font-weight: 700;
         letter-spacing: normal;
         line-height: 125%;
-        padding: 15px 0;
+        /*padding: 15px 0;*/
     }
     .fce_buttons_row.tb_btn_right {
         margin-<?php echo esc_attr($alignLeft); ?>: auto;
@@ -400,11 +445,13 @@ if(fluentcrm_is_rtl()) {
     /*
     * Classic Editor
      */
+    .wp-block-image.aligncenter img,
     img.aligncenter {
         margin: 0 auto;
         display: block;
     }
 
+    .wp-block-image.alignright img,
     img.alignright {
         display: block;
         margin: 0 0 0 auto;
@@ -496,11 +543,207 @@ if(fluentcrm_is_rtl()) {
             margin-top: 10px;
             text-align: center;
         }
+        img, a img {
+            height: auto !important;
+        }
+    }
+
+    /* Latest Post Block */
+    .fc_latest_post_item {
+        border:1px solid #edeef4;
+    }
+    .fc_latest_post_item.layout-6,
+    .fc_latest_post_item.layout-4 {
+        border: none;
+        border-bottom: 1px solid #edeef4;
+    }
+    .fc_latest_post_item.layout-5 {
+        border: none;
+    }
+    .fc_latest_post_item.layout-6:first-child {
+        border-top: 1px solid #edeef4;
+    }
+    .fc_latest_post_item.layout-6 .fc_latest_post_content .title {
+        font-size: 20px;
+    }
+    .fc_latest_post_item.layout-6 .fc_latest_post_content .meta {
+        margin: 0;
+    }
+    .fc_latest_post_item .fc_latest_post_content .title {
+        font-size: 22px;
+        line-height: 1.4;
+        margin: 0 0 12px 0;
+    }
+    .fc_latest_post_item .fc_latest_post_content .description {
+        margin: 0 0 15px 0;
+        font-size: 15px;
+        line-height: 180%;
+    }
+    .fc_latest_post_item .fc_latest_post_content .fc_latest_post_btn {
+        display: inline-block;
+    }
+
+    .fc_latest_post_item .fc_latest_post_content .meta {
+        display: flex;
+        align-items: center;
+        margin: 0 0 8px 0;
+    }
+    .fc_latest_post_item .fc_latest_post_content .meta .author {
+        display: flex;
+        align-items: center;
+        margin-right: 15px;
+    }
+    .fc_latest_post_item .fc_latest_post_content .meta .author img {
+        margin-right: 7px;
+        flex: none;
+    }
+    .fc_latest_post_item .fc_latest_post_content .meta .comments {
+        display: block;
+        margin-left: 15px;
+    }
+    .fc_latest_post_item.layout-4 .fc_latest_post_content .description {
+        margin: 0;
+    }
+    .fc_latest_post_item.layout-4 .fc_latest_post_content .meta {
+        margin: 20px 0 0 0;
+    }
+    .fc_latest_post_item.layout-5 {
+        padding: 0;
+        list-style: none;
+    }
+    .fc_latest_post_item.layout-5 tbody tr td {
+        border: none;
+        padding: 5px 0;
+        display: flex;
+    }
+    .fc_latest_post_item.layout-5 tbody tr td a {
+        font-size: 16px;
+        font-weight: 600;
+    }
+    .fc_latest_post_item.layout-5 tbody tr td .fc_latest_post_marker {
+        display: block;
+        width: 5px;
+        height: 5px;
+        background: #000;
+        border-radius: 20px;
+        margin-top: 8px;
+        margin-right: 5px;
+    }
+    .fc_latest_post_item.layout-7 {
+        border: none;
+    }
+    .fc_latest_post_item.layout-7 .fc_latest_post_content {
+        padding: 0;
+    }
+    .fc_latest_post_item.layout-7 .fc_latest_post_content .title {
+        font-size: 25px;
+        padding: 0;
+        line-height: 1.4;
+        margin: 0 0 10px 0;
+    }
+    .fc_latest_post_item.layout-7 .fc_latest_post_content .fc_latest_post_btn {
+        border-radius: 4px;
+        font-weight: 500;
+        padding: 4px 14px;
+    }
+
+
+    .fc_woo_products .template-default .fc_woo_product,
+    .fc_woo_products .template-layout-3 .fc_woo_product {
+        width: calc(50% - 20px);
+        display: inline-table;
+    }
+    .fc_woo_products .template-layout-3 .fc_woo_product:nth-child(even),
+    .fc_woo_products .template-default .fc_woo_product:nth-child(even) {
+        margin-left: 20px;
+    }
+    .fc_woo_product .fc_woo_product_img {
+        height: 280px;
+        position: relative;
+        margin-bottom: 20px;
+    }
+    .fc_woo_product .fc_woo_product_img img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        background: #eee;
+    }
+    .fc_woo_product .fc_woo_product_info .title {
+        font-size: 20px;
+        line-height: 1.2;
+        margin: 0 0 8px 0;
+        /*color: #2a363d;*/
+        font-weight: 500 !important;
+    }
+    .fc_woo_product .fc_woo_product_info .description {
+        font-size: 16px;
+        line-height: 1.5;
+    }
+    .fc_woo_product .fc_woo_product_info .price {
+        display: block;
+        line-height: 1.2;
+        font-size: 16px;
+        /*color: #37454e;*/
+        margin-bottom: 10px;
+    }
+    .fc_woo_product .fc_woo_product_info .price del {
+        opacity: 0.4;
+    }
+    .fc_woo_product .fc_woo_product_info .price ins {
+        text-decoration: none;
+    }
+    .fc_woo_product .fc_woo_product_info .add-to-cart-btn {
+        display: inline-block;
+        font-weight: 600;
+        font-size: 14px;
+        color: #202020;
+    }
+
+
+    .fc_woo_product.layout-2 .fc_woo_product_img {
+        height: auto;
+        margin: 0;
+    }
+    .fc_woo_product.layout-2 .fc_woo_product_info .price {
+        margin-bottom: 25px;
+    }
+    .fc_woo_product.layout-2 .fc_woo_product_info .add-to-cart-btn {
+        padding: 15px;
+        color: #fff;
+        display: block;
+        text-align: center;
+        line-height: 1.8;
+    }
+
+
+    .fc_woo_products .template-layout-3 .fc_woo_product {
+        text-align: center;
+    }
+    .fc_woo_products .template-layout-3 .fc_woo_product .fc_woo_product_img img,
+    .fc_woo_products .template-layout-3 .fc_woo_product .fc_woo_product_img {
+        border-radius: 6px;
     }
 
 
     .wp-block-table.is-style-stripes tbody tr:nth-child(odd) {
         background-color: #f0f0f0;
+    }
+
+    .fce_buttons_row.is-content-justification-right table {
+        float: right !important;
+    }
+
+    @media screen and (max-width: 600px) {
+        .fc_latest_post_item.layout-2 > tbody .fc_latest_post_item_tr td,
+        .fc_latest_post_item.layout-2 > tbody .fc_latest_post_item_tr,
+        .fc_latest_post_item.layout-3 > tbody .fc_latest_post_item_tr td,
+        .fc_latest_post_item.layout-3 > tbody .fc_latest_post_item_tr,
+        .fc_latest_post_item.layout-4 > tbody .fc_latest_post_item_tr td,
+        .fc_latest_post_item.layout-4 > tbody .fc_latest_post_item_tr {
+            display:block !important;
+            flex-wrap: wrap;
+        }
     }
 
     @media only screen and (max-width: 480px) {

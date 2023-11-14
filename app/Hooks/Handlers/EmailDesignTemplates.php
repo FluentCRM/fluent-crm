@@ -95,15 +95,20 @@ class EmailDesignTemplates
         $templateData = $this->filterTemplateData($templateData);
 
         $configDefault = [
-            'content_width' => '',
-            'headings_font_family' => '',
-            'text_color' => '',
-            'headings_color' => '',
-            'link_color' => '',
-            'body_bg_color' => '',
-            'content_bg_color' => '',
-            'footer_text_color' => '',
-            'content_font_family' => "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+            'content_width'         => '',
+            'headings_font_family'  => '',
+            'text_color'            => '',
+            'link_color'            => '',
+            'body_bg_color'         => '',
+            'content_bg_color'      => '',
+            'footer_text_color'     => '',
+            'content_font_family'   => "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+            'paragraph_color'       => '',
+            'paragraph_font_size'   => '',
+            'paragraph_font_family' => '',
+            'paragraph_line_height' => '',
+            'headings_color'        => '',
+            'heading_font_family'   => '',
         ];
 
         $templateData['config'] = wp_parse_args($templateData['config'], $configDefault);
@@ -121,15 +126,20 @@ class EmailDesignTemplates
         $templateData = $this->filterTemplateData($templateData);
 
         $configDefault = [
-            'content_width' => '',
-            'headings_font_family' => '',
-            'text_color' => '',
-            'headings_color' => '',
-            'link_color' => '',
-            'body_bg_color' => '',
-            'content_bg_color' => '',
-            'footer_text_color' => '',
-            'content_font_family' => "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+            'content_width'         => '',
+            'headings_font_family'  => '',
+            'text_color'            => '',
+            'link_color'            => '',
+            'body_bg_color'         => '',
+            'content_bg_color'      => '',
+            'footer_text_color'     => '',
+            'content_font_family'   => "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+            'paragraph_color'       => '',
+            'paragraph_font_size'   => '',
+            'paragraph_font_family' => '',
+            'paragraph_line_height' => '',
+            'headings_color'        => '',
+            'heading_font_family'   => '',
         ];
 
         $templateData['config'] = wp_parse_args($templateData['config'], $configDefault);

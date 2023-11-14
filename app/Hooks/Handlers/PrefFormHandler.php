@@ -132,6 +132,39 @@ class PrefFormHandler
         ]);
     }
 
+    public function handleDynamicContentShortCode($atts, $text = '')
+    {
+        if(!$text) {
+            return '';
+        }
+
+        $defaults = [
+            'hide_for_guest' => 'no'
+        ];
+
+        $atts = shortcode_atts($defaults, $atts, 'fluentcrm_content');
+
+        $subscriber = FluentCrmApi('contacts')->getCurrentContact(true, true);
+
+        if(!$subscriber) {
+            if($atts['hide_for_guest'] == 'yes') {
+                return '';
+            }
+            return preg_replace_callback('/({{|##)+(.*?)(}}|##)/', function ($matches) {
+                if(isset($matches[2])) {
+                    $token = $matches[2];
+                    $tokens = explode('|', $token);
+                    if(isset($tokens[1])) {
+                        return $tokens[1];
+                    }
+                }
+                return '';
+            }, $text);
+        }
+
+        return \FluentCrm\App\Services\Libs\Parser\Parser::parse($text, $subscriber);
+    }
+
     public function handleAjax()
     {
         if (!isset($_POST['_fc_nonce']) || !wp_verify_nonce($_POST['_fc_nonce'], 'fluent_crm_account_form_fields')) {
@@ -188,7 +221,13 @@ class PrefFormHandler
             ], 423);
         }
 
-        $subscriber->fill($validData)->save();
+        $subscriber->fill($validData);
+
+        $updateData = $subscriber->getDirty();
+
+        if($updateData) {
+            $subscriber->save();
+        }
 
         if (isset($_REQUEST['lists'])) {
             $publicLists = Helper::getPublicLists();
@@ -225,11 +264,22 @@ class PrefFormHandler
                 $subscriber->detachLists($detachLists);
             }
 
+        } else {
+            $listIds = $subscriber->lists()->get()->pluck('id')->toArray();
+            $subscriber->detachLists($listIds);
         }
 
         do_action('fluent_crm/pref_form_self_contact_updated', $subscriber, $_REQUEST);
 
-        do_action('fluentcrm_contact_updated', $subscriber);
+
+        if ($updateData) {
+            /*
+            * deprecated
+            */
+            do_action('fluentcrm_contact_updated', $subscriber, $updateData);
+
+            do_action('fluent_crm/contact_updated', $subscriber, $updateData);
+        }
 
         wp_send_json_success([
             'message' => __('Your information has been updated', 'fluent-crm'),
@@ -300,7 +350,7 @@ class PrefFormHandler
 
         $formFields[] = [
             'type' => 'raw_html',
-            'html' => '<div class="fc_2_col">'
+            'html' => '<div class="fc_2_col fc_email_phone_date">'
         ];
 
         $formFields['email'] = [
@@ -363,7 +413,7 @@ class PrefFormHandler
                 'html' => '<h4 class="fc_address_info_heading">' . Arr::get($labels, 'address_heading', 'Address Information') . '</h4>'
             ];
 
-            $countryNames = apply_filters('fluentcrm_countries', []);
+            $countryNames = apply_filters('fluent_crm/countries', []);
 
             $formattedCountries = [];
             foreach ($countryNames as $country) {

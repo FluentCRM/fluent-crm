@@ -25,12 +25,16 @@ class CustomContactField
             $data['field_types'] = $this->getFieldTypes();
         }
 
+        if (in_array('field_groups', $with)) {
+            $data['field_groups'] = $this->getFieldGroups();
+        }
+
         return $data;
     }
 
     public function getFieldTypes()
     {
-        return apply_filters('fluentcrm_global_field_types', [
+        return apply_filters('fluent_crm/global_field_types', [
             'text'          => [
                 'type'       => 'text',
                 'label'      => __('Single Line Text', 'fluent-crm'),
@@ -171,6 +175,23 @@ class CustomContactField
             }
         }
 
-        return array_filter($values);
+        return array_filter($values, function ($item) {
+            return $item != null;
+        });
+    }
+
+    public function getFieldGroups()
+    {
+        $fieldGroups = fluentcrm_get_option('contact_field_groups');
+
+        if (!$fieldGroups) {
+            $fieldGroups = [
+                [
+                    'slug'  => 'default',
+                    'title' => __('Custom Profile Data', 'fluent-crm')
+                ]
+            ];
+        }
+        return $fieldGroups;
     }
 }

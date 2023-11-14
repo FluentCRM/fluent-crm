@@ -33,6 +33,11 @@ class SettingsController extends Controller
             if ($key == 'email_settings') {
                 $returnSettings[$key] = Helper::getGlobalEmailSettings();
             } else if (isset($existingSettings[$key])) {
+
+                if ($key == 'business_settings') {
+                    $existingSettings[$key] = fluentcrmGetGlobalSettings('business_settings');
+                }
+
                 $returnSettings[$key] = $existingSettings[$key];
             }
         }
@@ -76,8 +81,18 @@ class SettingsController extends Controller
 
     public function getDoubleOptinSettings(Request $request)
     {
+        $doubleOptinSettings = Helper::getDoubleOptinSettings();
+        if (empty($doubleOptinSettings['tag_based_redirect'])) {
+            $doubleOptinSettings['tag_based_redirect'] = 'no';
+            $doubleOptinSettings['tag_redirects'] = [
+                [
+                    'field_key'   => [],
+                    'field_value' => ''
+                ]
+            ];
+        }
         $data = [
-            'settings' => Helper::getDoubleOptinSettings()
+            'settings' => $doubleOptinSettings
         ];
 
         if (in_array('settings_fields', $request->get('with', []))) {
@@ -92,6 +107,12 @@ class SettingsController extends Controller
                     'placeholder' => __('Optin Email Subject', 'fluent-crm'),
                     'label'       => __('Email Subject', 'fluent-crm'),
                     'help'        => __('Your double-optin email subject', 'fluent-crm')
+                ],
+                'email_pre_header'         => [
+                    'type'        => 'input-text-popper',
+                    'placeholder' => __('Optin Email Pre Header', 'fluent-crm'),
+                    'label'       => __('Email Pre Header', 'fluent-crm'),
+                    'help'        => __('Your double-optin email pre header', 'fluent-crm')
                 ],
                 'email_body'               => [
                     'type'        => 'wp-editor',
@@ -148,6 +169,35 @@ class SettingsController extends Controller
                         'value'      => 'redirect'
                     ]
                 ],
+                'tag_based_redirect'       => [
+                    'type'           => 'inline-checkbox',
+                    'checkbox_label' => (defined('FLUENTCAMPAIGN')) ? __('Enable Tag based double optin redirect', 'fluent-crm') : 'Enable Tag based double optin redirect (Require FluentCRM Pro)',
+                    'true_label'     => 'yes',
+                    'false_label'    => 'no',
+                    'disabled'       => !defined('FLUENTCAMPAIGN')
+                ],
+                'tag_redirects'            => [
+                    'label'                 => 'Configure your redirect URLs based on tags (Will be redirect to provided URL if any selected tag matched to the contact)',
+                    'type'                  => 'form-many-drop-down-mapper',
+                    'local_label'           => 'Targeted Tags',
+                    'local_placeholder'     => 'Select Tags',
+                    'remote_label'          => 'Redirect URL (After Double Optin Confirmation)',
+                    'field_option_selector' => [
+                        'option_key'  => 'tags',
+                        'is_multiple' => true
+                    ],
+                    'remote_field_type'     => 'input-text-popper',
+                    'remote_field'          => [
+                        'placeholder' => 'Redirect URL'
+                    ],
+                    'help'                  => 'User will be redirect to the URL which match based on the tags at first match',
+                    'dependency'            => [
+                        'depends_on' => 'tag_based_redirect',
+                        'operator'   => '=',
+                        'value'      => 'yes'
+                    ],
+                    'manage_serial'         => true
+                ]
             ];
         }
 
@@ -266,48 +316,55 @@ class SettingsController extends Controller
         }
 
         $bounceSettings = [
-            'ses'       => [
+            'ses'          => [
                 'label'       => __('Amazon SES', 'fluent-crm'),
                 'webhook_url' => site_url('index.php?fluentcrm=1&route=bounce_handler&provider=ses&verify_key=' . $securityCode),
                 'doc_url'     => 'https://fluentcrm.com/docs/bounce-handler-with-amazon-ses/',
                 'input_title' => __('Amazon SES Bounce Handler URL', 'fluent-crm'),
                 'input_info'  => __('Please use this bounce handler url in your Amazon SES + SNS settings', 'fluent-crm')
             ],
-            'mailgun'   => [
+            'mailgun'      => [
                 'label'       => __('Mailgun', 'fluent-crm'),
                 'webhook_url' => get_rest_url(null, 'fluent-crm/v2/public/bounce_handler/mailgun/handle/' . $securityCode),
                 'doc_url'     => 'https://fluentcrm.com/docs/bounce-handling-with-mailgun/',
                 'input_title' => __('Mailgun Bounce Handler Webhook URL', 'fluent-crm'),
                 'input_info'  => __('Please paste this URL into your Mailgun\'s Webhook settings to enable Bounce Handling with FluentCRM', 'fluent-crm')
             ],
-            'pepipost'  => [
+            'pepipost'     => [
                 'label'       => __('PepiPost', 'fluent-crm'),
                 'webhook_url' => get_rest_url(null, 'fluent-crm/v2/public/bounce_handler/pepipost/handle/' . $securityCode),
                 'doc_url'     => 'https://fluentcrm.com/docs/bounce-handling-with-pepipost/',
                 'input_title' => __('PepiPost Bounce Handler Webhook URL', 'fluent-crm'),
                 'input_info'  => __('Please paste this URL into your PepiPost\'s Webhook settings to enable Bounce Handling with FluentCRM', 'fluent-crm')
             ],
-            'postmark'  => [
+            'postmark'     => [
                 'label'       => __('PostMark', 'fluent-crm'),
                 'webhook_url' => get_rest_url(null, 'fluent-crm/v2/public/bounce_handler/postmark/handle/' . $securityCode),
                 'doc_url'     => 'https://fluentcrm.com/docs/bounce-handling-with-postmark/',
                 'input_title' => __('PostMark Bounce Handler Webhook URL', 'fluent-crm'),
                 'input_info'  => __('Please paste this URL into your PostMark\'s Webhook settings to enable Bounce Handling with FluentCRM', 'fluent-crm')
             ],
-            'sendgrid'  => [
+            'sendgrid'     => [
                 'label'       => __('SendGrid', 'fluent-crm'),
                 'webhook_url' => get_rest_url(null, 'fluent-crm/v2/public/bounce_handler/sendgrid/handle/' . $securityCode),
                 'doc_url'     => 'https://fluentcrm.com/docs/bounce-handling-with-sendgrid/',
                 'input_title' => __('SendGrid Bounce Handler Webhook URL', 'fluent-crm'),
                 'input_info'  => __('Please paste this URL into your SendGrid\'s Webhook settings to enable Bounce Handling with FluentCRM', 'fluent-crm')
             ],
-            'sparkpost' => [
+            'sparkpost'    => [
                 'label'       => __('SparkPost', 'fluent-crm'),
                 'webhook_url' => get_rest_url(null, 'fluent-crm/v2/public/bounce_handler/sparkpost/handle/' . $securityCode),
                 'doc_url'     => 'https://fluentcrm.com/docs/bounce-handling-with-sparkpost/',
                 'input_title' => __('SparkPost Bounce Handler Webhook URL', 'fluent-crm'),
                 'input_info'  => __('Please paste this URL into your SparkPost\'s Webhook settings to enable Bounce Handling with FluentCRM', 'fluent-crm')
-            ]
+            ],
+            'elasticemail' => [
+                'label'       => __('Elastic Email', 'fluent-crm'),
+                'webhook_url' => get_rest_url(null, 'fluent-crm/v2/public/bounce_handler/elasticemail/handle/' . $securityCode),
+                'doc_url'     => 'https://fluentcrm.com/docs/bounce-handling-with-elastic-email/',
+                'input_title' => __('Elastic Email Bounce Handler Webhook URL', 'fluent-crm'),
+                'input_info'  => __('Please paste this URL into your Elastic Email\'s Webhook settings to enable Bounce Handling with FluentCRM', 'fluent-crm')
+            ],
         ];
 
         $data = [
@@ -355,7 +412,7 @@ class SettingsController extends Controller
             $data['role_based_tagging_settings_fields'] = $roleBasedTaggingClass->getFields();
         }
 
-        if (defined('WC_PLUGIN_FILE') && defined('FLUENTCAMPAIGN_DIR_FILE')) {
+        if (defined('WC_PLUGIN_FILE')) {
             $data['woo_checkout_fields'] = $autoSubscribeService->getWooCheckoutFields();
             $data['woo_checkout_settings'] = $autoSubscribeService->getWooCheckoutSettings();
         }
@@ -746,10 +803,15 @@ class SettingsController extends Controller
             $data[$key] = sanitize_text_field($datum);
         }
 
+        if (Arr::get($data, 'company_module') == 'yes') {
+            require_once(FLUENTCRM_PLUGIN_PATH.'database/migrations/CompaniesMigrator.php');
+            \FluentCrmMigrations\CompaniesMigrator::migrate();
+        }
+
         update_option('_fluentcrm_experimental_settings', $data, 'no');
 
         return [
-            'message' => __('Experimental Settings has been updated', 'fluent-crm')
+            'message' => __('Settings has been updated', 'fluent-crm')
         ];
     }
 

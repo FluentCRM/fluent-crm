@@ -20,9 +20,16 @@ class UrlStores extends Model
 
     public static function getUrlSlug($longUrl)
     {
+
+        static $urls = [];
+
+        if(isset($urls[md5($longUrl)])) {
+            return $urls[md5($longUrl)];
+        }
+
         $isExist = self::where('url', $longUrl)
             ->first();
-        
+
         if ($isExist) {
             return $isExist->short;
         }
@@ -37,6 +44,8 @@ class UrlStores extends Model
         ];
 
         self::insert($data);
+
+        $urls[md5($longUrl)] = $short;
 
         return $short;
     }

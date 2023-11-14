@@ -2,6 +2,7 @@
 
 namespace FluentCrm\App\Http\Controllers;
 
+use FluentCrm\App\Models\Company;
 use FluentCrm\App\Models\Funnel;
 use FluentCrm\App\Models\Tag;
 use FluentCrm\App\Models\Lists;
@@ -55,7 +56,7 @@ class OptionsController extends Controller
      */
     public function countries()
     {
-        $countries = apply_filters('fluentcrm_countries', []);
+        $countries = apply_filters('fluent_crm/countries', []);
         $formattedCountries = [];
         foreach ($countries as $country) {
             $country['id'] = $country['code'];
@@ -156,33 +157,26 @@ class OptionsController extends Controller
     }
 
     /**
+     * Include all the Companies.
+     *
+     * @return array
+     */
+    public function companies()
+    {
+        return [
+            'companies' => Company::select('id', 'name as title')->orderBy('id', 'DESC')->get()
+        ];
+    }
+
+    /**
      * Include subscriber statuses.
      *
      * @return array
      */
     public function statuses()
     {
-        $statuses = fluentcrm_subscriber_statuses();
-        $formattedStatues = [];
-
-        $transMaps = [
-            'subscribed'   => __('Subscribed', 'fluent-crm'),
-            'pending'      => __('Pending', 'fluent-crm'),
-            'unsubscribed' => __('Unsubscribed', 'fluent-crm'),
-            'bounced'      => __('Bounced', 'fluent-crm'),
-            'complained'   => __('Complained', 'fluent-crm')
-        ];
-
-        foreach ($statuses as $status) {
-            $formattedStatues[] = [
-                'id'    => $status,
-                'slug'  => $status,
-                'title' => isset($transMaps[$status]) ? $transMaps[$status] : ucfirst($status)
-            ];
-        }
-
         return [
-            'statuses' => $formattedStatues
+            'statuses' => fluentcrm_subscriber_statuses(true)
         ];
     }
 
@@ -193,32 +187,8 @@ class OptionsController extends Controller
      */
     public function editable_statuses()
     {
-        $statuses = fluentcrm_subscriber_statuses();
-        $formattedStatues = [];
-
-        $unEditableStatuses = ['bounced', 'complained'];
-
-        $statuses = array_diff($statuses, $unEditableStatuses);
-
-        $transMaps = [
-            'subscribed'   => __('Subscribed', 'fluent-crm'),
-            'pending'      => __('Pending', 'fluent-crm'),
-            'unsubscribed' => __('Unsubscribed', 'fluent-crm'),
-            'bounced'      => __('Bounced', 'fluent-crm'),
-            'complained'   => __('Complained', 'fluent-crm')
-        ];
-
-
-        foreach ($statuses as $status) {
-            $formattedStatues[] = [
-                'id'    => $status,
-                'slug'  => $status,
-                'title' => isset($transMaps[$status]) ? $transMaps[$status] : ucfirst($status)
-            ];
-        }
-
         return [
-            'editable_statuses' => $formattedStatues
+            'editable_statuses' => fluentcrm_subscriber_editable_statuses(true)
         ];
     }
 
@@ -229,19 +199,8 @@ class OptionsController extends Controller
      */
     public function contact_types()
     {
-        $types = fluentcrm_contact_types();
-        $formattedTypes = [];
-
-        foreach ($types as $type => $label) {
-            $formattedTypes[] = [
-                'id'    => $type,
-                'slug'  => $type,
-                'title' => $label
-            ];
-        }
-
         return [
-            'contact_types' => $formattedTypes
+            'contact_types' => fluentcrm_contact_types(true)
         ];
     }
 
@@ -341,15 +300,30 @@ class OptionsController extends Controller
                     }
                 }
             }
-        } else if ($optionKey == 'woo_products' || $optionKey == 'product_selector_woo' || $optionKey == 'product_selector_woo_order') {
+
+            return [
+                'options' => $options
+            ];
+        }
+
+        if ($optionKey == 'woo_products' || $optionKey == 'product_selector_woo' || $optionKey == 'product_selector_woo_order') {
             if (defined('WC_PLUGIN_FILE')) {
-                $products = wc_get_products([
+
+                $args = [
                     'limit'   => 50,
                     'orderby' => 'date',
                     'order'   => 'DESC',
                     's'       => $search
-                ]);
+                ];
+
                 $pushedIds = [];
+
+                $subOptionKey = $request->getSafe('sub_option_key', []);
+                if (!empty($subOptionKey)) {
+                    $args['type'] = $subOptionKey;
+                }
+
+                $products = wc_get_products($args);
 
                 foreach ($products as $product) {
                     $productId = $product->get_id();
@@ -383,11 +357,25 @@ class OptionsController extends Controller
                     }
                 }
             }
-        } else if ($optionKey == 'edd_products' || $optionKey == 'product_selector_edd') {
+
+            return [
+                'options' => $options
+            ];
+
+        }
+
+        if ($optionKey == 'edd_products' || $optionKey == 'product_selector_edd') {
             if (class_exists('Easy_Digital_Downloads') && defined('FLUENTCAMPAIGN')) {
                 $options = \FluentCampaign\App\Services\Integrations\Edd\Helper::getProducts();
             }
-        } else if ($optionKey == 'campaigns' || $optionKey == 'funnels' || $optionKey == 'email_sequences') {
+
+            return [
+                'options' => $options
+            ];
+
+        }
+
+        if ($optionKey == 'campaigns' || $optionKey == 'funnels' || $optionKey == 'email_sequences') {
 
             if ($optionKey == 'campaigns') {
                 $objectModel = Campaign::select(['id', 'title', 'status'])->where('status', '!=', 'draft');
@@ -455,12 +443,114 @@ class OptionsController extends Controller
                     ];
                 }
             }
-        } else {
-            $options = apply_filters('fluentcrm_ajax_options_' . $optionKey, [], $search, $includedIds);
+
+            return [
+                'options' => $options
+            ];
+        }
+
+        if ($optionKey == 'companies') {
+            if (!Helper::isCompanyEnabled()) {
+                return [
+                    'options' => []
+                ];
+            }
+
+            $companies = Company::select(['id', 'name'])
+                ->searchBy($search)
+                ->limit(20)
+                ->orderBy('id', 'DESC')
+                ->get();
+
+            $pushedIds = [];
+            foreach ($companies as $company) {
+                $options[] = [
+                    'id'    => $company->id,
+                    'title' => $company->name
+                ];
+                $pushedIds[] = $company->id;
+            }
+
+            if (empty($includedIds)) {
+                $includedIds = $pushedIds;
+            }
+            $includedIds = array_diff($includedIds, $pushedIds);
+
+            if ($includedIds) {
+                $companies = Company::select(['id', 'name'])
+                    ->whereIn('id', $includedIds)
+                    ->get();
+                foreach ($companies as $company) {
+                    $options[] = [
+                        'id'    => $company->id,
+                        'title' => $company->name
+                    ];
+                }
+            }
+
+            return [
+                'options' => $options
+            ];
+        }
+
+        if ($optionKey == 'post_type') {
+            $postType = $request->getSafe('sub_option_key', '');
+            if(!$postType) {
+                return [
+                    'options' => []
+                ];
+            }
+
+            $args = [
+                'post_type'      => $postType,
+                'posts_per_page' => 20
+            ];
+
+            if ($search) {
+                $args['s'] = $search;
+            }
+
+            $posts = get_posts($args);
+
+            $formattedPosts = [];
+            if (!is_wp_error($posts)) {
+                foreach ($posts as $post) {
+                    $formattedPosts[$post->ID] = [
+                        'id'    => strval($post->ID),
+                        'title' => $post->post_title
+                    ];
+                }
+            }
+
+            if (!$includedIds) {
+                return [
+                    'options' => array_values($formattedPosts)
+                ];
+            }
+
+            $includedIds = (array) $includedIds;
+
+            $includedIds = array_diff($includedIds, array_keys($formattedPosts));
+            if ($includedIds) {
+                $posts = get_posts([
+                    'post_type'      => $postType,
+                    'post__in'       => $includedIds
+                ]);
+                foreach ($posts as $post) {
+                    $formattedPosts[$post->ID] = [
+                        'id'    => strval($post->ID),
+                        'title' => $post->post_title
+                    ];
+                }
+            }
+
+            return [
+                'options' => array_values($formattedPosts)
+            ];
         }
 
         return [
-            'options' => $options
+            'options' => apply_filters('fluentcrm_ajax_options_' . $optionKey, [], $search, $includedIds)
         ];
     }
 
@@ -493,7 +583,7 @@ class OptionsController extends Controller
         }
 
         if ($includeIds && $formattedTerms) {
-            $includeIds = array_diff(array_keys($formattedTerms), $includeIds);
+            $includeIds = array_diff($includeIds, array_keys($formattedTerms));
             if ($includeIds) {
                 $includedTerms = get_terms([
                     'taxonomy'   => $taxonomy,

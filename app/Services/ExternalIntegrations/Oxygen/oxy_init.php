@@ -5,7 +5,7 @@
 function fcrmOxyCheckTagCondition($value, $operator)
 {
     $contactApi = FluentCrmApi('contacts');
-    $contact = $contactApi->getCurrentContact();
+    $contact = $contactApi->getCurrentContact(true, true);
 
     if(!$contact) {
         if($operator == 'exist') {
@@ -38,7 +38,7 @@ function fcrmOxyCheckTagCondition($value, $operator)
 function fcrmOxyCheckStatusCondition($value, $operator)
 {
     $contactApi = FluentCrmApi('contacts');
-    $contact = $contactApi->getCurrentContact();
+    $contact = $contactApi->getCurrentContact(true, true);
 
     if(!$contact) {
         if($operator == '=') {
@@ -59,7 +59,7 @@ function fcrmOxyCheckStatusCondition($value, $operator)
 function fcrmOxyCheckContactExistCondition($value, $operator)
 {
     $contactApi = FluentCrmApi('contacts');
-    $contact = $contactApi->getCurrentContact();
+    $contact = $contactApi->getCurrentContact(true, true);
 
     if($value == 'yes') {
         return !!$contact;

@@ -81,7 +81,7 @@ class Webhook
                 $newStatus = 'complained';
                 if ($eventName == 'bounce') {
                     $newStatus = 'bounced';
-                } else if($eventName == 'unsubscribe') {
+                } else if ($eventName == 'unsubscribe') {
                     $newStatus = 'unsubscribed';
                 }
                 $unsubscribeData = [
@@ -242,5 +242,58 @@ class Webhook
         }
 
         return false;
+    }
+
+    private function handleElasticemail($request)
+    {
+        $status = strtolower($request->get('status'));
+
+        $processStatuses = [
+            'bounced',
+            'abusereport',
+            'unsubscribed'
+        ];
+
+        $bounceCategories = [
+            'NoMailbox',
+            'BlackListed',
+            'ManualCancel'
+        ];
+
+        $category = $request->get('category', 'unknown');
+
+        if($status == 'error' && in_array($category, $bounceCategories)) {
+            $status = 'bounced';
+        }
+
+        if(!in_array($status, $processStatuses)) {
+            return false;
+        }
+
+        $email = $request->get('to');
+
+        if(!is_email($email)) {
+            return false;
+        }
+
+        if($status == 'unsubscribed') {
+
+            $unsubscribeData = [
+                'email'  => $email,
+                'reason' => 'Unsubscribed from ElasticEmail Webhook API',
+                'status' => 'unsubscribed'
+            ];
+
+            return (new ExternalPages())->recordUnsubscribe($unsubscribeData);
+        }
+
+
+        $unsubscribeData = [
+            'email'  => $email,
+            'reason' => sprintf('Unsubscribed from ElasticEmail Webhook with Category %s', $category),
+            'status' => 'bounced'
+        ];
+
+        return (new ExternalPages())->recordUnsubscribe($unsubscribeData);
     }
 }

@@ -96,6 +96,7 @@ class UserRegistrationTrigger extends BaseTrigger
             return;
         }
 
+
         $willProcess = $this->isProcessable($funnel, $subscriberData);
         $willProcess = apply_filters('fluentcrm_funnel_will_process_' . $this->triggerName, $willProcess, $funnel, $subscriberData, $originalArgs);
         if (!$willProcess) {

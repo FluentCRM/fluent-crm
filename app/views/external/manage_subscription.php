@@ -6,9 +6,10 @@
     <meta http-equiv="Imagetoolbar" content="No"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?php esc_html_e('Update your preferences', 'fluent-crm') ?></title>
+    <meta name="robots" content="noindex">
     <?php
         wp_head();
-        do_action('fluentcrm_confirmation_head', $subscriber);
+        do_action('fluent_crm/manage_subscription_head', $subscriber);
     ?>
 </head>
 <body class="fc_unsub">
@@ -23,13 +24,13 @@
         <?php endif; ?>
     </div>
     <div class="fluentcrm_un_form_wrapper">
-        <h3><?php _e('Update your preferences', 'fluent-crm'); ?></h3>
+        <h3><?php esc_html_e('Update your preferences', 'fluent-crm'); ?></h3>
         <?php require_once FLUENTCRM_PLUGIN_PATH.'app/views/external/manage_subscription_form.php'; ?>
     </div>
 </div>
 <?php
     wp_footer();
-    do_action('fluentcrm_confirmation_footer', $subscriber);
+    do_action('fluent_crm/manage_subscription_footer', $subscriber);
 ?>
 </body>
 </html>

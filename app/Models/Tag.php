@@ -31,9 +31,9 @@ class Tag extends Model
 
     /**
      * Local scope to filter subscribers by search/query string
-     * @param ModelQueryBuilder $query
+     * @param \FluentCrm\Framework\Database\Query\Builder $query
      * @param string $search
-     * @return ModelQueryBuilder
+     * @return \FluentCrm\Framework\Database\Query\Builder
      */
     public function scopeSearchBy($query, $search)
     {
@@ -53,7 +53,7 @@ class Tag extends Model
     /**
      * Get all of the subscribers that belongs to the tag.
      *
-     * @return \WPManageNinja\WPOrm\Relation\BelongsToMany
+     * @return \FluentCrm\Framework\Database\Orm\Relations\BelongsToMany
      */
     public function subscribers()
     {

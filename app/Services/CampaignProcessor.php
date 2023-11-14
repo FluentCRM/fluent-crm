@@ -20,17 +20,16 @@ class CampaignProcessor
         if (fluentCrmGetMemoryLimit() > 510000000 && !fluentCrmIsMemoryExceeded(60)) {
             $this->initialStatus = 'scheduled';
         }
-
     }
 
     public function processEmails($perChunk = 0, $runTime = 30)
     {
-        if ($runTime > 50) {
-            $runTime = 50;
+        if ($runTime > 30) {
+            $runTime = fluentCrmMaxRunTime() - 5;
         }
 
         $startTime = microtime(true);
-        $campaign = Campaign::find($this->campaignId);
+        $campaign = Campaign::withoutGlobalScope('type')->find($this->campaignId);
 
         if (!$campaign) {
             return false;
@@ -45,7 +44,7 @@ class CampaignProcessor
         }
 
         if (!$perChunk || $perChunk <= 0) {
-            $perChunk = (int)apply_filters('fluentcrm_process_subscribers_per_request', 30);
+            $perChunk = (int)apply_filters('fluent_crm/process_subscribers_per_request', 30);
         }
 
         $subscribersModel = $campaign->getSubscribersModel($campaign->settings);
@@ -57,7 +56,7 @@ class CampaignProcessor
         /*
          * Prevent Multiple Jobs here
          */
-        $lastProcess = fluentcrm_get_campaign_meta($campaign->id, '_processing_emails', true);
+        $lastProcess = (int)fluentcrm_get_campaign_meta($campaign->id, '_processing_emails', true);
         if ($lastProcess && (time() - $lastProcess) < 55) {
             return $campaign;
         }
@@ -71,7 +70,7 @@ class CampaignProcessor
 
         while ($willRun && ((microtime(true) - $startTime) < $runTime) && !fluentCrmIsMemoryExceeded()) {
             usleep(200000); // 200 miliseconds sleep
-            $campaign = Campaign::find($campaign->id);
+            $campaign = Campaign::withoutGlobalScope('type')->find($campaign->id);
             $willRun = !!$result;
 
             if ($willRun) {
@@ -84,7 +83,7 @@ class CampaignProcessor
         fluentcrm_update_campaign_meta($campaign->id, '_processing_emails', 0);
 
         if (!$result) { // All Done. Let's make it scheduled
-            $campaign = Campaign::find($this->campaignId);
+            $campaign = Campaign::withoutGlobalScope('type')->find($this->campaignId);
 
             if ($campaign->status == 'processing') {
                 $campaign->status = 'scheduled';
@@ -112,7 +111,7 @@ class CampaignProcessor
 
         return $campaign->subscribe($subscribers, [
             'status'       => $this->initialStatus,
-            'scheduled_at' => $campaign->scheduled_at
+            'scheduled_at' => $campaign->getEmailScheduleAt()
         ], true);
     }
 

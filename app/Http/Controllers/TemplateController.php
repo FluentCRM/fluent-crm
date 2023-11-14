@@ -45,6 +45,19 @@ class TemplateController extends Controller
     {
         $template = Template::find($templateId);
 
+        $footerSettings = false;
+        if($template) {
+            $footerSettings = get_post_meta($template->ID, '_footer_settings', true);
+        }
+
+        if(!$footerSettings) {
+            $footerSettings = [
+                'custom_footer' => 'no',
+                'footer_content' => ''
+            ];
+        }
+
+
         if ($template) {
             $editType = get_post_meta($template->ID, '_edit_type', true);
             if (!$editType) {
@@ -59,7 +72,8 @@ class TemplateController extends Controller
                 'edit_type'       => $editType,
                 'design_template' => get_post_meta($template->ID, '_design_template', true),
                 'settings'        => [
-                    'template_config' => get_post_meta($template->ID, '_template_config', true)
+                    'template_config' => get_post_meta($template->ID, '_template_config', true),
+                    'footer_settings' => $footerSettings
                 ]
             ];
 
@@ -75,7 +89,8 @@ class TemplateController extends Controller
                 'edit_type'       => 'html',
                 'design_template' => $defaultTemplate,
                 'settings'        => [
-                    'template_config' => Helper::getTemplateConfig($defaultTemplate)
+                    'template_config' => Helper::getTemplateConfig($defaultTemplate),
+                    'footer_settings' => $footerSettings
                 ]
             ];
         }
@@ -107,6 +122,10 @@ class TemplateController extends Controller
             $postData['email_subject'] =  $postData['post_title'];
         }
 
+        if(empty($postData['post_excerpt'])) {
+            $postData['post_excerpt'] =  '';
+        }
+
         $postData['post_modified'] = current_time('mysql');
         $postData['post_modified_gmt'] = date('Y-m-d H:i:s');
         $postData['post_date'] = current_time('mysql');
@@ -124,6 +143,7 @@ class TemplateController extends Controller
         update_post_meta($templateId, '_email_subject', Arr::get($templateData, 'email_subject'));
         update_post_meta($templateId, '_edit_type', Arr::get($templateData, 'edit_type'));
         update_post_meta($templateId, '_template_config', Arr::get($templateData, 'settings.template_config'));
+        update_post_meta($templateId, '_footer_settings', Arr::get($templateData, 'settings.footer_settings'));
         update_post_meta($templateId, '_design_template', $designTemplate);
 
         do_action('fluent_crm/email_template_created', $templateId, $templateData);
@@ -156,6 +176,7 @@ class TemplateController extends Controller
         update_post_meta($newTemplateId, '_edit_type', get_post_meta($templateId, '_edit_type', true));
         update_post_meta($newTemplateId, '_template_config', get_post_meta($templateId, '_template_config', true));
         update_post_meta($newTemplateId, '_design_template', get_post_meta($templateId, '_design_template', true));
+        update_post_meta($newTemplateId, '_footer_settings', get_post_meta($templateId, '_footer_settings', true));
 
         do_action('fluent_crm/email_template_duplicated', $newTemplateId, $template);
 
@@ -171,6 +192,15 @@ class TemplateController extends Controller
 
         $templateData = wp_unslash($this->request->getJson('template'));
 
+        $footerSettings =  Arr::get($templateData, 'settings.footer_settings');
+        if($footerSettings) {
+            if (($footerSettings['custom_footer'] == 'yes') && !Helper::hasComplianceText($footerSettings['footer_content'])) {
+                return $this->sendError([
+                    'message' => __('##crm.manage_subscription_url## or ##crm.unsubscribe_url## string is required for compliance. Please include unsubscription or manage subscription link', 'fluent-crm')
+                ]);
+            }
+        }
+
         if(empty($templateData['post_title'])) {
             $templateData['post_title'] = 'Email template created at '.date('Y-m-d H:i');
         }
@@ -185,16 +215,21 @@ class TemplateController extends Controller
             'post_excerpt'
         ]);
 
+
+
         $postData['post_modified'] = current_time('mysql');
         $postData['post_modified_gmt'] = date('Y-m-d H:i:s');
         Template::where('ID', $id)->update($postData);
-
-        do_action('fluent_crm/email_template_updated', $templateData, $oldTemplate);
 
         update_post_meta($id, '_email_subject', Arr::get($templateData, 'email_subject'));
         update_post_meta($id, '_edit_type', Arr::get($templateData, 'edit_type'));
         update_post_meta($id, '_design_template', Arr::get($templateData, 'design_template'));
         update_post_meta($id, '_template_config', Arr::get($templateData, 'settings.template_config'));
+        update_post_meta($id, '_footer_settings', Arr::get($templateData, 'settings.footer_settings'));
+
+        $template = Template::findOrFail($id);
+
+        do_action('fluent_crm/email_template_updated', $templateData, $template);
 
         return $this->sendSuccess([
             'message'     => __('Template successfully updated', 'fluent-crm'),

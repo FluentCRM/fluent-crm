@@ -3,6 +3,7 @@
 namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\Services\Helper;
+use FluentCrm\Framework\Request\Request;
 use FluentCrm\Framework\Support\Arr;
 
 /**
@@ -73,7 +74,7 @@ class DocsController extends Controller
         return $doc;
     }
 
-    public function getAddons()
+    public function getAddons(Request $request)
     {
         $addOns = [
             'fluentform'    => [
@@ -82,7 +83,7 @@ class DocsController extends Controller
                 'is_installed'   => defined('FLUENTFORM'),
                 'learn_more_url' => 'https://wordpress.org/plugins/fluentform/',
                 'settings_url'   => admin_url('admin.php?page=fluent_forms'),
-                'action_text'    => __('Install Fluent Forms', 'fluent-crm'),
+                'action_text'    => $this->isPluginInstalled( 'fluent-form/fluent-form.php' ) ? __('Active Fluent Forms', 'fluent-crm') : __('Install Fluent Forms', 'fluent-crm'),
                 'description'    => __('Collect leads and build any type of forms, accept payments, connect with your CRM with the Fastest Contact Form Builder Plugin for WordPress', 'fluent-crm')
             ],
             'fluentsmtp'    => [
@@ -91,17 +92,8 @@ class DocsController extends Controller
                 'is_installed'   => defined('FLUENTMAIL'),
                 'learn_more_url' => 'https://wordpress.org/plugins/fluent-smtp/',
                 'settings_url'   => admin_url('options-general.php?page=fluent-mail#/'),
-                'action_text'    => __('Install Fluent SMTP', 'fluent-crm'),
+                'action_text'    => $this->isPluginInstalled( 'fluent-smtp/fluent-smtp.php' ) ? __('Active Fluent SMTP', 'fluent-crm') : __('Install Fluent SMTP', 'fluent-crm'),
                 'description'    => __('The Ultimate SMTP and SES Plugin for WordPress. Connect with any SMTP, SendGrid, Mailgun, SES, Sendinblue, PepiPost, Google, Microsoft and more.', 'fluent-crm')
-            ],
-            'fluentconnect' => [
-                'title'          => __('Fluent Connect', 'fluent-crm'),
-                'logo'           => fluentCrmMix('images/fluent-connect.svg'),
-                'is_installed'   => defined('FLUENT_CONNECT_PLUGIN_VERSION'),
-                'learn_more_url' => 'https://wordpress.org/plugins/fluent-connect/',
-                'settings_url'   => admin_url('admin.php?page=fluent-connect#/'),
-                'action_text'    => __('Install Fluent Connect', 'fluent-crm'),
-                'description'    => __('Connect FluentCRM with ThriveCart and create, segment contact and run automation on ThriveCart purchase events.', 'fluent-crm')
             ],
             'fluent-support' => [
                 'title'          => __('Fluent Support', 'fluent-crm'),
@@ -109,13 +101,34 @@ class DocsController extends Controller
                 'is_installed'   => defined('FLUENT_SUPPORT_VERSION'),
                 'learn_more_url' => 'https://wordpress.org/plugins/fluent-connect/',
                 'settings_url'   => admin_url('admin.php?page=fluent-support#/'),
-                'action_text'    => __('Install Fluent Support', 'fluent-crm'),
+                'action_text'    => $this->isPluginInstalled( 'fluent-support/fluent-support.php' ) ? __('Active Fluent Support', 'fluent-crm') : __('Install Fluent Support', 'fluent-crm'),
                 'description'    => __('WordPress Helpdesk and Customer Support Ticket Plugin. Provide awesome support and manage customer queries right from your WordPress dashboard.', 'fluent-crm')
-            ]
+            ],
+            'fluentconnect' => [
+                'title'          => __('Fluent Connect', 'fluent-crm'),
+                'logo'           => fluentCrmMix('images/fluent-connect.svg'),
+                'is_installed'   => defined('FLUENT_CONNECT_PLUGIN_VERSION'),
+                'learn_more_url' => 'https://wordpress.org/plugins/fluent-connect/',
+                'settings_url'   => admin_url('admin.php?page=fluent-connect#/'),
+                'action_text'    => $this->isPluginInstalled( 'fluent-connect/fluent-connect.php' ) ? __('Active Fluent Connect', 'fluent-crm') : __('Install Fluent Connect', 'fluent-crm'),
+                'description'    => __('Connect FluentCRM with ThriveCart and create, segment contact and run automation on ThriveCart purchase events.', 'fluent-crm')
+            ],
         ];
 
-        return [
+        $data = [
             'addons' => $addOns
         ];
+
+        if(in_array('experimental_features', $request->get('with', []))) {
+            $data['experimental_features'] = Helper::getExperimentalSettings();
+        }
+
+        return $data;
     }
+
+    private function isPluginInstalled($plugin)
+    {
+        return file_exists( WP_PLUGIN_DIR . '/' . $plugin );
+    }
+
 }

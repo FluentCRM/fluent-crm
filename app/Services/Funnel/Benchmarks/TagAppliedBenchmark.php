@@ -54,7 +54,7 @@ class TagAppliedBenchmark extends BaseBenchMark
                     'creatable'   => true,
                     'is_multiple' => true,
                     'label'       => __('Select Tags', 'fluent-crm'),
-                    'placeholder' => __('Select Tags', 'fluent-crm')
+                    'placeholder' => __('Select Tags', 'fluent-crm'),
                 ],
                 'select_type' => [
                     'label'      => __('Run When', 'fluent-crm'),

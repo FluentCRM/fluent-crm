@@ -6,12 +6,12 @@ use FluentCrm\Framework\Support\Arr;
 
 class Mailer
 {
-    public static function send($data)
+    public static function send($data, $subscriber = null)
     {
 
-        $headers = static::buildHeaders($data);
+        $headers = static::buildHeaders($data, $subscriber);
 
-        if (apply_filters('fluentcrm_is_simulated_mail', false, $data, $headers)) {
+        if (apply_filters('fluent_crm/is_simulated_mail', false, $data, $headers)) {
             return true;
         }
 
@@ -35,7 +35,7 @@ class Mailer
         );
     }
 
-    protected static function buildHeaders($data)
+    protected static function buildHeaders($data, $subscriber = null)
     {
         $headers[] = 'Content-Type: text/html; charset=UTF-8';
 
@@ -51,9 +51,19 @@ class Mailer
             $headers[] = "Reply-To: $replyTo";
         }
 
-        if (apply_filters('fluencrm_enable_unsub_header', true, $data)) {
+        if (apply_filters('fluent_crm/enable_unsub_header', true, $data)) {
             $sendingEmail = Arr::get($data, 'to.email');
-            if ($sendingEmail) {
+
+            if ($subscriber) {
+
+                $unsubscribeUrl = add_query_arg([
+                    'fluentcrm'   => 1,
+                    'route'       => 'unsubscribe',
+                    'secure_hash' => fluentCrmGetContactSecureHash($subscriber->id)
+                ], site_url('/'));
+
+                $headers[] = 'List-Unsubscribe: <' . $unsubscribeUrl . '>';
+            } else if ($sendingEmail) {
                 $unsubscribeUrl = add_query_arg([
                     'fluentcrm' => 1,
                     'route'     => 'unsubscribe',
@@ -61,9 +71,10 @@ class Mailer
                 ], site_url('/'));
                 $headers[] = 'List-Unsubscribe: <' . $unsubscribeUrl . '>';
             }
+
         }
 
-        return apply_filters('fluentcrm_email_headers', $headers, $data);
+        return apply_filters('fluent_crm/email_headers', $headers, $data);
     }
 
     private static function willIncludeName()

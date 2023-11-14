@@ -111,41 +111,36 @@ abstract class BaseMigrator
 
     }
 
-
     /**
      * Maybe create field options.
      *
      * When importing multi-checkbox or multi-select data, we can save time by
      * auto-populating the options into the FluentCRM custom field config.
      *
-     * @since x.x.x
-     *
      * @param array $mergeData The loaded custom field data.
+     * @since 2.8.34
+     *
      */
-    public function maybeCreateFieldOptions( $mergeData ) {
+    public function maybeCreateFieldOptions($mergeData)
+    {
 
-        $needsUpdate  = false;
+        $needsUpdate = false;
         $customFields = fluentcrm_get_custom_contact_fields();
 
-        foreach ( $mergeData['custom_values'] as $key => $value ) {
-
-            if ( is_array( $value ) ) {
-
-                foreach ( $customFields as $i => $field ) {
-
-                    if ( $key === $field['slug'] && in_array( $field['type'], [ 'checkbox', 'select-multi' ] ) && ! empty( array_diff( $value, $field['options'] ) ) ) {
-
-                        $value                         = array_map( 'sanitize_text_field', $value );
-                        $customFields[ $i ]['options'] = array_merge( $field['options'], array_diff( $value, $field['options'] ) );
-                        $needsUpdate                   = true;
-
+        foreach ($mergeData['custom_values'] as $key => $value) {
+            if (is_array($value)) {
+                foreach ($customFields as $i => $field) {
+                    if ($key === $field['slug'] && in_array($field['type'], ['checkbox', 'select-multi']) && !empty(array_diff($value, $field['options']))) {
+                        $value = array_map('sanitize_text_field', $value);
+                        $customFields[$i]['options'] = array_merge($field['options'], array_diff($value, $field['options']));
+                        $needsUpdate = true;
                     }
                 }
             }
         }
 
-        if ( $needsUpdate ) {
-            fluentcrm_update_option( 'contact_custom_fields', $customFields );
+        if ($needsUpdate) {
+            fluentcrm_update_option('contact_custom_fields', $customFields);
         }
 
     }
@@ -186,6 +181,8 @@ abstract class BaseMigrator
 
         do_action('fluentcrm_tag_created', $tag->id);
 
+        do_action('fluent_crm/tag_created', $tag);
+
         return $tag->id;
     }
 
@@ -199,6 +196,7 @@ abstract class BaseMigrator
         );
 
         do_action('fluentcrm_list_created', $list->id);
+        do_action('fluent_crm/list_created', $list);
 
         return $list->id;
     }

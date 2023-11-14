@@ -3,11 +3,8 @@
 namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\Hooks\Handlers\FunnelHandler;
-use FluentCrm\App\Models\Campaign;
-use FluentCrm\App\Models\CustomEmailCampaign;
 use FluentCrm\App\Models\Funnel;
 use FluentCrm\App\Models\FunnelCampaign;
-use FluentCrm\App\Models\FunnelMetric;
 use FluentCrm\App\Models\FunnelSequence;
 use FluentCrm\App\Models\FunnelSubscriber;
 use FluentCrm\App\Services\Funnel\FunnelHelper;
@@ -246,6 +243,12 @@ class FunnelController extends Controller
         }
 
         return array_values($formattedSequences);
+    }
+
+    public function saveSequencesFallback(Request $request)
+    {
+        $funnelId = $request->get('funnel_id');
+        return $this->saveSequences($request, $funnelId);
     }
 
     public function saveSequences(Request $request, $funnelId)
@@ -696,6 +699,12 @@ class FunnelController extends Controller
         ];
     }
 
+    public function saveEmailActionFallback(Request $request)
+    {
+        $funnelId = $request->get('funnel_id');
+        return $this->saveEmailAction($request, $funnelId);
+    }
+
     public function saveEmailAction(Request $request, $funnelId)
     {
         $funnel = Funnel::findOrFail($funnelId);
@@ -727,7 +736,7 @@ class FunnelController extends Controller
             $funnelCampaignId = $campaign->id;
         }
 
-        if(Arr::get($funnelCampaign, 'design_template') == 'visual_builder') {
+        if (Arr::get($funnelCampaign, 'design_template') == 'visual_builder') {
             $design = Arr::get($funnelCampaign, '_visual_builder_design', []);
             fluentcrm_update_campaign_meta($funnelCampaignId, '_visual_builder_design', $design);
         } else {
@@ -740,6 +749,72 @@ class FunnelController extends Controller
             'type'               => $type,
             'reference_campaign' => $funnelCampaignId,
             'campaign'           => Arr::only($refCampaign->toArray(), array_keys(FunnelCampaign::getMock()))
+        ];
+    }
+
+
+    public function getSyncableContactCounts(Request $request, $funnelId)
+    {
+        $funnel = Funnel::findOrFail($funnelId);
+        $latestAction = \FluentCrm\App\Models\FunnelSequence::where('funnel_id', $funnelId)
+            ->orderBy('sequence', 'DESC')
+            ->first();
+
+        if (!$latestAction) {
+            return [
+                'syncable_count' => 0
+            ];
+        }
+
+        $count = \FluentCrm\App\Models\FunnelSubscriber::where('funnel_id', $funnel->id)
+            ->with(['subscriber'])
+            ->where('status', 'completed')
+            ->whereHas('subscriber', function ($q) {
+                $q->where('status', 'subscribed');
+            })
+            ->whereHas('last_sequence', function ($q) use ($latestAction) {
+                $q->where('action_name', '!=', 'end_this_funnel')
+                    ->where('id', '!=', $latestAction->id)
+                    ->where('sequence', '<', $latestAction->sequence);
+            })->count();
+
+        return [
+            'syncable_count' => $count
+        ];
+    }
+
+    public function syncNewSteps(Request $request, $funnelId)
+    {
+        $funnel = Funnel::findOrFail($funnelId);
+
+        if ($funnel->status != 'published') {
+            return $this->sendError([
+                'message' => __('Funnel status need to be published', 'fluent-crm')
+            ]);
+        }
+
+        if (!defined('FLUENTCAMPAIGN_DIR_FILE')) {
+            return $this->sendError([
+                'message' => __('This feature require latest version of FluentCRM Pro version', 'fluent-crm')
+            ]);
+        }
+
+        $cleanup = new \FluentCampaign\App\Hooks\Handlers\Cleanup();
+
+        if (!method_exists($cleanup, 'syncAutomationSteps')) {
+            return $this->sendError([
+                'message' => __('This feature require latest version of FluentCRM Pro version', 'fluent-crm')
+            ]);
+        }
+
+        $result = $cleanup->syncAutomationSteps($funnel);
+
+        if (is_wp_error($result)) {
+            return $this->sendError($result->get_error_messages());
+        }
+        
+        return [
+            'message' => __('Synced successfully', 'fluent-crm')
         ];
     }
 }

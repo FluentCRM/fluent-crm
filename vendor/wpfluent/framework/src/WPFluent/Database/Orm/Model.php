@@ -895,7 +895,7 @@ abstract class Model implements ArrayAccess, ArrayableInterface, JsonableInterfa
      * @param  string|null  $localKey
      * @return \FluentCrm\Framework\Database\Orm\Relations\HasManyThrough
      */
-    public function hasManyThrough($related, $through, $firstKey = null, $secondKey = null, $localKey = null)
+    public function hasManyThrough($related, $through, $firstKey = null, $secondKey = null, $localKey = null, $parentRelationKey = 'id')
     {
         $through = new $through;
 
@@ -905,7 +905,7 @@ abstract class Model implements ArrayAccess, ArrayableInterface, JsonableInterfa
 
         $localKey = $localKey ?: $this->getKeyName();
 
-        return new HasManyThrough((new $related)->newQuery(), $this, $through, $firstKey, $secondKey, $localKey);
+        return new HasManyThrough((new $related)->newQuery(), $this, $through, $firstKey, $secondKey, $localKey, $parentRelationKey);
     }
 
     /**

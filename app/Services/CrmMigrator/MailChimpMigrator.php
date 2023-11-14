@@ -9,6 +9,7 @@ use FluentCrm\Framework\Support\Arr;
 class MailChimpMigrator extends BaseMigrator
 {
     private $tagNameCache = [];
+    private $taggingArray = [];
 
     public function getInfo()
     {
@@ -192,14 +193,12 @@ class MailChimpMigrator extends BaseMigrator
 
         $params = [
             'offset' => Arr::get($postedData, 'completed', 0),
-            'count'  => $processPerPage,
-            'status' => ''
+            'count'  => $processPerPage
         ];
 
-        $taggingArray = [];
         if(!$isAutoTagMapping) {
             $tagMappings = Arr::get($postedData, 'tags', []);
-            $taggingArray = $this->mapTags($tagMappings);
+            $this->taggingArray = $this->mapTags($tagMappings);
         }
 
         if ($mapSettings['import_active_only'] == 'yes') {
@@ -264,7 +263,7 @@ class MailChimpMigrator extends BaseMigrator
 
             $contact = FluentCrmApi('contacts')->createOrUpdate($data);
 
-            if ($params['status'] == 'subscribed' && $contact && $contact->status != 'subscribed') {
+            if (isset($params['status']) && $params['status'] == 'subscribed' && $contact && $contact->status != 'subscribed') {
                 $oldStatus = $contact->status;
                 $contact->status = 'subscribed';
                 $contact->save();
@@ -311,8 +310,8 @@ class MailChimpMigrator extends BaseMigrator
         }
 
         foreach ($remoteTags as $contactTag) {
-            if (!empty($taggingArray[$contactTag['id']])) {
-                $tagIds[] = $taggingArray[$contactTag['id']];
+            if (!empty($this->taggingArray[$contactTag['id']])) {
+                $tagIds[] = $this->taggingArray[$contactTag['id']];
             }
         }
 

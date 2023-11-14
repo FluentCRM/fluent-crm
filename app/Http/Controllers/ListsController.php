@@ -90,6 +90,8 @@ class ListsController extends Controller
 
         do_action('fluentcrm_list_created', $list->id);
 
+        do_action('fluent_crm/list_created', $list);
+
         return $this->send([
             'lists'   => $list,
             'message' => __('Successfully saved the list.', 'fluent-crm')
@@ -145,6 +147,8 @@ class ListsController extends Controller
 
         do_action('fluentcrm_list_updated', $id);
 
+        do_action('fluent_crm/list_updated', $list);
+
         return $this->send([
             'lists'   => $list,
             'message' => __('Successfully saved the list.', 'fluent-crm'),
@@ -181,7 +185,13 @@ class ListsController extends Controller
 
             $createdIds[] = $list->id;
 
-            do_action('fluentcrm_list_created', $list->id);
+            if($list->wasRecentlyCreated) {
+                do_action('fluentcrm_list_created', $list->id);
+                do_action('fluent_crm/list_created', $list);
+            } else {
+                do_action('fluentcrm_list_updated', $list->id);
+                do_action('fluent_crm/list_updated', $list);
+            }
         }
 
         return $this->sendSuccess([
@@ -200,7 +210,9 @@ class ListsController extends Controller
     public function remove(Request $request, $id)
     {
         Lists::where('id', $id)->delete();
-        do_action('fc_list_deleted', $id);
+        do_action('fluent_crm/list_deleted', $id);
+        do_action('fluentcrm_list_deleted', $id);
+
         return $this->send([
             'message' => __('Successfully removed the list.', 'fluent-crm')
         ]);
@@ -213,7 +225,8 @@ class ListsController extends Controller
 
         foreach ($listIds as $listId) {
             Lists::where('id', $listId)->delete();
-            do_action('fc_list_deleted', $listId);
+            do_action('fluent_crm/list_deleted', $listId);
+            do_action('fluentcrm_list_deleted', $listId);
         }
 
         return $this->sendSuccess([
