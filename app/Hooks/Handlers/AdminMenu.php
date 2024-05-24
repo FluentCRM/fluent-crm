@@ -1016,7 +1016,7 @@ class AdminMenu
                     bottom: 0;
                     background-color: #1e1e1e;
                     color: white;
-                    z-index: 999999;
+                    z-index: 1;
                 }
 
                 .fc-navigation-header a, .fc_backto_wp a {
