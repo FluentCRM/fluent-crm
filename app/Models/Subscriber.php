@@ -609,6 +609,10 @@ class Subscriber extends Model
         });
 
         foreach ($newValues as $key => $value) {
+            if (is_string($value) && str_starts_with($value, '[') && str_ends_with($value, ']')) {
+                $cleanQuotes = trim($value, '[]');
+                $value = explode(",", $cleanQuotes);
+            }
             $exist = $this->meta()->where('key', $key)->first();
             if ($exist) {
                 if ($exist->value == $value) {
