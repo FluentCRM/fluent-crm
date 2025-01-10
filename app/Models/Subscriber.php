@@ -614,6 +614,15 @@ class Subscriber extends Model
                 if ($exist->value == $value) {
                     continue;
                 }
+                $unserialized = maybe_unserialize($exist->value);
+                if (is_array($unserialized)) {
+                    if (in_array($value, $unserialized)) {
+                        continue;
+                    } else {
+                        $unserialized[] = $value;
+                        $value = $unserialized;
+                    }
+                }
                 $updateValues[$key] = $value;
                 $exist->fill(['value' => $value])->save();
             } else {
