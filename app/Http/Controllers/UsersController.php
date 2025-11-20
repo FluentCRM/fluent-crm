@@ -52,6 +52,14 @@ class UsersController extends Controller
             'map', 'tags', 'lists', 'roles', 'update', 'new_status', 'double_optin_email', 'import_silently'
         ]);
 
+        /**
+         * Filter the number of subscribers to process per request while importing users in FluentCRM.
+         *
+         * This filter allows you to modify the number of subscribers that are processed
+         * in a single request when processing subscribers in FluentCRM.
+         *
+         * @param int $limit The number of subscribers to process per request. Default is 100.
+         */
         $limit = apply_filters('fluent_crm/process_subscribers_per_request', 100);
         $page = absint($request->get('page', 1));
 

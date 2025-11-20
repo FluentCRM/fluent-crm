@@ -46,7 +46,10 @@ class MapIterator extends IteratorIterator
 
     /**
      * Get the value of the current element
+     *
+     * @return mixed
      */
+    #[\ReturnTypeWillChange]
     public function current()
     {
         $iterator = $this->getInnerIterator();

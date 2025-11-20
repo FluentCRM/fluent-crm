@@ -24,7 +24,9 @@ class Meta extends Model
         'object_type',
         'object_id',
         'key',
-        'value'
+        'value',
+        'created_at',
+        'updated_at'
     ];
 
     public function setValueAttribute($value)

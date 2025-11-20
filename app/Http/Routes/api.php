@@ -70,9 +70,17 @@ $router->prefix('subscribers')->withPolicy('SubscriberPolicy')->group(function (
     $router->put('{id}/notes/{note_id}', 'SubscriberController@updateNote')->int('id')->int('note_id');
     $router->delete('{id}/notes/{note_id}', 'SubscriberController@deleteNote')->int('id')->int('note_id');
     $router->get('{id}/external_view', 'SubscriberController@getExternalView')->int('id');
+    $router->post('{id}/external_view', 'SubscriberController@saveExternalViewData')->int('id');
     $router->get('{id}/info-widgets', 'SubscriberController@getInfoWidgets')->int('id');
 
     $router->get('search-contacts', 'SubscriberController@searchContacts');
+
+    $router->get('{id}/tracking-events', 'SubscriberController@getTrackingEvents')->int('id');
+    $router->post('track-event', 'SubscriberController@trackEvent');
+
+    $router->get('{id}/url-metrics', 'SubscriberController@getUrlMetrics')->int('id');
+
+    $router->post('bulk-add-update', 'SubscriberController@bulkAddUpdate');
 
 });
 
@@ -109,14 +117,19 @@ $router->prefix('campaigns')->withPolicy('CampaignPolicy')->group(function ($rou
     $router->post('{id}/un-schedule', 'CampaignController@unSchedule')->int('id');
     $router->get('{id}/processing-stat', 'CampaignController@processingStat')->int('id');
 
+    $router->get('{id}/share-url', 'CampaignController@getShareUrl')->int('id');
+
 
     $router->get('{id}/status', 'CampaignController@getCampaignStatus')->int('id');
     $router->get('{id}/overview_stats', 'CampaignController@getOverviewStats')->int('id');
     $router->get('{id}/link-report', 'CampaignAnalyticsController@getLinksReport')->int('id');
     $router->get('{id}/revenues', 'CampaignAnalyticsController@getRevenueReport')->int('id');
+    $router->post('{id}/revenues/resync', 'CampaignAnalyticsController@getRevenueReSyncReport')->int('id');
     $router->get('{id}/unsubscribers', 'CampaignAnalyticsController@getUnsubscribers')->int('id');
 
     $router->get('{id}/contacts-by-segment', 'CampaignAnalyticsController@getSegmentedContacts')->int('id');
+
+    $router->put('{id}/update-labels', 'CampaignController@updateLabels')->int('id');
 });
 
 $router->prefix('templates')->withPolicy('TemplatePolicy')->group(function ($router) {
@@ -133,6 +146,7 @@ $router->prefix('templates')->withPolicy('TemplatePolicy')->group(function ($rou
     $router->post('do-bulk-action', 'TemplateController@handleBulkAction');
 
     $router->post('set-global-style', 'TemplateController@setGlobalStyle');
+    $router->get('/built-in-templates', 'TemplateController@getBuiltInTemplates');
 
 });
 
@@ -144,7 +158,12 @@ $router->prefix('funnels')->withPolicy('FunnelPolicy')->group(function ($router)
 
     $router->get('/', 'FunnelController@funnels');
     $router->post('/', 'FunnelController@create');
+    $router->get('templates', 'FunnelController@getTemplates');
+    $router->post('create-from-template', 'FunnelController@createFromTemplate');
     $router->post('import', 'FunnelController@importFunnel');
+
+    $router->get('all-activities', 'FunnelController@getAllActivities');
+    $router->post('remove-bulk-subscribers', 'FunnelController@removeBulkSubscribers');
 
     $router->get('triggers', 'FunnelController@getTriggersRest');
 
@@ -158,10 +177,13 @@ $router->prefix('funnels')->withPolicy('FunnelPolicy')->group(function ($router)
     $router->put('{id}', 'FunnelController@updateFunnelProperty')->int('id');
     $router->put('{id}/change-trigger', 'FunnelController@changeTrigger')->int('id');
     $router->post('{id}/sequences', 'FunnelController@saveSequences')->int('id');
+    $router->put('funnel/{id}/title', 'FunnelController@updateFunnelTitle')->int('id');
 
     $router->post('{id}/sequences/save-email-action', 'FunnelController@saveEmailAction')->int('id');
 
     $router->get('{id}/subscribers', 'FunnelController@getSubscribers')->int('id');
+    $router->get('{id}/subscribers/{contact_id}', 'FunnelController@getSubscriberReporting')->int('id')->int('contact_id');
+
     $router->delete('{id}/subscribers', 'FunnelController@deleteSubscribers')->int('id');
     $router->delete('{id}', 'FunnelController@delete')->int('id');
     $router->get('{id}/report', 'FunnelController@report')->int('id');
@@ -174,8 +196,11 @@ $router->prefix('funnels')->withPolicy('FunnelPolicy')->group(function ($router)
     $router->get('{id}/syncable-counts', 'FunnelController@getSyncableContactCounts')->int('id');
     $router->post('{id}/sync-new-steps', 'FunnelController@syncNewSteps')->int('id');
 
-});
+    $router->post('send-test-webhook', 'FunnelController@sendTestWebhook');
 
+    $router->put('{id}/update-labels', 'FunnelController@updateLabels')->int('id');
+
+});
 
 /*
  * Reporting Route
@@ -191,6 +216,7 @@ $router->prefix('reports')->withPolicy('ReportPolicy')->group(function ($router)
     $router->get('options', 'OptionsController@index');
     $router->get('ajax-options', 'OptionsController@getAjaxOptions');
     $router->get('taxonomy-terms', 'OptionsController@getTaxonomyTerms');
+    $router->get('cascade_selections', 'OptionsController@getCascadeSelections');
 
     $router->get('emails', 'ReportingController@getEmails');
     $router->delete('emails', 'ReportingController@deleteEmails');
@@ -198,6 +224,7 @@ $router->prefix('reports')->withPolicy('ReportPolicy')->group(function ($router)
     $router->get('advanced-providers', 'ReportingController@getAdvancedReportProviders');
 
     $router->get('ping', 'ReportingController@ping');
+
 });
 
 
@@ -233,6 +260,8 @@ $router->prefix('setting')->withPolicy('SettingsPolicy')->group(function ($route
 
     $router->get('rest-keys', 'SettingsController@getRestKeys');
     $router->post('rest-keys', 'SettingsController@createRestKey');
+    $router->delete('rest-keys', 'SettingsController@deleteRestKey');
+
 
     $router->get('integrations', 'SettingsController@getIntegrations');
     $router->post('integrations', 'SettingsController@saveIntegration');
@@ -242,15 +271,28 @@ $router->prefix('setting')->withPolicy('SettingsPolicy')->group(function ($route
 
     $router->get('experiments', 'SettingsController@getExperimentalSettings');
     $router->post('experiments', 'SettingsController@updateExperimentalSettings');
+    $router->get('experiments/campaigns', 'SettingsController@getCampaigns');
+
+    $router->get('system-logs', 'SystemLogController@index');
+    $router->get('system-logs/reset', 'SystemLogController@deleteAll');
+
+    $router->get('activity-logs', 'ActivityLogController@index');
+    $router->get('activity-logs/reset', 'ActivityLogController@deleteAll');
 
 });
 
 
 $router->prefix('custom-fields')->withPolicy('CustomFieldsPolicy')->group(function ($router) {
-
     $router->get('contacts', 'CustomContactFieldsController@getGlobalFields');
     $router->put('contacts', 'CustomContactFieldsController@saveGlobalFields');
+    $router->put('contacts/update_group_name', 'CustomContactFieldsController@updateGroupName');
+});
 
+$router->prefix('labels')->withPolicy('CustomFieldsPolicy')->group(function ($router) {
+    $router->get('/', 'GlobalLabelController@getlabels');
+    $router->post('/', 'GlobalLabelController@create');
+    $router->put('{id}', 'GlobalLabelController@update')->int('id');
+    $router->delete('{id}', 'GlobalLabelController@delete')->int('id');
 });
 
 $router->prefix('webhooks')->withPolicy('WebhookPolicy')->group(function ($router) {
@@ -354,5 +396,9 @@ $router->prefix('companies')->withPolicy('CompanyPolicy')->group(function ($rout
 
     $router->post('csv-import', 'CsvController@importCompanies');
 
+    $router->get('custom-fields', 'CompanyController@getCustomGlobalFields');
+    $router->put('custom-fields', 'CompanyController@saveCustomGlobalFields');
+
+    $router->get('{id}/custom_tab_view', 'CompanyController@getCompanyExternalView')->int('id');
 });
 

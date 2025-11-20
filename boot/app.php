@@ -6,6 +6,8 @@ use FluentCrm\App\Hooks\Handlers\DeactivationHandler;
 
 return function ($file) {
 
+    require_once FLUENTCRM_PLUGIN_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php';
+
     register_activation_hook($file, function ($network_wide) use ($file) {
         (new ActivationHandler)->handle($network_wide);
     });
@@ -38,21 +40,29 @@ return function ($file) {
 
         do_action('fluentcrm_loaded', $app);
         do_action('fluentcrm_addons_loaded', $app);
+
+        add_action('init', function () use ($app) {
+            do_action('fluent_crm/after_init', $app);
+        }, 1000);
+
     });
 
     add_filter('cron_schedules', function ($schedules) {
         if (!is_array($schedules)) {
             $schedules = [];
         }
+
         if (!isset($schedules['fluentcrm_every_minute'])) {
             $schedules['fluentcrm_every_minute'] = array(
                 'interval' => 60,
-                'display'  => esc_html__('Every Minute (FluentCRM)', 'fluentform'),
+                'display'  => esc_html__('Every Minute (FluentCRM)', 'fluent-crm'),
             );
+        }
 
+        if (!isset($schedules['fluentcrm_scheduled_five_minute_tasks'])) {
             $schedules['fluentcrm_scheduled_five_minute_tasks'] = array(
                 'interval' => 300,
-                'display'  => esc_html__('Every 5 Minutes (FluentCRM)', 'fluentform'),
+                'display'  => esc_html__('Every 5 Minutes (FluentCRM)', 'fluent-crm'),
             );
         }
 
@@ -60,27 +70,83 @@ return function ($file) {
     }, 11);
 
     add_action('fluentcrm_loading_app', function () {
+
+        if (!as_next_scheduled_action('fluentcrm_scheduled_every_minute_tasks')) {
+            as_schedule_recurring_action(time(), 60, 'fluentcrm_scheduled_every_minute_tasks', [], 'fluent-crm');
+        }
+
         $hookName = 'fluentcrm_scheduled_minute_tasks';
         if (!wp_next_scheduled($hookName)) {
             wp_schedule_event(time(), 'fluentcrm_every_minute', $hookName);
         }
 
-        $dailyHook = 'fluentcrm_scheduled_hourly_tasks';
-        if (!wp_next_scheduled($dailyHook)) {
-            wp_schedule_event(time(), 'hourly', $dailyHook);
+        $hourlyHook = 'fluentcrm_scheduled_hourly_tasks';
+        if (!wp_next_scheduled($hourlyHook)) {
+            wp_schedule_event(time() + 100, 'hourly', $hourlyHook);
         }
 
         $hookName = 'fluentcrm_scheduled_five_minute_tasks';
         if (!wp_next_scheduled($hookName)) {
-            wp_schedule_event(time(), 'fluentcrm_scheduled_five_minute_tasks', $hookName);
+            wp_schedule_event(time() + 5, 'fluentcrm_every_minute', $hookName);
         }
 
         $weeklyHook = 'fluentcrm_scheduled_weekly_tasks';
         if (!wp_next_scheduled($weeklyHook)) {
-            wp_schedule_event(time(), 'weekly', $weeklyHook);
+            wp_schedule_event(time() + 1000, 'weekly', $weeklyHook);
         }
 
-    }, 10);
+        $dailyHook = 'fluentcrm_scheduled_daily_tasks';
+        if (!wp_next_scheduled($dailyHook)) {
+            wp_schedule_event(time() + 500, 'daily', $dailyHook);
+        }
 
-    require_once FLUENTCRM_PLUGIN_PATH.'app/Services/Libs/action-scheduler/action-scheduler.php';
+        /*
+         * The below schedule is powered by Action Scheduler by WooCommerce
+         * It will run every day.
+         */
+        if (false === as_next_scheduled_action( 'fluent_crm_ascheduler_runs_daily' ) ) {
+            as_schedule_recurring_action( strtotime('midnight today'), DAY_IN_SECONDS, 'fluent_crm_ascheduler_runs_daily', [], 'fluent-crm' );
+        }
+        /*
+         *
+         * @todo: Handle Duplicate Schedules and we can remove this code at the end of October 2024
+         */
+        $crons = _get_cron_array();
+        $cronMaps = [
+            'fluentcrm_scheduled_minute_tasks'      => 'fluentcrm_every_minute',
+            'fluentcrm_scheduled_hourly_tasks'      => 'hourly',
+            'fluentcrm_scheduled_five_minute_tasks' => 'fluentcrm_every_minute',
+            'fluentcrm_scheduled_weekly_tasks'      => 'weekly',
+            'fluentcrm_scheduled_daily_tasks'       => 'daily'
+        ];
+
+        $occurrences = [];
+        $multiples = [];
+
+        foreach ($crons as $time => $hooks) {
+            foreach ($hooks as $hook => $hook_events) {
+                if (!isset($cronMaps[$hook])) {
+                    continue;
+                }
+
+                if (isset($occurrences[$hook])) {
+                    $multiples[$hook] = isset($multiples[$hook]) ? $multiples[$hook] + 1 : 1;
+                    continue;
+                }
+
+                $occurrences[$hook] = 1;
+            }
+        }
+
+        if ($multiples) {
+            foreach ($multiples as $scheduleKey => $multiple) {
+                wp_clear_scheduled_hook($scheduleKey);
+                $mapName = $cronMaps[$scheduleKey];
+                wp_schedule_event(time() + 100, $mapName, $scheduleKey);
+            }
+        }
+
+        // <--- Done Handling Duplicate Schedules
+
+    }, 10);
 };

@@ -18,7 +18,9 @@ class Meta
         $table = $wpdb->prefix .'fc_meta';
         $indexPrefix = $wpdb->prefix .'fc_mt_';
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $sql = "CREATE TABLE $table (
                 `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
                 `object_type` VARCHAR(50) NOT NULL,
@@ -33,6 +35,7 @@ class Meta
             ) $charsetCollate;";
             dbDelta($sql);
         } else {
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $indexes = $wpdb->get_results("SHOW INDEX FROM $table");
             $indexedColumns = [];
             foreach ($indexes as $index) {
@@ -40,8 +43,8 @@ class Meta
             }
 
             if(!in_array('key', $indexedColumns)) {
-                $sql = "ALTER TABLE {$table} ADD INDEX `{$indexPrefix}_mto_id_key` (`key`);";
-                $wpdb->query($sql);
+                // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+                $wpdb->query("ALTER TABLE {$table} ADD INDEX `{$indexPrefix}_mto_id_key` (`key`);");
             }
         }
     }

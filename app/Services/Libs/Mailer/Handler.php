@@ -2,119 +2,127 @@
 
 namespace FluentCrm\App\Services\Libs\Mailer;
 
-use FluentCrm\App\Models\Campaign;
 use FluentCrm\App\Models\CampaignEmail;
+use FluentCrm\App\Models\SubscriberPivot;
 use FluentCrm\App\Services\Helper;
 use FluentCrm\Framework\Support\Arr;
 
-class Handler
+class Handler extends BaseHandler
 {
-    protected $startedAt = null;
+    protected $runnerTitle = 'Handler::handle';
 
-    protected $campaignId = false;
-
-    protected $emailLimitPerSecond = 0;
+    protected $sendingPerChunk = 20;
 
     protected $maximumProcessingTime = 50;
 
-    protected $dispatchedWithinOneSecond = 0;
+    protected $optionKey = 'fluentcrm_is_sending_emails';
 
-    protected $hadJobs = false;
-
-    public function handle($campaignId = null)
+    public function handle()
     {
-        if (did_action('fluent_crm/sending_emails_starting')) {
-            return false;
+        if (!$this->isSystemOk()) {
+            return true; // Early return
         }
 
-        if (apply_filters('fluent_crm/disable_email_processing', false)) {
-            return false;
-        }
-
-        $this->maximumProcessingTime = fluentCrmMaxRunTime();
-
-        $sendingPerChunk = apply_filters('fluent_crm/email_sending_per_chunk', 20);
+        Helper::debugLog('Running Scheduler -> ' . $this->calledFrom, 'Handler::handle');
 
         Helper::maybeDisableEmojiOnEmail();
 
         try {
-            $this->campaignId = $campaignId;
-            if ($this->isProcessing()) {
-                return false;
-            }
-
             $this->processing();
             $this->handleFailedLog();
             $this->startedAt = microtime(true);
-            $startedTimeStamp = time();
-            $result = $this->processBatchEmails($startedTimeStamp, $campaignId, $sendingPerChunk);
+            $result = $this->processBatchEmails();
+
+            if (is_wp_error($result)) {
+                Helper::debugLog('Error at Mailer::handle', $result->get_error_message(), 'error');
+                update_option($this->optionKey, null);
+                $this->logSentCount();
+                return true;
+            }
 
             if ($result === 'time_up') {
-                return false;
-            }
-
-        } catch (\Exception $e) {
-
-        }
-
-        $hadJobs = $this->hadJobs;
-        if ($hadJobs || random_int(0, 50) > 20) { // sometimes we want to check this
-            $dateStamp = date('Y-m-d H:i:s', ( current_time('timestamp') - $this->maximumProcessingTime - 20 ));
-
-            CampaignEmail::where('status', 'processing')
-                ->where('updated_at', '<', $dateStamp)
-                ->update([
-                    'status'       => 'pending'
-                ]);
-        }
-
-        update_option(FLUENTCRM . '_is_sending_emails', null);
-
-        if (!$hadJobs) {
-            do_action('fluentcrm_scheduled_maybe_regular_tasks');
-        }
-    }
-
-    protected function processBatchEmails($startedTimeStamp, $campaignId = null, $perBatch = 10)
-    {
-        if ((time() - $startedTimeStamp) > $this->maximumProcessingTime) {
-            update_option(FLUENTCRM . '_is_sending_emails', null);
-            if (!$this->memory_exceeded()) {
                 $this->callBackGround();
+                $this->logSentCount();
+                return true;
             }
-            return 'time_up';
+        } catch (\Exception $e) {
+            Helper::debugLog('Exception at Mailer::handle', $e->getMessage(), 'error');
         }
 
-        $emails = $this->getNextBatchEmails($campaignId, $perBatch);
+        $this->logSentCount();
 
-        if ($emails->isEmpty()) {
-            update_option(FLUENTCRM . '_is_sending_emails', null);
-            return 'empty';
+        update_option($this->optionKey, null);
+
+        if ($this->sentCount || random_int(0, 50) > 20) { // sometimes we want to check this
+            $lastChecked = fluentCrmGetOptionCache('_fcrm_last_email_process_cleanup', 600);
+            if (!$lastChecked || time() - $lastChecked > 70) {
+                $dateStamp = gmdate('Y-m-d H:i:s', (current_time('timestamp') - $this->maximumProcessingTime - 30));
+                CampaignEmail::where('status', 'processing')
+                    ->where('updated_at', '<', $dateStamp)
+                    ->update([
+                        'status' => 'pending'
+                    ]);
+                fluentCrmSetOptionCache('_fcrm_last_email_process_cleanup', time(), 600);
+            }
         }
 
+        if (!$this->sentCount) {
+            do_action('fluentcrm_scheduled_maybe_regular_tasks');
+            do_action('fluent_crm_process_automation');
+        }
 
-        $this->hadJobs = true;
-        $this->updateProcessTime();
-        $this->sendEmails($emails);
-
-        usleep(5000); // 5 miliseconds sleep
-
-        return $this->processBatchEmails($startedTimeStamp, $campaignId, $perBatch);
+        return true;
     }
 
-    protected function getNextBatchEmails($campaignId = null, $limit = 10)
+    private function isSystemOk()
+    {
+        $this->calledFrom = Arr::get($_REQUEST, 'action') == 'fluentcrm-post-campaigns-send-now' ? 'ajax' : 'cron';
+
+        if ($this->calledFrom == 'cron') {
+            fluentcrm_update_option($this->optionKey . '_last_called', time());
+        }
+
+        if (did_action('fluent_crm/sending_emails_starting') || apply_filters('fluent_crm/disable_email_processing', false)) {
+            return false;
+        }
+
+        $this->startingTimeStamp = time();
+        $this->isMultiThread = Helper::willMultiThreadEmail();
+
+        if ($this->isMultiThread) {
+            if (!as_next_scheduled_action('fluent_crm_send_multi_thread_emails')) {
+                Helper::debugLog('Scheduling multi thread emails', 'extended log');
+                as_schedule_recurring_action(time(), 60, 'fluent_crm_send_multi_thread_emails', [], 'fluent-crm', false);
+            }
+        }
+
+        if ($this->memoryExceeded()) {
+            Helper::debugLog('Mailer Memory Exceeded at ' . $this->runnerTitle, 'Memory Limit: ' . fluentCrmGetMemoryLimit() . '<br />Current Usage: ' . memory_get_usage(true));
+            return false;
+        }
+
+        $systemMaxProcessingTime = fluentCrmMaxRunTime();
+
+        if ($this->maximumProcessingTime > $systemMaxProcessingTime) {
+            $this->maximumProcessingTime = $systemMaxProcessingTime;
+        }
+
+        if ($this->isProcessing()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    protected function getNextBatchEmails()
     {
         $currentTime = current_time('mysql');
 
         $emails = CampaignEmail::whereIn('status', ['pending', 'scheduled'])
-            ->when($campaignId, function ($query) use ($campaignId) {
-                return $query->where('campaign_id', $campaignId);
-            })
             ->where('scheduled_at', '<=', $currentTime)
-            ->whereNotNull('scheduled_at')
             ->with('campaign', 'subscriber')
-            ->orderBy('scheduled_at', 'ASC')
-            ->limit($limit)
+            ->orderBy('scheduled_at', 'DESC')
+            ->limit($this->sendingPerChunk)
             ->get();
 
         $ids = $emails->pluck('id')->toArray();
@@ -123,8 +131,8 @@ class Handler
             fluentCrmDb()->table('fc_campaign_emails')
                 ->whereIn('id', $ids)
                 ->update([
-                    'status'       => 'processing',
-                    'updated_at'   => $currentTime
+                    'status'     => 'processing',
+                    'updated_at' => $currentTime
                 ]);
         }
 
@@ -133,6 +141,10 @@ class Handler
 
     public function processSubscriberEmail($subscriberId)
     {
+        if (!$this->isSystemOk()) {
+            return;
+        }
+
         $emailCollection = CampaignEmail::whereIn('status', ['pending', 'scheduled'])
             ->where('scheduled_at', '<=', current_time('mysql'))
             ->whereNotNull('scheduled_at')
@@ -148,221 +160,8 @@ class Handler
                     'status'     => 'processing',
                     'updated_at' => current_time('mysql')
                 ]);
-
             $this->sendEmails($emailCollection);
         }
-    }
-
-    protected function isProcessing()
-    {
-        $lastProcessStartedAt = get_option(FLUENTCRM . '_is_sending_emails');
-
-        if (!$lastProcessStartedAt) {
-            return false;
-        }
-
-        if ($this->seemsStuck($lastProcessStartedAt)) {
-            return false;
-        }
-
-        return true;
-    }
-
-    protected function processing()
-    {
-        update_option(FLUENTCRM . '_is_sending_emails', time());
-    }
-
-    protected function updateProcessTime()
-    {
-        update_option(FLUENTCRM . '_is_sending_emails', time());
-    }
-
-    protected function seemsStuck($lastProcessStartedAt)
-    {
-        if ($lastProcessStartedAt && time() - $lastProcessStartedAt > 60) {
-            return true;
-        }
-        return false;
-    }
-
-    protected function sendEmails($campaignEmails)
-    {
-        do_action('fluent_crm/sending_emails_starting', $campaignEmails);
-
-        if (defined('FLUENTMAIL')) {
-            add_filter('fluentmail_will_log_email', 'fluentcrm_maybe_disable_fsmtp_log', 10, 2);
-        }
-
-        $failedIds = [];
-        $sentIds = [];
-
-        foreach ($campaignEmails as $email) {
-            if ($this->reachedEmailLimitPerSecond()) {
-                $this->updateEmailsStatus($sentIds, 'sent');
-                $sentIds = [];
-                $this->updateEmailsStatus($failedIds, 'failed');
-                $failedIds = [];
-                $this->restartWhenOneSecondExceeds();
-            }
-
-            /*
-             * We are doing an extra query to make sure we are not send duplicate emails
-             */
-            fluentCrmDb()->table('fc_campaign_emails')
-                ->where('id', $email->id)
-                ->update([
-                    'status' => 'sent'
-                ]);
-
-            // Check again if the contact is in subscribed status or not
-            // If not then we will cancel the email
-            if($email->subscriber && $email->subscriber->status != 'subscribed') {
-                $email->status = 'cancelled';
-                $email->save();
-                continue;
-            }
-
-            $response = Mailer::send($email->data(), $email->subscriber);
-
-            $this->dispatchedWithinOneSecond++;
-
-            if (is_wp_error($response)) {
-                $failedIds[] = $email->id;
-            } else {
-                $sentIds[] = $email->id;
-            }
-        }
-
-        $this->updateEmailsStatus($sentIds, 'sent');
-        $this->updateEmailsStatus($failedIds, 'failed');
-
-        if (defined('FLUENTMAIL')) {
-            remove_filter('fluentmail_will_log_email', 'fluentcrm_maybe_disable_fsmtp_log', 10);
-        }
-
-        do_action('fluentcrm_sending_emails_done', $campaignEmails);
-    }
-
-    protected function reachedEmailLimitPerSecond()
-    {
-        $emailLimitPerSecond = $this->getEmailLimitPerSecond();
-        return ($emailLimitPerSecond && $this->dispatchedWithinOneSecond >= $emailLimitPerSecond);
-    }
-
-    protected function restartWhenOneSecondExceeds()
-    {
-        $sleepMicroSecond = 1000000 - (microtime(true) - $this->startedAt) * 1000000;
-        if ($sleepMicroSecond > 0) {
-            usleep(ceil($sleepMicroSecond));
-        }
-
-        $this->dispatchedWithinOneSecond = 0;
-        $this->startedAt = microtime(true);
-    }
-
-    protected function getEmailLimitPerSecond()
-    {
-        if ($this->emailLimitPerSecond) {
-            return $this->emailLimitPerSecond;
-        }
-
-        $emailSettings = fluentcrmGetGlobalSettings('email_settings', []);
-
-        if (!empty($emailSettings['emails_per_second'])) {
-            $limit = intval($emailSettings['emails_per_second']);
-        } else {
-            $limit = 14;
-        }
-
-        if (!$limit || $limit < 2) {
-            $limit = 2;
-        }
-
-        $this->emailLimitPerSecond = $limit;
-    }
-
-    public function finishProcessing()
-    {
-        return $this->markArchiveCampaigns();
-    }
-
-    protected function markArchiveCampaigns()
-    {
-        // get the scheduled or working  campaigns where scheduled_at is five minutes ago
-        $campaigns = Campaign::whereIn('status', ['working', 'scheduled'])
-            ->whereDoesntHave('emails', function ($query) {
-                $query->whereIn('status', ['scheduling', 'pending', 'scheduled', 'processing', 'draft']);
-                return $query;
-            })
-            ->withoutGlobalScope('type')
-            ->whereIn('type', fluentCrmAutoProcessCampaignTypes())
-            ->where('scheduled_at', '<', date('Y-m-d H:i:s', current_time('timestamp') - 300))
-            ->get();
-
-        if (!$campaigns->isEmpty()) {
-            Campaign::whereIn('id', array_unique($campaigns->pluck('id')->toArray()))
-                ->withoutGlobalScope('type')
-                ->update([
-                    'status' => 'archived'
-                ]);
-            return true;
-        }
-
-        return false;
-    }
-
-    protected function jobCompleted()
-    {
-        // If we've still some campaigns in working mode then they are stuck so
-        // Mark those campaigns and their pending emails as purged, so we can show
-        // those campaigns in the campaign's page (index) allowed to edit the campaign.
-        foreach (Campaign::withoutGlobalScope('type')->where('status', 'working')->get() as $campaign) {
-
-            $hasPending = $campaign->emails()->whereIn('status', ['draft', 'pending', 'scheduled', 'processing'])->count();
-            if ($hasPending) {
-                continue;
-            }
-
-            $hasSent = $campaign->emails()->where('status', 'sent')->count();
-            $hasFailed = $campaign->emails()->where('status', 'failed')->count();
-
-            if ($hasSent) {
-                $campaign->status = 'archived';
-                $campaign->save();
-            } else if (!$hasSent && !$hasFailed) {
-                $campaign->status = 'purged';
-                $campaign->save();
-            }
-
-        }
-    }
-
-    protected function handleFailedLog()
-    {
-        $campaignId = $this->campaignId;
-        add_action('wp_mail_failed', function ($error) use ($campaignId) {
-            $data = $error->get_error_data();
-            $to = Arr::get($data, 'to');
-            if ($to) {
-                if (is_array($to)) {
-                    $to = $to[0];
-                }
-            }
-
-            if (!$to) {
-                return;
-            }
-
-            CampaignEmail::where('campaign_id', $campaignId)
-                ->where('email_address', $to)
-                ->limit(1)
-                ->orderBy('id', 'DESC')
-                ->update([
-                    'status' => 'failed',
-                    'note'   => $error->get_error_message()
-                ]);
-        });
     }
 
     public function sendDoubleOptInEmail($subscriber)
@@ -371,7 +170,20 @@ class Handler
             return false; // already subscribed
         }
 
-        $config = Helper::getDoubleOptinSettings();
+        $listIdOfSubscriber = Helper::latestListIdOfSubscriber($subscriber->id);
+        $config = null;
+        if ($listIdOfSubscriber) {
+            $globalDoubleOptin = fluentcrm_get_list_meta($listIdOfSubscriber, 'global_double_optin');
+            if ($globalDoubleOptin && $globalDoubleOptin->value == 'no') {
+                $meta = fluentcrm_get_meta($listIdOfSubscriber, 'FluentCrm\App\Models\Lists', 'double_optin_settings', []);
+                $config = $meta ? $meta->value : null;
+            }
+        }
+
+        if (!$config) {
+            $config = Helper::getDoubleOptinSettings();
+        }
+
         if (!Arr::get($config, 'email_subject') || !Arr::get($config, 'email_body')) {
             return false; // is not valid
         }
@@ -384,7 +196,7 @@ class Handler
             $emailPreHeader = apply_filters('fluent_crm/parse_campaign_email_text', $config['email_pre_header'], $subscriber);
         }
 
-        $url = site_url('?fluentcrm=1&route=confirmation&hash=' . $subscriber->hash . '&secure_hash='.$subscriber->getSecureHash());
+        $url = site_url('?fluentcrm=1&route=confirmation&hash=' . $subscriber->hash . '&secure_hash=' . $subscriber->getSecureHash());
 
         $emailBody = apply_filters('fluent_crm/double_optin_email_body', $emailBody, $subscriber);
         $emailSubject = apply_filters('fluent_crm/double_optin_email_subject', $emailSubject, $subscriber);
@@ -414,7 +226,8 @@ class Handler
 
         $data = [
             'to'      => [
-                'email' => $subscriber->email
+                'email' => $subscriber->email,
+                'name'  => $subscriber->full_name
             ],
             'subject' => $emailSubject,
             'body'    => $emailBody,
@@ -426,98 +239,48 @@ class Handler
         return true;
     }
 
-
-    /**
-     * Memory exceeded
-     *
-     * Ensures the batch process never exceeds 90% of the maximum WordPress memory.
-     *
-     * Based on WP_Background_Process::memory_exceeded()
-     *
-     * @return bool
-     */
-    protected function memory_exceeded()
-    {
-        $memory_limit = $this->get_memory_limit() * 0.70;
-        $current_memory = memory_get_usage(true);
-
-        $memory_exceeded = $current_memory >= $memory_limit;
-
-        return apply_filters('fluentcrm_memory_exceeded', $memory_exceeded, $this);
-    }
-
-    /**
-     * Get memory limit
-     *
-     * @return int
-     */
-    public function get_memory_limit()
-    {
-        if (function_exists('ini_get')) {
-            $memory_limit = ini_get('memory_limit');
-        } else {
-            $memory_limit = '128M'; // Sensible default, and minimum required by WooCommerce
-        }
-
-        if (!$memory_limit || -1 === $memory_limit || '-1' === $memory_limit) {
-            // Unlimited, set to 12GB.
-            $memory_limit = '12G';
-        }
-
-        if (function_exists('wp_convert_hr_to_bytes')) {
-            return wp_convert_hr_to_bytes($memory_limit);
-        }
-
-        $value = strtolower(trim($memory_limit));
-        $bytes = (int)$value;
-
-        if (false !== strpos($value, 'g')) {
-            $bytes *= GB_IN_BYTES;
-        } elseif (false !== strpos($value, 'm')) {
-            $bytes *= MB_IN_BYTES;
-        } elseif (false !== strpos($value, 'k')) {
-            $bytes *= KB_IN_BYTES;
-        }
-
-        return min($bytes, PHP_INT_MAX);
-    }
-
     private function callBackGround()
     {
-        wp_remote_post(admin_url('admin-ajax.php'), [
-            'sslverify' => false,
-            'blocking'  => false,
-            'body'      => [
-                'campaign_id' => $this->campaignId,
-                'retry'       => 1,
-                'time'        => time(),
-                'action'      => 'fluentcrm-post-campaigns-send-now'
-            ]
-        ]);
-    }
-
-    protected function updateEmailsStatus($ids, $status)
-    {
-        if (!$ids) {
+        if ($this->memoryExceeded()) {
+            Helper::debugLog('Handler::callBackGround Memory Exceeded', 'Memory Limit: ' . fluentCrmGetMemoryLimit() . '<br />Current Usage: ' . memory_get_usage(true), 'info');
             return false;
         }
-        if ($status == 'sent') {
-            fluentCrmDb()->table('fc_campaign_emails')
-                ->whereIn('id', $ids)
-                ->where('status', '!=', 'failed')
-                ->update([
-                    'email_body'   => '',
-                    'updated_at'   => current_time('mysql'),
-                    'status'       => 'sent'
-                ]);
-        } else {
-            fluentCrmDb()->table('fc_campaign_emails')
-                ->whereIn('id', $ids)
-                ->update([
-                    'status'     => $status,
-                    'updated_at' => current_time('mysql')
-                ]);
+
+        $nextCron = as_next_scheduled_action('fluentcrm_scheduled_every_minute_tasks');
+        $willRun = !$nextCron || $nextCron == 1 || ($nextCron - time()) >= 5 || ($nextCron - time()) < -70;
+
+        if (!$willRun) {
+            $lastCalled = (int)fluentcrm_get_option($this->optionKey . '_last_called');
+            if ($lastCalled && (time() - $lastCalled) < 50) {
+                $willRun = true;
+            }
         }
-        return true;
+
+        if ($willRun) { // If next cron is after more than 5 seconds we want to run this or it's currently running
+
+            $url = add_query_arg([
+                'action' => 'fluentcrm-post-campaigns-send-now',
+                'time'   => time()
+            ], admin_url('admin-ajax.php'));
+
+            Helper::debugLog('Sent to Background Handler::callBackGround', $url, 'extended');
+
+            wp_remote_post($url, [
+                'sslverify' => false,
+                'blocking'  => false,
+                'timeout'   => 1,
+                'body'      => [
+                    'campaign_id' => null,
+                    'retry'       => 1
+                ]
+            ]);
+        } else {
+            Helper::debugLog('Not Running', 'Handler::callBackGround -> ' . ($nextCron - time()), 'extended');
+        }
+    }
+
+    protected function isTimeUp()
+    {
+        return (time() - $this->startingTimeStamp) >= $this->maximumProcessingTime;
     }
 }

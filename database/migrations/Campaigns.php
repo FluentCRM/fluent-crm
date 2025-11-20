@@ -17,7 +17,9 @@ class Campaigns
 
         $table = $wpdb->prefix .'fc_campaigns';
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $sql = "CREATE TABLE $table (
                 `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
                 `parent_id` BIGINT UNSIGNED NULL,
@@ -50,6 +52,7 @@ class Campaigns
             ) $charsetCollate;";
             dbDelta($sql);
         } else {
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $indexes = $wpdb->get_results("SHOW INDEX FROM $table");
             $indexedColumns = [];
             foreach ($indexes as $index) {
@@ -57,9 +60,12 @@ class Campaigns
             }
 
             if(!in_array('status', $indexedColumns)) {
+                // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
                 $indexSql = "ALTER TABLE {$table} ADD INDEX `type` (`type`),
-                        ADD INDEX `status` (`status`),
-                        ADD INDEX `parent_id` (`parent_id`);";
+                    ADD INDEX `status` (`status`),
+                    ADD INDEX `parent_id` (`parent_id`);";
+                    
+                // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
                 $wpdb->query($indexSql);
             }
         }

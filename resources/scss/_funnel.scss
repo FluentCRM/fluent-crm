@@ -1,0 +1,1820 @@
+$trigger_bg_color: #FFF3DC;
+$general_action_bg_color: #F0ECFD;
+$conditional_bg_color: #FFEFED;
+$waiting_action_bg_color: #ffffff;
+$send_email_action_bg_color: #E9FBFB;
+$benchmark_bg_color: #E3FFE9;
+$funnel_end_bg_color: $trigger_bg_color;
+$funnel_box_title_color: #111827;
+$funnel_box_subtitle_color: #374151;
+
+.fc_funnel_root {
+    .fluentcrm_body {
+        background-color: #f6f8fa;
+    }
+}
+.fluentcrm_blocks_wrapper {
+    box-sizing: border-box;
+    z-index: 2;
+    width: 100%;
+    min-height: 90vh;
+    padding: 20px 20px 40px 20px;
+
+    > h3 {
+        padding: 0px 20px;
+        font-size: 20px;
+        font-weight: bold;
+        color: #393C44;
+    }
+
+    .fluentcrm_blocks {
+        list-style: none;
+        padding: 0;
+        min-height: 450px;
+        text-align: center;
+
+        .fluentcrm_blockin {
+            width: auto;
+            display: inline-block;
+            margin: 10px auto 0 auto !important;
+            text-align: center;
+            -webkit-transition: .2s;
+            -moz-transition: .2s;
+            -ms-transition: .2s;
+            -o-transition: .2s;
+
+            background: #fff;
+            border-style: solid;
+            border-width: 1px;
+            border-color: transparent;
+            border-radius: 8px;
+            box-shadow: 0 1px 1px hsla(220,7%,73%,.302);
+            padding: 0 20px 10px;
+            transition: all .3s ease;
+
+            &:hover {
+                border: 1px solid #7e61e6;
+                box-shadow: 0 16px 16px rgba(0,0,0,.039);
+            }
+
+            .fluentcrm_block_stats {
+                display: flex;
+                justify-content: center;
+                gap: 10px;
+                margin-top: 15px;
+                span {
+                    margin: 0;
+                    align-items: center;
+                    border: 1px solid #f2f2f2;
+                    border-radius: 6px;
+                    color: #2d3149;
+                    display: flex;
+                    font-size: 14px;
+                    justify-content: center;
+                    line-height: 1;
+                    min-width: 62px;
+                    padding: 6px 4px;
+                    text-align: center;
+                    height: auto;
+
+                    &.el-tag--danger {
+                        background-color: #fef0f0;
+                        border-color: #fbc4c4;
+                        color: #f56c6c;
+                    }
+                }
+            }
+        }
+    }
+
+    .fluentcrm_block_end_this_funnel .fluentcrm_blockin {
+        background-color: $funnel_end_bg_color !important;
+        .fluentcrm_block_title {
+            color: $funnel_box_title_color;
+            .fc-icon-end_funnel {
+                background: $funnel_end_bg_color;
+            }
+        }
+        .fluentcrm_block_desc {
+            color: $funnel_box_subtitle_color;
+        }
+
+        span.el-tag, span.el-tag * {
+            color: #409eff !important;
+        }
+
+        .el-tag--plain.el-tag--danger {
+            background-color: #fff !important;
+            border-color: #fbc4c4 !important;
+            color: #f56c6c !important;
+
+            * {
+                color: #f56c6c !important;
+            }
+        }
+    }
+
+    .fluentcrm_block_send_custom_email .fluentcrm_blockin {
+        background-color: $send_email_action_bg_color !important;
+    }
+
+    .fluentcrm_block_fluentcrm_wait_times {
+        .fluentcrm_blockin {
+            background-color: $waiting_action_bg_color !important;
+        }
+    }
+
+    .fluentcrm_block_add_contact_to_tag {
+        .fluentcrm_blockin {
+            background-color: #d6e5f6;
+            .fluentcrm_block_desc {
+                color: $funnel_box_subtitle_color;
+            }
+        }
+    }
+
+
+
+}
+
+.fluentcrm_funnel_header {
+    margin: 0 0 20px;
+    border-bottom: 2px solid #e6e6e6;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    position: relative;
+
+    h3 {
+        margin: 0;
+    }
+
+    p {
+        margin: 10px 0 0 0;
+    }
+    .close-drawer {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 20px;
+        cursor: pointer;
+        width: 50px;
+        height: 50px;
+        text-align: center;
+        line-height: 50px;
+        transition: .3s;
+        &:hover {
+            color: #f56c6c;
+        }
+    }
+}
+
+.el-drawer__wrapper {
+    .el-drawer__body {
+        background-repeat: repeat;
+        filter: alpha(opacity=1);
+        background-size: 30px 30px;
+
+        .fluentcrm_block_editor_body {
+            .fc_funnerl_editor {
+                > div {
+                    margin-bottom: 20px;
+
+                    &:empty {
+                        margin-bottom: 0 !important;
+                        padding: 0 !important;
+                    }
+
+                    &:last-child {
+                        margin-bottom: 0;
+                    }
+                }
+                .el-checkbox {
+                    .el-checkbox__label {
+                        word-wrap: normal;
+                        vertical-align: text-top;
+                        white-space: break-spaces;
+                    }
+                }
+
+                .fc_2col_inline {
+                    .el-checkbox .el-checkbox__label {
+                        white-space: normal !important;
+                    }
+                }
+
+                .fc_rich_container {
+                    padding-left: 0;
+                    padding-bottom: 0;
+                }
+
+                > div {
+                    > .el-form-item {
+                        margin-bottom: 0;
+                        .el-form-item__content {
+                            .el-date-editor {
+                                &.el-input {
+                                    width: 100%;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                .fc_coupon_settings {
+                    .el-form-item {
+                        .el-checkbox {
+                            .el-checkbox__label {
+                                white-space: normal;
+                            }
+                        }
+                    }
+                    .fc-item-copier-input {
+                        display: inline-flex;
+                        input {
+							background: #fff;
+						}
+                    }
+                }
+            }
+
+            .fc_funnel_conditions {
+                //padding-bottom: 0;
+                > h3 {
+                    margin-top: 6px;
+                }
+
+                > div {
+                    .el-form-item {
+                        //margin-bottom: 0;
+                        .el-form-item__content {
+                            > p {
+                                margin: 5px 0 0 0;
+                            }
+                            .el-checkbox {
+                                .el-checkbox__label {
+                                    white-space: break-spaces;
+                                    word-wrap: normal;
+                                    vertical-align: text-top;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    .fluentcrm_block_editor_body {
+        padding: 0 20px;
+    }
+}
+
+.fluentcrm-sequence_control {
+    margin: 10px -20px -20px;
+    padding: 20px 20px 20px;
+    background: whitesmoke;
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    .fluentcrm_pull_left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+}
+
+.fluentcrm_block {
+    user-select: none;
+    cursor: pointer;
+    padding: 19px 10px 19px;
+    border: 1px solid transparent;
+    transition-property: box-shadow, height;
+    transition-duration: .2s;
+    transition-timing-function: cubic-bezier(.05, .03, .35, 1);
+    border-radius: 5px;
+    box-shadow: 0px 0px 30px rgba(22, 33, 74, 0);
+    box-sizing: border-box;
+    display: table;
+    position: relative;
+    margin: 0 auto;
+
+    &:hover {
+        .fc_block_controls {
+            display: inline-block;;
+        }
+    }
+
+    .fc_block_controls {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 9;
+        display: none;
+    }
+
+    .fluentcrm_block_title {
+        position: relative;
+        margin: 0 0 5px 0 !important;
+        padding: 0px !important;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+
+        color: $funnel_box_title_color;
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 1.28;
+
+        i {
+            font-size: 14px;
+            color: #5f6266;
+            background: #fff;
+            border: 2px solid #f6f8fa;
+            border-radius: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 30px;
+            width: 30px;
+            margin-top: -15px;
+            margin-bottom: 0px;
+            z-index: 2;
+        }
+
+        .fc-icon-writing {
+            font-size: 20px;
+        }
+
+        .fc-icon-writing {
+            left: -38px;
+        }
+    }
+
+    .fluentcrm_block_desc {
+        color: $funnel_box_subtitle_color;
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 1.28;
+        max-width: 310px;
+        width: 100%;
+        margin: 5px auto auto auto;
+        word-break: break-word;
+    }
+
+    &:first-child::after {
+        top: 25px;
+    }
+
+    &:last-child::after {
+        bottom: 30px;
+    }
+}
+
+.fluentcrm_float_label {
+    display: table-cell;
+    vertical-align: middle;
+    width: 50px;
+    padding-right: 10px;
+}
+
+.fluentcrm_round_block {
+    background: #673AB7;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 30px;
+    color: white;
+    z-index: 9;
+    position: absolute;
+    top: 23px;
+}
+
+.fluentcrm_block_start {
+    display: block;
+    background: #f7fafc;
+    padding: 10px 20px;
+    box-sizing: border-box;
+    position: relative;
+
+    h3 {
+        margin: 0px 0px 10px;
+        padding: 0;
+    }
+
+    p {
+        padding: 0;
+        margin: 0;
+    }
+}
+
+.fluentcrm_block_add {
+    padding: 20px 15px;
+    background: #e3e8ef;
+}
+
+.block_full {
+    width: 100%;
+}
+
+.fluentcrm_block_editor {
+    .fluentcrm_block_editor_header {
+        background: white;
+        padding: 15px 20px;
+
+        h3 {
+            margin: 0 0 10px;
+        }
+
+        p {
+            margin: 0;
+        }
+    }
+
+    .fluentcrm_block_editor_body {
+        padding: 20px;
+    }
+}
+
+.fc_block_type_benchmark {
+    .fluentcrm_blockin {
+        background-color: $benchmark_bg_color !important;
+        border-color: $benchmark_bg_color;
+    }
+
+    &.fc_funnel_benchmark_required {
+        .fluentcrm_blockin {
+            background-color: $benchmark_bg_color !important;
+        }
+    }
+}
+
+.fluentcrm_block.fluentcrm_block_trigger {
+    .fluentcrm_blockin {
+        background-color: $trigger_bg_color !important;
+        border-color: $trigger_bg_color;
+        .fluentcrm_block_title {
+            color: $funnel_box_title_color;
+            i {
+                background: $trigger_bg_color;
+            }
+        }
+        .fluentcrm_block_desc {
+            color: $funnel_box_subtitle_color;
+        }
+    }
+}
+
+.block_item_holder {
+    &:last-child {
+        .block_item_add {
+            .fc_show_plus {
+                &::after {
+                    content: none;
+                }
+            }
+        }
+    }
+}
+
+.block_item_add {
+    .fc_show_plus {
+        z-index: 2;
+        font-size: 15px;
+        display: inline-block;
+        background: white;
+        padding: 3px;
+        border-radius: 50%;
+        cursor: pointer;
+        position: relative;
+
+        &::before {
+            content: "";
+            position: absolute;
+            left: 47%;
+            right: 50%;
+            height: 20px;
+            width: 2px;
+            background: #2f2925;
+            top: -20px;
+            z-index: -1;
+        }
+
+        &::after {
+            content: "";
+            position: absolute;
+            left: 47%;
+            right: 50%;
+            height: 20px;
+            width: 2px;
+            background: #2f2925;
+            bottom: -20px;
+            z-index: 0;
+        }
+
+        i {
+            z-index: 1;
+            position: relative;
+        }
+    }
+
+    &:hover {
+        .fc_show_plus {
+            color: #7e61e6;
+        }
+    }
+
+    .fc_plus_text {
+        font-size: 12px;
+    }
+}
+
+span.stats_badge_inline {
+    display: inline-block;
+    padding: 4px 7px;
+    border: 1px solid #d9ecff;
+    font-size: 80%;
+    background: #ecf5ff;
+    border-radius: 3px;
+    line-height: 100%;
+    color: #409eff;
+    height: 20px;
+}
+
+.fc_option_creatable {
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+
+    .fc_with_select {
+        position: relative;
+    }
+}
+
+.fc_pro_ribbon {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #7757e6;
+    color: white;
+    padding: 0 8px;
+    border-radius: 0 5px 0 5px;
+    font-size: 12px;
+}
+
+.fc_sequence_import {
+    .fluentcrm_funnel_header {
+        margin-left: -45px;
+        margin-right: -45px;
+        border-bottom: 1px solid #e3e8ed;
+    }
+
+    .fc_sequence_navigation {
+        text-align: right;
+        background: #ebf4fb;
+        margin: 0 -45px -30px;
+        padding: 20px 45px;
+    }
+}
+
+.ff_funnel_badge {
+    background: #63adf9;
+    color: white;
+    font-size: 10px;
+    padding: 0 10px;
+    display: inline-block;
+    margin-top: 1px;
+    border-radius: 15px;
+    vertical-align: text-top;
+    text-transform: capitalize;
+    &.ff_funnel_badge-trigger {
+        background: #7756e6;
+    }
+}
+
+.fc_choice_block {
+    margin-bottom: 20px;
+
+    &:nth-child(3n+1) {
+        clear: both;
+    }
+
+    .fc_choice_card {
+        width: auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        margin: 0;
+        text-align: center;
+        -webkit-transition: 0.2s;
+        -moz-transition: 0.2s;
+        -ms-transition: 0.2s;
+        -o-transition: 0.2s;
+        cursor: pointer;
+        border: 1px solid #e4e4e4;
+        border-radius: 8px;
+        box-shadow: 0 1px 1px hsla(220, 7%, 73%, 0.302);
+        padding: 15px 20px 15px;
+        transition: all 0.3s ease;
+        position: relative;
+        background: #f9f9f9;
+
+        > * {
+            word-break: keep-all;
+        }
+
+        &:hover {
+            border: 1px solid #7e61e6;
+            box-shadow: 0 16px 16px rgba(0,0,0,.039);
+            .fc_choice_card_overlay {
+                opacity: 1;
+            }
+        }
+
+        h3 {
+            position: relative;
+            margin: 0 0 6px 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #2d3149;
+            font-size: 16px;
+            font-weight: 600;
+            line-height: 1.28;
+        }
+
+        p {
+            color: #a4a8b5;
+            font-size: 14px;
+            font-weight: 400;
+            line-height: 1.28;
+            max-width: 310px;
+            width: 100%;
+            margin: 5px 0 0 0;
+            word-break: break-word;
+        }
+
+        .fc_choice_card_overlay {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: rgb(255 255 255 / 55%);
+            cursor: auto;
+            border-radius: 8px;
+            opacity: 0;
+            transition: .3s;
+            -webkit-transition: .3s;
+            .el-button {
+                margin: 0;
+            }
+            .preview-btn {
+                color: #FFF;
+                background-color: #909399;
+                border-color: #909399;
+                font-size: 12px;
+                padding: 6px 15px;
+                border-radius: 4px;
+            }
+        }
+
+        &.fc_trigger_selected {
+            background: #7757e6;
+            box-shadow: 0 16px 16px rgba(0,0,0,.039);
+            border-color: #7757e6;
+
+            * {
+                color: white;
+            }
+            h3 {
+                i {
+                    color: #7757e6;
+                }
+            }
+
+            .fc_pro_ribbon {
+                background: #f5f5f5;
+                color: #7756e6;
+            }
+        }
+
+        img {
+            position: absolute;
+            left: 2px;
+            top: -2px;
+            opacity: 0.5;
+            width: 20px;
+        }
+
+        i {
+            font-size: 16px;
+            color: #5f6266;
+            background: #fff;
+            border: 2px solid #f6f8fa;
+            border-radius: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 35px;
+            width: 35px;
+            margin-bottom: 4px;
+            z-index: 2;
+            transition: .3s;
+            -webkit-transition: .3s;
+        }
+
+        .fc-icon-writing {
+            font-size: 28px;
+        }
+
+        .fc-icon-writing {
+            left: -38px;
+        }
+        &.fc_choice_card_create_from_scratch {
+            background: none;
+            border: 1px dashed #e4e4e4;
+            box-shadow: none;
+            &:hover {
+                border-color: rgb(126 97 230 / 100%);
+                background: rgb(126 97 230 / 10%);
+                h3 {
+                    i {
+                        border-color: rgb(126 97 230 / 20%);
+                        background: rgb(126 97 230 / 50%);
+                        color: #ffffff;
+                    }
+                }
+            }
+        }
+    }
+}
+.fcrm_back_to_template {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    color: #000000;
+    h3 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 16px;
+        margin: 0;
+        cursor: pointer;
+        &:hover {
+            .icon {
+                i {
+                    &:first-child {
+                        margin-left: -16px;
+                        transition: .5s;
+                        -webkit-transition: .5s;
+                    }
+                }
+            }
+        }
+        .icon {
+            display: flex;
+            flex: none;
+            position: relative;
+            width: 16px;
+            height: 16px;
+            overflow: hidden;
+            i {
+                color: #666666;
+                &:last-child {
+                    color: #000000;
+                }
+            }
+        }
+    }
+}
+
+.fc_trigger_dialog_wrap {
+    .el-dialog__header {
+        padding: 12px 20px;
+        border: none;
+    }
+    .fc_a_cat_selection_wrapper {
+        .el-row {
+            display: flex;
+        }
+        .fc_trigger_left_col {
+            .fc_trigger_selectors {
+                height: 100%;
+                border-right: none;
+                border-radius: 4px;
+                padding: 8px;
+                .el-menu-item {
+                    border-radius: 4px;
+                    + .el-menu-item {
+                        margin-top: 4px;
+                    }
+                    &.is-active {
+                        background-color: #545c64 !important;
+                    }
+                }
+            }
+        }
+
+        .fc_choice_header {
+            border-bottom: 1px solid #eae9e9;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+
+            p {
+                padding: 0;
+                font-size: 15px;
+                margin: 10px 0;
+            }
+
+            h2 {
+                color: #1d2327;
+                font-size: 18px;
+                font-weight: 500;
+                margin: 0;
+            }
+        }
+    }
+
+    .el-form {
+        .el-form-item {
+            .el-input {
+                input {
+                    margin: 0;
+                    border-color: #dcdfe6 !important;
+                    padding: 0 12px;
+                    &:focus {
+                        border-color: #7757e6 !important;
+                    }
+                }
+            }
+        }
+    }
+}
+
+.fc_choice_row {
+    width: 100%;
+    display: flex;
+    flex-flow: row wrap;
+
+    .fc_choice_block {
+        display: flex;
+        align-items: stretch;
+        flex-direction: column;
+
+        .fc_choice_card {
+            height: 100%;
+        }
+    }
+
+    &.fc_items_benchmark {
+        .fc_choice_card {
+            background: #ffe7c3;
+            border-color: #ffe7c3;
+
+            &:hover {
+                background: #f7daaf;
+                border-color: #f7daaf;
+            }
+        }
+    }
+
+    &.fc_items_conditional {
+        .fc_choice_card {
+            background: #f2efff;
+        }
+    }
+}
+
+.fc_choice_blocks {
+    .fc_choice_wrap_benchmark {
+        background: #f9f7f3;
+        padding: 1px 20px;
+        margin-right: 20px;
+        margin-bottom: 30px;
+        margin-top: 40px;
+        padding-right: 0;
+        padding-top: 26px;
+        position: relative;
+        border: 1px solid #dbdbdb;
+        border-radius: 3px;
+
+        .fc_choice_card {
+            background: #ffe7c3;
+            border: 1px solid #ffe7c3;
+
+            &:hover {
+                background: #f7daaf;
+                border-color: #f7daaf;
+            }
+        }
+
+        .fc_choice_category {
+            > h3 {
+                display: none;
+            }
+        }
+
+        > h2 {
+            position: absolute;
+            top: -15px;
+            background: #f9f7f2;
+            padding: 4px 10px;
+            border: 1px solid #dbdbdb;
+            margin: 0;
+            font-size: 16px;
+            border-radius: 3px;
+        }
+    }
+
+    .fc_choice_wrap_action {
+        background: #ffffff;
+        padding: 1px 20px;
+        margin-right: 20px;
+        margin-bottom: 30px;
+        margin-top: 40px;
+        padding-right: 0;
+        padding-top: 26px;
+        position: relative;
+        border: 1px solid #dbdbdb;
+        border-radius: 3px;
+
+        > h2 {
+            position: absolute;
+            top: -15px;
+            background: #ffffff;
+            padding: 4px 10px;
+            border: 1px solid #dbdbdb;
+            margin: 0;
+            border-radius: 3px;
+            font-size: 16px;
+        }
+    }
+
+    .fc_choice_selected_action {
+        .fc_choice_category {
+            background: #ffffff;
+            padding: 30px 0 1px 20px;
+            margin-right: 20px;
+            margin-bottom: 30px;
+            margin-top: 40px;
+            position: relative;
+            border: 1px solid #dbdbdb;
+            border-radius: 3px;
+
+            > h3 {
+                position: absolute;
+                top: -14px;
+                background: #ffffff;
+                padding: 4px 10px;
+                border: 1px solid #dbdbdb;
+                margin: 0;
+                border-radius: 4px;
+                font-size: 16px;
+            }
+
+            &:nth-child(even) {
+                background: #646970;
+                border-color: #646970;
+
+                > h3 {
+                    background: white;
+                }
+            }
+        }
+    }
+
+    .fc_choice_wrap_conditional {
+        background: #f8f8fd;
+        padding: 26px 0 1px 20px;
+        margin-right: 20px;
+        margin-bottom: 30px;
+        margin-top: 40px;
+        position: relative;
+        border: 1px solid #dbdbdb;
+        border-radius: 3px;
+
+        > h2 {
+            position: absolute;
+            top: -15px;
+            background: #f8f8fd;
+            padding: 4px 10px;
+            border: 1px solid #dbdbdb;
+            margin: 0;
+            font-size: 16px;
+            border-radius: 3px;
+        }
+
+        .fc_choice_card {
+            background: #ddd6f9 !important;
+            border: 1px solid #ddd6f9;
+
+            &:hover {
+                background: #cdc5ef !important;
+                border-color: #c1c1c1;
+            }
+        }
+
+        .fc_choice_category {
+            > h3 {
+                display: none;
+            }
+        }
+    }
+
+
+}
+.fc_block_type_action {
+    .fluentcrm_blockin {
+        background: $general_action_bg_color !important;
+        min-width: 331px;
+        .fluentcrm_block_title {
+            color: $funnel_box_title_color !important;
+        }
+        .fluentcrm_block_desc {
+            color: $funnel_box_subtitle_color !important;
+        }
+        .fluentcrm_block_stats {
+            span {
+                border-color: #d5cef4 !important;
+            }
+        }
+    }
+}
+
+.fc_block_type_conditional {
+    .fluentcrm_blockin {
+        background: $conditional_bg_color !important;
+        min-width: 331px;
+        .fluentcrm_block_desc {
+            color: $funnel_box_title_color !important;
+        }
+        .fluentcrm_block_desc {
+            color: $funnel_box_subtitle_color !important;
+        }
+        .fluentcrm_block_stats {
+            span {
+                border-color: #d5cef4 !important;
+            }
+        }
+    }
+}
+
+.el-dropdown-list-wrapper {
+    border: none;
+
+    ul.el-dropdown-menu.el-dropdown-list.fc_limit_height {
+        height: 200px;
+        overflow: auto;
+        margin: 0;
+    }
+}
+
+.fc_child_blocks {
+    .fluentcrm_blockin {
+        width: 100% !important;
+        margin-bottom: 20px !important;
+        &:hover {
+            .fc_action_abs_right {
+                top: 32px;
+                right: 7px;
+            }
+        }
+    }
+    .fluentcrm_block {
+        width: 100%;
+        padding: 0;
+        margin-bottom: 20px;
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+}
+
+.fc_block_choice_wrapper {
+
+    ul.el-menu--horizontal.el-menu {
+        margin-bottom: 20px;
+    }
+
+    .fc_choice_blocks {
+        padding: 0 20px;
+    }
+    li.is-active {
+        svg {
+            fill: #303133;
+        }
+    }
+
+    i {
+        font-size: 17px;
+    }
+
+    i.el-dialog__close.el-icon.el-icon-close {
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 20px;
+        font-weight: bold;
+        cursor: pointer;
+        &:hover {
+            color: #409EFF;
+        }
+    }
+    .fc_funnel_block_search_wrap {
+        padding: 0 20px;
+        .el-input {
+            input {
+                margin: 0;
+            }
+        }
+    }
+}
+
+.fc_funnel_block_modal {
+    .el-drawer__container {
+        .el-drawer {
+            @media (max-width: 1440px) {
+                min-width: 800px;
+            }
+            @media (max-width: 950px) {
+                min-width: 700px;
+            }
+            @media (max-width: 720px) {
+                min-width: 600px;
+            }
+            @media (max-width: 510px) {
+                min-width: 95%;
+            }
+        }
+    }
+    .el-drawer__body {
+        .fluentcrm_funnel_header {
+            background-color: #f5f5f5;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+            margin: 0 -20px 20px;
+            padding: 15px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            p {
+                margin-top: 8px;
+            }
+        }
+    }
+}
+
+
+.fc_drawer_for_send_custom_email, .fc_drawer_for_funnel_condition {
+    .el-drawer__container {
+        .el-drawer {
+            @media (min-width: 510px) {
+                min-width: 98% !important;
+            }
+            @media (min-width: 720px) {
+                min-width: 95% !important;
+            }
+            @media (min-width: 950px) {
+                min-width: 90% !important;
+            }
+            @media (min-width: 1200px) {
+                min-width: 80% !important;
+            }
+            @media (min-width: 1201px) {
+                min-width: 1200px !important;
+            }
+        }
+    }
+}
+
+.fc_sequence_import {
+    .fluentcrm_funnel_header {
+        background-color: #f5f5f5;
+        border-top-left-radius: 5px;
+        border-top-right-radius: 5px;
+        margin: -30px -45px 20px;
+        padding: 20px 45px;
+    }
+}
+
+img.fc_choice_icon {
+    width: 16px;
+    height: 16px;
+    filter: invert(1);
+}
+
+.fc_trigger_icon {
+    margin-right: 6px;
+
+    img {
+        width: 24px;
+        height: 24px;
+    }
+
+    i {
+        font-size: 24px;
+    }
+}
+
+.fc_trigger_selectors {
+    min-height: 400px;
+    max-height: 550px;
+    overflow-x: hidden;
+}
+
+.funnel_trigger_inst {
+    color: red;
+    font-weight: bold;
+}
+
+.fc_cond_and {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 10px;
+}
+
+.block_item_holder_conditional {
+    position: relative;
+}
+
+.block_cond_holder {
+    padding: 15px 15px 15px;
+    width: 400px;
+    border: 1px solid #c2c2c2;
+    transition-property: box-shadow, height;
+    transition-duration: .2s;
+    transition-timing-function: cubic-bezier(0.05, 0.03, 0.35, 1);
+    border-radius: 5px;
+    box-shadow: 0 0 30px rgba(22, 33, 74, 0);
+    float: left;
+    background: #f7fafc;
+    position: relative;
+
+    @media (max-width: 895px) {
+        float: none;
+        width: auto;
+        flex: 1;
+    }
+}
+
+.block_conditional_wrapper {
+    position: relative;
+    width: 940px;
+    margin: 45px auto 0px;
+    display: flex;
+    justify-content: space-between;
+
+    @media (max-width: 895px) {
+        max-width: 100%;
+        gap: 10px;
+    }
+}
+
+.fc_cond_border_no_top {
+    width: 500px;
+    height: 100px;
+    margin: -20px auto 25px;
+    border: 2px solid black;
+    border-top: 0;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+}
+
+.block_cond_holder.block_cond_yes {
+    float: right;
+    border-color: #2f2925;
+}
+
+span.fc_b_no_node {
+    width: 7px;
+    height: 7px;
+    background: transparent;
+    position: absolute;
+    bottom: 50%;
+    left: 0;
+    border-radius: 50%;
+}
+
+span.fc_b_yes_node {
+    width: 7px;
+    height: 7px;
+    background: transparent;
+    position: absolute;
+    bottom: 50%;
+    right: 0;
+    border-radius: 50%;
+}
+
+span.fc_b_no_node_point {
+    width: 7px;
+    height: 7px;
+    background: transparent;
+    position: absolute;
+    top: 0px;
+    right: 50%;
+    border-radius: 50%;
+}
+
+span.fc_b_yes_node_point {
+    width: 7px;
+    height: 7px;
+    background: transparent;
+    position: absolute;
+    top: 0px;
+    right: 50%;
+    border-radius: 50%;
+}
+
+.block_cond_holder.block_cond_no, .fc_dom_path.fc_dom_path_left {
+    border-color: #f7adad !important;
+}
+
+.fc_dom_path {
+    &.fc_ab_test,
+    &.fc_condition_node_point {
+        top: 90px !important;
+    }
+}
+.fc_dom_path.fc_ab_test > span,
+.fc_condition_node_point span {
+    display: inline-block;
+    position: absolute;
+    background: #fff;
+    width: 35px;
+    height: 35px;
+    text-align: center;
+    line-height: 30px;
+    border-radius: 50%;
+    left: -18px;
+    border: 2px solid #f7adad;
+    box-shadow: 0 0 10px rgb(0 0 0 / 10%);
+    top: 20px;
+}
+
+.fc_condition_node_point.fc_dom_path_right span {
+    left: auto;
+    right: -18px;
+    border-color: #2f2925;
+}
+
+.fc_dom_path.fc_ab_test {
+    border-color: #bacd00 !important;
+    border-width: 3px !important;
+}
+
+.fc_dom_path.fc_ab_test > span {
+    border-radius: 30px;
+    border-color: #bacd00;
+    width: fit-content;
+    padding: 0 10px;
+    left: -50%;
+    font-size: 12px;
+}
+
+.fc_dom_path.fc_ab_test.fc_dom_path_right span {
+    left: auto;
+    right: -50%;
+}
+
+.fc_action_selector {
+    ul {
+        display: block;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+
+        li {
+            cursor: pointer;
+            margin: 0;
+            border-bottom: 1px solid #f4f7fb;
+            padding: 10px 15px;
+            display: block;
+            overflow: hidden;
+            transition: .2s;
+            -webkit-transition: .2s;
+            -moz-transition: .2s;
+            -ms-transition: .2s;
+            -o-transition: .2s;
+
+            &:last-child {
+                border: none;
+            }
+
+            h4 {
+                margin: 0 0 4px 0;
+            }
+
+            p {
+                padding: 0;
+                margin: 0;
+            }
+
+            &:hover {
+                background: #f6f6f7;
+                border-bottom-color: #f6f6f7;
+            }
+        }
+    }
+}
+
+.fc_item_num_selector {
+    > .el-select {
+        width: 69%;
+        display: inline-block;
+    }
+
+    > .el-input {
+        display: inline-block;
+        width: 24%;
+    }
+}
+
+.fluentcrm_blockin {
+    background: $general_action_bg_color !important;
+
+    .fc_action_abs_right {
+        display: none;
+    }
+
+
+    &:hover {
+        .fc_action_abs_right {
+            position: absolute;
+            top: 55px;
+            right: 15px;
+            display: block;
+        }
+    }
+}
+
+.fc_clickable_pop span.el-popover__reference {
+    display: block;
+    width: 100%;
+    margin: -7px -20px;
+    padding: 7px 20px;
+}
+
+
+.fc_path_no  .el-timeline-item__tail, .fc_path_no_A .el-timeline-item__tail {
+    border-left: 2px solid #7c90fd;
+}
+
+.fc_path_yes .el-timeline-item__tail, .fc_path_yes_B .el-timeline-item__tail {
+    border-left: 2px solid #ff9800;
+}
+
+.el-timeline-item {
+    margin-bottom: 0;
+    &.fc_timeline_empty {
+        opacity: 0.4;
+    }
+}
+
+.fc_funnel_conditions {
+    .fc_rich_container {
+        background: #f5f7fa;
+    }
+    label.el-checkbox {
+        display: flex;
+        align-items: flex-start;
+        .el-checkbox__input {
+            margin-top: 3px;
+        }
+    }
+}
+
+.fc_drawer_for_fcrm_create_woo_coupon.fc_blocked_no_id {
+    .fluentcrm-sequence_control > button {
+        display: none;
+    }
+}
+
+
+.fc_drawer_for_fcrm_create_woo_coupon .fc_block_white {
+    padding: 0;
+    background: white;
+    margin-bottom: 30px;
+    border-radius: 0;
+    box-shadow: none;
+    .el-form-item__content {
+        line-height: 1.6;
+    }
+    .el-form-item {
+        margin-bottom: 20px;
+    }
+}
+
+.fc_header_merge_codes {
+    > .el-button-group {
+        margin-top: -10px;
+        margin-right: 10px;
+    }
+}
+
+// Funnel Label
+.el-form {
+    &.fc_label_form {
+        .el-form-item {
+            margin-bottom: 10px;
+            &:last-child {
+                margin-bottom: 0;
+            }
+            .el-form-item__content {
+                line-height: 1;
+            }
+            .el-form-item__label {
+                font-size: 14px;
+                font-weight: 500;
+                line-height: 20px;
+                color: #445164;
+                margin-bottom: 8px;
+                padding: 0;
+            }
+            .el-input {
+                input {
+                    margin: 0;
+                    box-shadow: none;
+                    border: 1px solid #D6DAE1;
+                    border-radius: 8px;
+                    padding: 4px 16px;
+                    display: block;
+                }
+            }
+        }
+    }
+}
+// @TODO: I will move this code to the globals.scss file
+.el-popover {
+    &.fc-funnel-actions-popover {
+        border: 1px solid #eaecf0;
+        border-radius: 8px;
+        box-shadow: 0 8px 30px rgba(27,37,51,.1);
+        padding: 12px;
+        box-sizing: border-box;
+        *, *:after,*:before {
+            box-sizing: border-box;
+        }
+        .fc_funnel_action_header {
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .fc_funnel_acton_field {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            .el-button {
+                margin: 0;
+                border: none;
+                width: 100%;
+                text-align: left;
+                line-height: 24px;
+                padding: 4px 16px;
+                border-radius: 8px;
+                color: #1b2533;
+                &:hover {
+                    background: #f5f6f7;
+                }
+            }
+        }
+    }
+    &.fc_individual_progress_popover {
+        max-height: 450px;
+        overflow-x: hidden;
+        overscroll-behavior: contain;
+    }
+}
+.el-dialog__wrapper {
+    &.fc_modal {
+        box-sizing: border-box;
+        .el-dialog {
+            max-width: 560px;
+            width: 100%;
+            padding: 20px;
+            border-radius: 8px;
+            min-width: inherit !important;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        .el-dialog__header {
+            border: none;
+            padding: 0 0 16px;
+            background: transparent;
+            border-bottom: 1px solid #EAECF0;
+            margin-bottom: 20px;
+            .el-dialog__title {
+                font-size: 20px;
+                font-weight: 600;
+                line-height: 28px;
+                color: #1B2533;
+                margin: 0;
+            }
+        }
+        .el-dialog__body {
+            padding: 0;
+        }
+        .el-dialog__footer {
+            padding: 0;
+            .dialog-footer {
+                background: transparent;
+                border-top: 1px solid #EAECF0;
+                padding: 18px 0 0 0;
+                gap: 12px;
+                display: flex;
+                align-items: center;
+                margin: 0;
+                .el-button {
+                    margin: 0;
+                }
+            }
+        }
+    }
+    &.fc_label_modal {
+
+    }
+}
+.el-radio-group {
+    &.fc_labels_radio {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        .el-radio {
+            margin: 0;
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+            transition: .3s;
+            -webkit-transition: .3s;
+            &.is-checked {
+                box-shadow: 0 0 0 1.5px #fff, 0 0 0 3px #7757E6;
+            }
+            .el-radio__input {
+                width: 100%;
+                height: 100%;
+                opacity: 0;
+            }
+            .el-radio__label {
+                display: none;
+            }
+        }
+    }
+}
+.fc_funnel_labels {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
+    .el-tag {
+        margin: 0;
+        border: none;
+        color: #1B2533;
+        height: auto;
+        padding: 1px 2px 1px 5px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        .el-popover__reference-wrapper {
+            i {
+                cursor: pointer;
+                margin: 0;
+                transform: scale(1);
+                right: 0;
+                width: 14px;
+                height: 14px;
+                line-height: 14px;
+                color: #1B2533;
+                transition: .3s;
+                -webkit-transition: .3s;
+                &:hover {
+                    background: #1B2533;
+                    color: #ffffff;
+                }
+            }
+        }
+    }
+}
+.el-drawer__wrapper {
+    &.fc_drawer {
+        .el-drawer__header {
+            font-weight: 500;
+            line-height: 32px;
+            color: #1B2533;
+            padding: 40px 24px 20px 24px;
+            margin: 0;
+            border-bottom: 1px solid #D6DAE1;
+            background: none;
+
+            > span {
+                font-size: 20px;
+            }
+        }
+        .el-drawer__body {
+            padding: 20px 25px;
+        }
+
+        &.fc_drawer_manage_labels {
+            .el-drawer {
+                width: 100% !important;
+                max-width: 600px;
+            }
+            .fc_drawer_manage_labels_header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+                h3 {
+					margin: 0;
+					font-size: 18px;
+				}
+            }
+            .fc_drawer_manage_labels_body {
+                .el-table {
+                    border: 1px solid #D6DAE1;
+                    border-radius: 8px;
+                    &:before {
+                        display: none;
+                    }
+                    thead {
+                        tr {
+                            th {
+                                font-size: 14px;
+                                font-weight: 700;
+                                line-height: 26px;
+                                color: #323232;
+                                padding: 10px 0;
+                                background: #EAECF0;
+                                .cell {
+                                    padding-left: 15px;
+                                    padding-right: 15px;
+                                }
+                            }
+                        }
+                    }
+                    tbody {
+                        tr {
+                            &:last-child {
+                                td {
+                                    border-bottom: none;
+                                }
+                            }
+                            td {
+                                color: #1B2533;
+                                font-size: 14px;
+                                padding: 8px 0;
+                                position: relative;
+                                .cell {
+                                    padding-left: 15px;
+                                    padding-right: 15px;
+                                }
+                                .fc_drawer_label_action {
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: flex-end;
+                                    gap: 4px;
+                                }
+                                .fc_label_name {
+                                    display: flex;
+                                    align-items: flex-start;
+                                    gap: 5px;
+                                    word-break: break-word;
+                                    .fc_label_color {
+                                        margin-top: 7px;
+                                        flex: none;
+                                        width: 10px;
+                                        height: 10px;
+                                        border-radius: 50%;
+                                    }
+                                }
+                                .fc_label_slug {
+                                    color: #8b8b8b;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

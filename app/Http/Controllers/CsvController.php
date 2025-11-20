@@ -3,6 +3,7 @@
 namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\Models\Company;
+use FluentCrm\App\Services\Helper;
 use FluentCrm\App\Services\Libs\FileSystem;
 use FluentCrm\App\Services\Sanitize;
 use FluentCrm\Framework\Support\Arr;
@@ -45,7 +46,6 @@ class CsvController extends Controller
 
         $delimeter = $request->get('delimiter', 'comma');
 
-
         if ($delimeter == 'comma') {
             $delimeter = ',';
         } else {
@@ -77,10 +77,19 @@ class CsvController extends Controller
             $mappables = Subscriber::mappables();
         }
 
-        $headerItems = array_filter($headers);
+        $headerItems = array_values(array_filter($headers));
         $subscriberColumns = array_keys($mappables);
 
         $maps = [];
+
+        $customFields = fluentcrm_get_custom_contact_fields();
+
+        $fieldsMap = [];
+        if ($customFields) {
+            foreach ($customFields as $field) {
+                $fieldsMap[$field['slug']] = $field['label'];
+            }
+        }
 
         foreach ($headerItems as $headerItem) {
             $tableMap = (in_array($headerItem, $subscriberColumns)) ? $headerItem : null;
@@ -92,6 +101,10 @@ class CsvController extends Controller
                 }
             }
 
+            if (!empty($fieldsMap) && in_array($headerItem, $fieldsMap)) {
+                $tableMap = array_search($headerItem, $fieldsMap);
+            }
+
             $maps[] = [
                 'csv'   => $headerItem,
                 'table' => $tableMap
@@ -99,10 +112,28 @@ class CsvController extends Controller
         }
 
         if ($request->get('type') == 'company') {
+            /**
+             * Determine the columns of the company table in FluentCRM.
+             *
+             * This filter allows you to modify the columns of the company table in the CSV export.
+             *
+             * @since 2.8.0
+             *
+             * @param array $subscriberColumns An array of default subscriber columns.
+             */
             $columns = apply_filters(
                 'fluent_crm/company_table_columns', $subscriberColumns
             );
         } else {
+            /**
+             * Determine the columns of the subscriber table in FluentCRM.
+             *
+             * This filter allows you to modify the columns displayed in the subscriber table.
+             *
+             * @since 2.8.0
+             *
+             * @param array $subscriberColumns An array of default subscriber table columns.
+             */
             $columns = apply_filters(
                 'fluent_crm/subscriber_table_columns', $subscriberColumns
             );
@@ -173,6 +204,7 @@ class CsvController extends Controller
             ]);
         }
 
+
         $page = $this->request->get('importing_page', 1);
         $processPerRequest = 500;
         $offset = ($page - 1) * $processPerRequest;
@@ -182,6 +214,9 @@ class CsvController extends Controller
         $customFieldKeys = $this->customFieldKeys();
         $subscribers = [];
         $skipped = [];
+
+        $isCompanyEnabled = Helper::isCompanyEnabled();
+
         foreach ($records as $record) {
             if (!array_filter($record)) {
                 continue;
@@ -195,7 +230,15 @@ class CsvController extends Controller
                     continue;
                 }
                 if (isset($map['csv'], $map['table'])) {
-                    if (in_array($map['table'], $customFieldKeys)) {
+                    if (in_array($map['table'], ['tags', 'lists'])) {
+                        //if tags or lists are mapped to be imported
+                        if ($map['table'] == 'tags') {
+                            $subscriber['tags'] = !empty($record[$map['csv']]) ? explode(',', $record[$map['csv']]) : [];
+                        } else {
+                            $subscriber['lists'] = !empty($record[$map['csv']]) ? explode(',', $record[$map['csv']]) : [];
+                        }
+                    }
+                    else if (in_array($map['table'], $customFieldKeys)) {
                         $subscriber['custom_values'][$map['table']] = $record[$map['csv']];
                     } else {
                         $subscriber[$map['table']] = $record[$map['csv']];
@@ -207,9 +250,32 @@ class CsvController extends Controller
                 return $this->sendError(['email' => "The email field is required."], 422);
             }
 
-            $subscriber['email'] = trim($subscriber['email']);
+            $subscriber['email'] = is_string($subscriber['email']) ? trim($subscriber['email']) : $subscriber['email'];
 
             if ($subscriber['email'] && is_email($subscriber['email'])) {
+
+                if (isset($subscriber['company_id']) && $subscriber['company_id'] && $isCompanyEnabled) {
+                    $companyNameOrId = $subscriber['company_id'];
+                    if (is_string($companyNameOrId)) {
+                        $company = Company::query()->firstOrCreate([
+                            'name' => $subscriber['company_id']
+                        ], [
+                            'name' => $subscriber['company_id']
+                        ]);
+
+                        if ($company) {
+                            $subscriber['company_id'] = $company->id;
+                        } else {
+                            unset($subscriber['company_id']);
+                        }
+                    } else {
+                        $company = Company::find($subscriber['company_id']);
+                        if (!$company) {
+                            unset($subscriber['company_id']);
+                        }
+                    }
+                }
+
                 $subscribers[] = Sanitize::contact($subscriber);
             } else {
                 $skipped[] = $subscriber;
@@ -312,6 +378,8 @@ class CsvController extends Controller
         $willCreateOwner = $this->request->get('create_owner') == 'yes';
         $willUpdate = $this->request->get('update') == 'yes';
 
+        $customFields = fluentcrm_get_custom_company_fields();
+
         $companies = [];
         $skipped = [];
         foreach ($records as $record) {
@@ -341,6 +409,21 @@ class CsvController extends Controller
                 }
             }
 
+
+            if ($customFields) {
+                $customValues = [];
+
+                foreach ($company as $dataKey => $dataValue) {
+                    if (strpos($dataKey, '_custom_') === 0) {
+                        $customKey = str_replace('_custom_', '', $dataKey);
+                        $customValues[$customKey] = $dataValue;
+                        unset($company[$dataKey]);
+                    }
+                }
+
+                $company['custom_values'] = $customValues;
+            }
+
             $company = Sanitize::company($company);
 
             if (!empty($company['owner_email']) && is_email($company['owner_email'])) {
@@ -367,7 +450,6 @@ class CsvController extends Controller
             }
 
             $createdCompany = FluentCrmApi('companies')->createOrUpdate($company);
-
             $companies[] = $createdCompany;
         }
 

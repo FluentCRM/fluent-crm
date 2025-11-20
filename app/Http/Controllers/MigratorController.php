@@ -48,7 +48,7 @@ class MigratorController extends Controller
         if (is_wp_error($result)) {
             return $this->sendError([
                 'message' => $result->get_error_message(),
-            ], 423);
+            ], 422);
         }
 
         return [
@@ -74,7 +74,7 @@ class MigratorController extends Controller
         if (is_wp_error($result)) {
             return $this->sendError([
                 'message' => $result->get_error_message(),
-            ], 423);
+            ], 422);
         }
 
         return [
@@ -103,7 +103,7 @@ class MigratorController extends Controller
         if (is_wp_error($summary)) {
             return $this->sendError([
                 'message' => $summary->get_error_message(),
-            ], 423);
+            ], 422);
         }
 
         return [
@@ -131,7 +131,7 @@ class MigratorController extends Controller
         if (is_wp_error($summary)) {
             return $this->sendError([
                 'message' => $summary->get_error_message(),
-            ], 423);
+            ], 422);
         }
 
         return [
@@ -153,11 +153,49 @@ class MigratorController extends Controller
             return ActiveCampaignMigrator::class;
         }
 
+        /**
+         * Filter the migrator driver class.
+         *
+         * This filter allows you to modify the migrator driver class.
+         *
+         * @since 2.7.0
+         *
+         * @param mixed  $class  The current migrator driver class. Default null.
+         * @param string $driver The driver name.
+         */
         return apply_filters('fluent_crm/migrator_driver_class', null, $driver);
     }
 
     private function getMigrators()
     {
+        /**
+         * Filter the list of available SaaS migrators.
+         *
+         * This filter allows modification of the list of available SaaS migrators
+         * by adding, removing, or modifying the migrators.
+         *
+         * @since 2.7.0
+         *
+         * @param array $migrators {
+         *     An associative array of migrators.
+         *
+         *     @type array $mailchimp {
+         *         Information about the MailChimp migrator.
+         *     }
+         *     @type array $ConvertKit {
+         *         Information about the ConvertKit migrator.
+         *     }
+         *     @type array $MailerLite {
+         *         Information about the MailerLite migrator.
+         *     }
+         *     @type array $Drip {
+         *         Information about the Drip migrator.
+         *     }
+         *     @type array $ActiveCampaign {
+         *         Information about the ActiveCampaign migrator.
+         *     }
+         * }
+         */
         return apply_filters('fluent_crm/saas_migrators', [
             'mailchimp'      => (new MailChimpMigrator())->getInfo(),
             'ConvertKit'     => (new ConvertKitMigrator())->getInfo(),

@@ -202,13 +202,6 @@ class BlockParser
         $align = Arr::get($block, 'attrs.layout.justifyContent', 'left');
         $tableCssClass = 'fce_row fce_buttons_row';
 
-        $width = 'auto';
-        if ($align == 'right' || $alignment == 'center') {
-            $width = '100%';
-        } else if (Arr::get($block, 'innerBlocks.0.attrs.width') == 100) {
-            $width = '100%';
-        }
-
         $tableCssClass .= ' tb_btn_' . $alignment;
 
         if ($definedWidth = Arr::get($block, 'innerBlocks.0.attrs.width')) {
@@ -224,22 +217,38 @@ class BlockParser
         $extraStyle = '';
         if ($spacings = Arr::get($block, 'attrs.style.spacing.margin', [])) {
 
-            if(!empty($spacings['top'])) {
+            if (!empty($spacings['top'])) {
                 $extraStyle .= 'margin-top:' . $spacings['top'] . ';';
             }
 
-            if(!empty($spacings['bottom'])) {
+            if (!empty($spacings['bottom'])) {
                 $extraStyle .= 'margin-bottom:' . $spacings['bottom'] . ';';
             }
         }
 
-        return '<table valign="middle" align="' . $align . '" class="' . $tableCssClass . '" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%; width: ' . $width . '; float:none;' . $extraStyle . '"><tbody><tr>';
+        return '<table valign="middle" align="' . $align . '" class="' . $tableCssClass . '" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%; float:none;' . $extraStyle . '"><tbody><tr>';
     }
 
     private function getButtonWrapper($content, $data)
     {
         $defaultClass = Arr::get($data, 'attrs.className', '');
         $backgroundColor = Arr::get($data, 'attrs.style.color.background');
+
+        $typoTextTransform = Arr::get($data, 'attrs.style.typography.textTransform');
+        $typoFontWeight = Arr::get($data, 'attrs.style.typography.fontWeight');
+        $typoFontStyle = Arr::get($data, 'attrs.style.typography.fontStyle');
+
+        $typography = '';
+        if ($typoTextTransform) {
+            $typography .= 'text-transform: ' . $typoTextTransform . ';';
+        }
+        if ($typoFontWeight) {
+            $typography .= 'font-weight: ' . $typoFontWeight . ';';
+        }
+        if ($typoFontStyle) {
+            $typography .= 'font-style: ' . $typoFontStyle . ';';
+        }
+
         if (!$backgroundColor) {
             $bgClass = Arr::get($data, 'attrs.backgroundColor');
             $backgroundColor = Helper::getColorSchemeValue($bgClass);
@@ -248,7 +257,7 @@ class BlockParser
         $hasTextColor = Arr::get($data, 'attrs.style.color.text') || Arr::get($data, 'attrs.textColor');
 
         $btn_wrapper_class = $defaultClass . ' ';
-        if (!$backgroundColor && $defaultClass != 'is-style-outline') {
+        if (!$backgroundColor && strpos($defaultClass, 'is-style-outline') !== true) {
             $btn_wrapper_class .= 'fc_d_btn_bg ';
             $backgroundColor = '#32373c';
         }
@@ -257,33 +266,26 @@ class BlockParser
             $btn_wrapper_class .= 'fc_d_btn_color ';
         }
 
-        $additionalStyle = '';
-        if ($defaultClass == 'is-style-outline') {
+        if (strpos($defaultClass, 'is-style-outline') !== false) {
+            $backgroundColor = Arr::get($data, 'attrs.style.color.background');
             if (!$backgroundColor) {
                 $backgroundColor = 'white';
             }
-            $textColor = Arr::get($data, 'attrs.style.color.text');
-            if (!$textColor) {
-                $textColorName = Arr::get($data, 'attrs.textColor');
-                $textColor = Helper::getColorSchemeValue($textColorName);
-            }
-
-            if (!$textColor) {
-                $textColor = '#000000';
-            }
-
-            $additionalStyle = 'border: 1px solid ' . $textColor;
         }
 
         $borderRadius = Arr::get($data, 'attrs.style.border.radius', '0px');
 
         $content = trim(preg_replace("/<\/?div[^>]*\>/i", "", $content));
 
-        $td = '<td class="fc_btn ' . trim($btn_wrapper_class) . '" align="center" style="border-radius: ' . $borderRadius . '; ' . $additionalStyle . '" bgcolor="' . $backgroundColor . '">';
+        if (Arr::get($data, 'attrs.fontSize')) {
+            $btn_wrapper_class .= ' has-' . Helper::kebabCase(Arr::get($data, 'attrs.fontSize')) . '-font-size ';
+        }
+
+        $td = '<td class="fc_btn ' . trim($btn_wrapper_class) . '" align="center" style="' . $typography . ' border-radius: ' . $borderRadius . ';" bgcolor="' . $backgroundColor . '" border-radius="30px">';
 
         $align = Arr::get($data, 'parent_attrs.parent_attrs.layout.justifyContent', 'center');
 
-        $alignment = $align == 'center' ? 'text-align: -webkit-center' : ' ';
+        $alignment = $align == 'center' ? 'text-align: -webkit-center;' : ' ';
 
         return '<td style="padding-right: 10px;' . $alignment . '" align="' . $align . '" valign="middle" class="fce_column"><table style="margin-bottom: 4px; margin-top: 4px;" border="0" cellspacing="0" cellpadding="0"><tr>' . $td . $content . '</td></tr></table></td>';
     }
@@ -296,6 +298,19 @@ class BlockParser
     private function renderConditionalBlock($content, $data)
     {
         $subscriber = BlockParserHelper::getSubscriber();
+        if (!$subscriber) {
+            /**
+             * Filter the current subscriber while rendering the Conditional Block in FluentCRM.
+             *
+             * This filter allows you to modify the subscriber object used in the current block condition.
+             *
+             * @since 2.8.44
+             *
+             * @param object $subscriber The current subscriber object.
+             * @return object The modified subscriber object.
+             */
+            $subscriber = apply_filters('fluent_crm/get_current_block_condition_subscriber', $subscriber);
+        }
 
         if (!$subscriber) {
             return $content;
@@ -334,24 +349,24 @@ class BlockParser
             'align' . Arr::get($block, 'attrs.align', 'left')
         ]));
         $radius = Arr::get($block, 'attrs.style.border.radius', '0px');
-        $marginTop  = $this->getSpacing('attrs.marginTop', $block);
-        $marginBottom  = $this->getSpacing('attrs.marginBottom', $block);
-        $marginLeft  = $this->getSpacing('attrs.marginLeft', $block);
-        $marginRight  = $this->getSpacing('attrs.marginRight', $block);
+        $marginTop = $this->getSpacing('attrs.marginTop', $block);
+        $marginBottom = $this->getSpacing('attrs.marginBottom', $block);
+        $marginLeft = $this->getSpacing('attrs.marginLeft', $block);
+        $marginRight = $this->getSpacing('attrs.marginRight', $block);
 
-        $paddingTop  = $this->getSpacing('attrs.paddingTop', $block);
-        $paddingBottom  = $this->getSpacing('attrs.paddingBottom', $block);
-        $paddingLeft  = $this->getSpacing('attrs.paddingLeft', $block);
-        $paddingRight  = $this->getSpacing('attrs.paddingRight', $block);
+        $paddingTop = $this->getSpacing('attrs.paddingTop', $block);
+        $paddingBottom = $this->getSpacing('attrs.paddingBottom', $block);
+        $paddingLeft = $this->getSpacing('attrs.paddingLeft', $block);
+        $paddingRight = $this->getSpacing('attrs.paddingRight', $block);
 
-        $margin  = ''.$marginTop.'px '.$marginRight.'px '.$marginBottom.'px '.$marginLeft.'px';
-        $padding = ''.$paddingTop.'px '.$paddingRight.'px '.$paddingBottom.'px '.$paddingLeft.'px';
+        $margin = '' . $marginTop . 'px ' . $marginRight . 'px ' . $marginBottom . 'px ' . $marginLeft . 'px';
+        $padding = '' . $paddingTop . 'px ' . $paddingRight . 'px ' . $paddingBottom . 'px ' . $paddingLeft . 'px';
 
 
         $content = $block['innerContent'][0];
         $html = strip_tags($content, '<a><figcaption><img>');
         $html = str_replace(['<figcaption', 'figcaption/>'], ['<p', '/p>'], $html);
-        $html = '<div class="' . $classNames .'" style="border-radius: ' . $radius . '; margin: '. $margin . '; padding: '.$padding.'">'. $html . '</div>';
+        $html = '<div class="' . $classNames . '" style="border-radius: ' . $radius . '; margin: ' . $margin . '; padding: ' . $padding . '">' . $html . '</div>';
         return $html;
     }
 
@@ -360,9 +375,9 @@ class BlockParser
         return '';
     }
 
-    private  function getSpacing($key, $block)
+    private function getSpacing($key, $block)
     {
-        $data  = Arr::get($block, $key, '0');
+        $data = Arr::get($block, $key, '0');
         if (empty($data)) {
             $data = '0';
         }

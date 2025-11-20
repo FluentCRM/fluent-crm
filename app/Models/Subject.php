@@ -20,6 +20,8 @@ class Subject extends Model
 
     public static function boot()
     {
+        parent::boot();
+
         static::creating(function ($model) {
             $model->object_type = __class__;
         });

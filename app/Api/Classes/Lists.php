@@ -2,6 +2,7 @@
 namespace FluentCrm\App\Api\Classes;
 
 use FluentCrm\App\Models\Lists as CrmLists;
+use FluentCrm\Framework\Support\Arr;
 
 /**
  * Contacts List Class - PHP APi Wrapper
@@ -61,10 +62,11 @@ class Lists
             $list['slug']  = sanitize_text_field($list['slug']);
 
             $list = \FluentCrm\App\Models\Lists::updateOrCreate(
-                [
+                array_filter([
                     'slug' => $list['slug'],
-                    'title' => sanitize_text_field($list['title'])
-                ],
+                    'title' => sanitize_text_field($list['title']),
+                    'description' => sanitize_textarea_field(Arr::get($list, 'description'))
+                ]),
                 ['slug' => $list['slug']]
             );
 
@@ -88,6 +90,7 @@ class Lists
             return call_user_func_array([$this->instance, $method], $params);
         }
 
-        throw new \Exception("Method {$method} does not exist.");
+        /* translators: %s: method name */
+        throw new \Exception(sprintf('Method %s does not exist.', esc_html($method)));
     }
 }

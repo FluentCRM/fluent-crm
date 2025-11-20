@@ -15,6 +15,7 @@ class Webhook
     public function handle($serviceName, $request)
     {
         $method = 'handle' . ucfirst(strtolower($serviceName));
+
         if (method_exists($this, $method)) {
             return $this->{$method}($request);
         }
@@ -48,6 +49,8 @@ class Webhook
         $newStatus = 'bounced';
         if ($event == 'complained') {
             $newStatus = 'complained';
+        } else if ($event == 'unsubscribed') {
+            $newStatus = 'unsubscribed';
         }
 
         $unsubscribeData = [
@@ -83,6 +86,8 @@ class Webhook
                     $newStatus = 'bounced';
                 } else if ($eventName == 'unsubscribe') {
                     $newStatus = 'unsubscribed';
+                } else if ($eventName == 'spamreport') {
+                    $newStatus = 'spammed';
                 }
                 $unsubscribeData = [
                     'email'  => Arr::get($event, 'email'),
@@ -119,8 +124,10 @@ class Webhook
             $eventName = Arr::get($event, 'EVENT');
             if (in_array($eventName, ['bounced', 'invalid', 'spam', 'unsubscribed'])) {
                 $newStatus = 'bounced';
-                if ($eventName == 'unsubscribed' || $eventName == 'spam') {
+                if ($eventName == 'unsubscribed') {
                     $newStatus = 'complained';
+                } else if ($eventName == 'spam') {
+                    $newStatus = 'spammed';
                 }
                 $reason = $newStatus . __(' status was set from SendGrid Webhook API. Reason: ', 'fluent-crm') . Arr::get($event, 'BOUNCE_TYPE') . __('. Recorded at: ', 'fluent-crm') . current_time('mysql');
 
@@ -172,8 +179,10 @@ class Webhook
             $eventName = Arr::get($event, 'type');
             if (in_array($eventName, ['bounce', 'spam_complaint', 'link_unsubscribe'])) {
                 $newStatus = 'bounced';
-                if ($eventName == 'spam_complaint' || $eventName == 'link_unsubscribe') {
+                if ($eventName == 'link_unsubscribe') {
                     $newStatus = 'complained';
+                } else if ($eventName == 'spam_complaint') {
+                    $newStatus = 'spammed';
                 }
                 $reason = $newStatus . __(' status was set from Sparkpost Webhook API. Reason: ', 'fluent-crm') . $eventName . __('. Recorded at: ', 'fluent-crm') . current_time('mysql');
 
@@ -218,7 +227,7 @@ class Webhook
         if (in_array($eventName, ['Bounce', 'SpamComplaint'])) {
             $newStatus = 'bounced';
             if ($eventName == 'SpamComplaint') {
-                $newStatus = 'complained';
+                $newStatus = 'spammed';
             }
 
             $reason = $newStatus . __(' status was set from PostMark Webhook API. Reason: ', 'fluent-crm') . $eventName . __('. Recorded at: ', 'fluent-crm') . current_time('mysql');
@@ -262,21 +271,25 @@ class Webhook
 
         $category = $request->get('category', 'unknown');
 
-        if($status == 'error' && in_array($category, $bounceCategories)) {
+        if ($status == 'error' && in_array($category, $bounceCategories)) {
             $status = 'bounced';
         }
 
-        if(!in_array($status, $processStatuses)) {
-            return false;
+        if (!in_array($status, $processStatuses)) {
+            return [
+                'message' => 'unknown_status'
+            ];
         }
 
         $email = $request->get('to');
 
-        if(!is_email($email)) {
-            return false;
+        if (!is_email($email)) {
+            return [
+                'message' => 'invalid_email'
+            ];
         }
 
-        if($status == 'unsubscribed') {
+        if ($status == 'unsubscribed') {
 
             $unsubscribeData = [
                 'email'  => $email,
@@ -295,5 +308,137 @@ class Webhook
         ];
 
         return (new ExternalPages())->recordUnsubscribe($unsubscribeData);
+    }
+
+    private function handlePostalserver($request)
+    {
+        $event = strtolower($request->get('event'));
+
+        $processStatuses = [
+            'messagebounced',
+            'messagedeliveryfailed'
+        ];
+
+        if (!in_array($event, $processStatuses)) {
+            return false;
+        }
+
+        $payload = $request->get('payload');
+
+
+        if (!$payload || !is_array($payload)) {
+            return false;
+        }
+
+        $reason = Arr::get($payload, 'details', 'Unknown Reason');
+
+        if ($event == 'messagedeliveryfailed') {
+            $payloadStatus = Arr::get($payload, 'status');
+            if ($payloadStatus != 'HardFail') {
+                return false;
+            }
+            $toEmail = Arr::get($payload, 'message.to');
+        } else {
+            $toEmail = Arr::get($payload, 'bounce.to');
+
+            if (!$toEmail) {
+                $toEmail = Arr::get($payload, 'message.to');
+            }
+        }
+
+        if (!$toEmail || !is_email($toEmail)) {
+            return false;
+        }
+
+        $unsubscribeData = [
+            'email'  => $toEmail,
+            'reason' => $reason,
+            'status' => 'bounced'
+        ];
+
+        return (new ExternalPages())->recordUnsubscribe($unsubscribeData);
+    }
+
+    private function handleSmtp2go($request)
+    {
+        $event = strtolower($request->get('event'));
+
+        $processStatuses = [
+            'bounce',
+            'spam',
+            'unsubscribe'
+        ];
+        
+        if (!in_array($event, $processStatuses)) {
+            return false;
+        }
+
+        $reason = sanitize_textarea_field($request->get('message', 'Unknown Reason'));
+
+        if ($event == 'bounce') {
+            $bounceType = $request->get('bounce');
+            if ($bounceType == 'soft') {
+                return false;
+            }
+        }
+
+        $toEmail = $request->get('rcpt');
+        if (!$toEmail || !is_email($toEmail)) {
+            return false;
+        }
+
+        $newStatus = 'bounced';
+        if ($event == 'unsubscribe') {
+            $newStatus = 'unsubscribed';
+        } else if ($event == 'spam') {
+            $newStatus = 'spammed';
+        }
+
+        $unsubscribeData = [
+            'email'  => $toEmail,
+            'reason' => $reason,
+            'status' => $newStatus,
+            'unsubscribe_reason' => $reason
+        ];
+
+        return (new ExternalPages())->recordUnsubscribe($unsubscribeData);
+    }
+
+    /**
+     * @param $request \FluentCrm\Framework\Request\Request
+     * @return boolean
+     */
+    private function handleBrevo($request)
+    {
+        $event = $request->getJson();
+
+        if (!$event || !count($event)) {
+            return false;
+        }
+
+        $unsubscribeData = [];
+        
+        $eventName = Arr::get($event, 'event');
+        if (in_array($eventName, ['soft_bounce', 'hard_bounce', 'spam', 'error', 'blocked', 'unsubscribe'])) {
+            $newStatus = 'complained';
+            if (in_array($eventName, ['soft_bounce', 'hard_bounce'])) {
+                $newStatus = 'bounced';
+            } else if ($eventName == 'unsubscribe') {
+                $newStatus = 'unsubscribed';
+            } else if ($eventName == 'spam') {
+                $newStatus = 'spammed';
+            }
+            $unsubscribeData = [
+                'email'  => Arr::get($event, 'email'),
+                'reason' => $newStatus . __(' status was set from Brevo Webhook API. Reason: ', 'fluent-crm') . Arr::get($event, 'reason', 'unknown') . __('. Recorded at: ', 'fluent-crm') . current_time('mysql'),
+                'status' => $newStatus
+            ];
+        }
+
+        if ($unsubscribeData) {
+            return (new ExternalPages())->recordUnsubscribe($unsubscribeData);
+        }
+
+        return false;
     }
 }

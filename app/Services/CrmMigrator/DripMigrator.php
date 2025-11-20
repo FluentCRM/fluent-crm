@@ -226,7 +226,7 @@ class DripMigrator extends BaseMigrator
                 'state'          => $subscriber['state'],
                 'postal_code'    => $subscriber['zip'],
                 'phone'          => $subscriber['phone'],
-                'created_at'     => date('Y-m-d H:i:s', strtotime($subscriber['created_at'])),
+                'created_at'     => gmdate('Y-m-d H:i:s', strtotime($subscriber['created_at'])),
                 'source'         => 'Drip',
                 'ip'             => $subscriber['ip_address'],
                 'country'        => Arr::get($subscriber, 'country'),
@@ -264,10 +264,7 @@ class DripMigrator extends BaseMigrator
             $contact = FluentCrmApi('contacts')->createOrUpdate($data);
 
             if ($status == 'subscribed' && $contact && $contact->status != 'subscribed') {
-                $oldStatus = $contact->status;
-                $contact->status = 'subscribed';
-                $contact->save();
-                do_action('fluentcrm_subscriber_status_to_subscribed', $contact, $oldStatus);
+                $contact->updateStatus('subscribed');
             }
         }
 

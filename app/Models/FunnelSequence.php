@@ -42,6 +42,8 @@ class FunnelSequence extends Model
 
     public static function boot()
     {
+        parent::boot();
+
         static::updating(function ($model) {
             if (isset($model->settings) && is_array($model->settings)) {
                 $model->settings = \maybe_serialize($model->settings);

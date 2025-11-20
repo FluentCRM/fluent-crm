@@ -1,0 +1,75 @@
+html[dir="rtl"] {
+    .el-dropdown-menu {
+        right: auto;
+    }
+
+    .wp_vue_editor_wrapper .popover-wrapper {
+        right: 120px !important;
+    }
+
+    
+    .fc_rich_container {
+        .fc_rich_filter {
+            .fc_rich_filters {
+                .fc_filter_intro {
+                    > button {
+                        margin-left: 5px;
+                        margin-top: 1px;
+                        padding: 8px 9px;
+                    }
+                }
+            }
+        }
+    }
+
+    .fc_block_type_conditional {
+        .fluentcrm_blockin {
+            max-width: 420px;
+        }
+    }
+
+    .fc_dom_path {
+        &.fc_condition_node_point {
+            &.fc_dom_path_right {
+                border-color: #2f2925;
+                border-width: 2px 0 0 2px !important;
+                border-left-style: solid !important;
+                border-top-right-radius: 0 !important;
+                border-top-left-radius: 20px;
+                //left: 384px !important;
+                transform: translateX(-69px);
+            }
+            &.fc_dom_path_left {
+                border-width: 2px 2px 0 0 !important;
+                border-right-style: solid !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 20px !important;
+                transform: translateX(69px);
+                //left: auto !important;
+                //right: 382px;
+            }
+        }
+
+        &.fc_ab_test {
+            &.fc_ab_test_b {
+                &.fc_dom_path_right {
+                    border-right-style: initial !important;
+                    border-left-style: solid !important;
+                    border-top-right-radius: 0 !important;
+                    border-top-left-radius: 20px !important;
+                    transform: translateX(-69px);
+                }
+            }
+            &.fc_ab_test_a {
+                &.fc_dom_path_left {
+                    border-left-style: initial !important;
+                    border-right-style: solid !important;
+                    border-top-left-radius: 0 !important;
+                    border-top-right-radius: 20px !important;
+                    transform: translateX(69px);
+                }
+            }
+        }
+    }
+}
+

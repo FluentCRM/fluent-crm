@@ -26,6 +26,15 @@ class SetupWizard
      */
     public function __construct()
     {
+        /**
+         * Determine whether to enable the FluentCRM setup wizard.
+         *
+         * This filter allows you to enable or disable the setup wizard for FluentCRM.
+         *
+         * @since 1.0.0
+         *
+         * @param bool Whether to enable the setup wizard. Default true.
+         */
         if (apply_filters('fluentcrm_setup_wizard', true) && current_user_can('manage_options')) {
             if(fluentcrm_get_option('fluentcrm_setup_wizard_ran') == 'yes') {
                 wp_redirect(admin_url('admin.php?page=fluentcrm-admin&setup_complete=' . time()));
@@ -59,13 +68,15 @@ class SetupWizard
 
         wp_register_script(
             'fluentcrm-boot',
-            fluentCrmMix('admin/js/boot.js'), ['jquery'], date('Ymd'), true
+            fluentCrmMix('admin/js/boot.js'), ['jquery'], gmdate('Ymd'), true
         );
 
         wp_register_script(
             'fluentcrm-setup',
-            fluentCrmMix('admin/js/setup-wizard.js'), ['fluentcrm-boot'], date('Ymd'), true
+            fluentCrmMix('admin/js/setup-wizard.js'), ['fluentcrm-boot'], gmdate('Ymd'), true
         );
+
+        wp_enqueue_script('lodash');
 
         $existingSettings = get_option(FLUENTCRM . '-global-settings');
         $businessSettings = Arr::get($existingSettings, 'business_settings', []);
@@ -80,6 +91,7 @@ class SetupWizard
             'dashboard_url'     => admin_url('admin.php?page=fluentcrm-admin&setup_complete=' . time()),
             'business_settings' => (object) $businessSettings,
             'has_fluentform'    => defined('FLUENTFORM'),
+            'has_fluentcart'    => defined('FLUENTCART_VERSION'),
             'auth' => [
                 'permissions' => PermissionManager::currentUserPermissions(),
                 'first_name' => $currentUser->first_name,

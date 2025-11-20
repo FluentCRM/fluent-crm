@@ -12,7 +12,10 @@ use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\SubscriberMeta;
 use FluentCrm\App\Models\SubscriberNote;
 use FluentCrm\App\Models\SubscriberPivot;
+use FluentCrm\App\Services\BlockParser;
 use FluentCrm\App\Services\Helper;
+use FluentCrm\App\Models\Meta;
+
 
 /**
  *  Cleanup Class
@@ -44,7 +47,7 @@ class Cleanup
             \FluentCampaign\App\Models\SequenceTracker::whereIn('subscriber_id', $subscriberIds)->delete();
         }
 
-        if(Helper::isExperimentalEnabled('company_module')) {
+        if (Helper::isExperimentalEnabled('company_module')) {
             Company::whereIn('owner_id', $subscriberIds)
                 ->update([
                     'owner_id' => NULL
@@ -99,10 +102,13 @@ class Cleanup
 
         FunnelSubscriber::where('subscriber_id', $subscriber->id)
             ->where('status', 'active')
+            ->whereDoesntHave('funnel', function ($query) {
+                $query->where('trigger_name', 'fluent_crm/subscriber_status_changed');
+            })
             ->update([
                 'status' => 'cancelled'
             ]);
-
+        
         if (defined('FLUENTCAMPAIGN')) {
             \FluentCampaign\App\Models\SequenceTracker::where('subscriber_id', $subscriber->id)
                 ->where('status', 'active')
@@ -231,5 +237,116 @@ class Cleanup
 
         // Delete company notes
         CompanyNote::where('subscriber_id', $id)->delete();
+    }
+
+    public function handleUserPasswordChanged($user)
+    {
+        $contact = Subscriber::where('email', $user->user_email)
+            ->first();
+
+        if (!$contact) {
+            return false;
+        }
+
+        $exist = SubscriberMeta::where('subscriber_id', $contact->id)
+            ->where('key', '_secure_managed_hash')
+            ->first();
+
+        if (!$exist) {
+            return false;
+        }
+
+        $hash = md5(wp_generate_uuid4() . '_' . $contact->id . '_' . '_' . time() . '__' . $contact->id);
+        $exist->value = $hash;
+        $exist->updated_at = gmdate('Y-m-d H:i:s');
+        $exist->save();
+
+        return true;
+    }
+
+    public function archiveCampaignAssets($campaign)
+    {
+        if ($campaign->type != 'campaign' || fluentcrm_get_campaign_meta($campaign->id, '_cached_email_body', true)) {
+            return;
+        }
+
+        // We will create email body and then cache it for future use
+        $rawTemplates = [
+            'raw_html',
+            'visual_builder'
+        ];
+
+        if (in_array($campaign->design_template, $rawTemplates)) {
+            $emailBody = $campaign->email_body;
+        } else {
+            $emailBody = (new BlockParser())->parse($campaign->email_body);
+        }
+
+        fluentcrm_update_campaign_meta($campaign->id, '_cached_email_body', $emailBody);
+        return true;
+    }
+
+    public static function maybeRemoveOldScheuledActionLogs()
+    {
+        $group_slug = 'fluent-crm';
+        $days_old = 7;
+
+        global $wpdb;
+
+        // Get the timestamp for 7 days ago
+        $cutoff_date = gmdate('Y-m-d H:i:s', strtotime("-{$days_old} days"));
+
+        // Get the group ID
+        $group_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT group_id FROM {$wpdb->prefix}actionscheduler_groups WHERE slug = %s",
+            $group_slug
+        ));
+
+        if (!$group_id) {
+            return false; // Group not found
+        }
+
+        // Delete old actions and their associated logs
+        $deleted = $wpdb->query($wpdb->prepare("
+        DELETE a, l
+        FROM {$wpdb->prefix}actionscheduler_actions a
+        LEFT JOIN {$wpdb->prefix}actionscheduler_logs l ON a.action_id = l.action_id
+        WHERE a.group_id = %d
+        AND a.status IN ('complete', 'failed')
+        AND a.scheduled_date_gmt < %s", $group_id, $cutoff_date));
+
+        // Clean up orphaned claims
+        $wpdb->query("
+        DELETE c
+        FROM {$wpdb->prefix}actionscheduler_claims c
+        LEFT JOIN {$wpdb->prefix}actionscheduler_actions a ON c.claim_id = a.claim_id
+        WHERE a.action_id IS NULL");
+
+        return $deleted;
+    }
+
+    public function SyncSubscriberDeleteSettings($fromKey, $value)
+    {
+        if ($fromKey == 'compliance_settings') {
+            $option = Meta::where('key', 'user_syncing_settings')
+                ->where('object_type', 'option')
+                ->first();
+
+            if ($option) {
+                $settings = $option->value;
+
+                if ($settings['delete_contact_on_user_delete'] != $value) {
+                    $settings['delete_contact_on_user_delete'] = $value;
+                    $option->value = $settings;
+                    $option->save();
+                }
+            }
+        } else {
+            $complianceSettings = get_option('_fluentcrm_compliance_settings');
+            if ($complianceSettings) {
+                $complianceSettings['delete_contact_on_user'] = $value;
+                update_option('_fluentcrm_compliance_settings', $complianceSettings, 'no');
+            }
+        }
     }
 }

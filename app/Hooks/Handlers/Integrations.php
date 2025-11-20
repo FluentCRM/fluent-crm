@@ -3,6 +3,7 @@
 namespace FluentCrm\App\Hooks\Handlers;
 
 use FluentCrm\App\Models\Tag;
+use FluentCrm\App\Services\ExternalIntegrations\BricksBuilderIntegration;
 use FluentCrm\Framework\Support\Arr;
 
 /**
@@ -20,6 +21,10 @@ class Integrations
             (new \FluentCrm\App\Services\ExternalIntegrations\FluentForm\FluentFormInit())->init();
         }
 
+        if(defined('FLUENTCART_VERSION')) {
+            (new \FluentCrm\App\Services\ExternalIntegrations\FluentCart\FluentCart())->init();
+        }
+
         /*
          * Oxygen Edito Integration
          */
@@ -27,14 +32,21 @@ class Integrations
             require_once FLUENTCRM_PLUGIN_PATH . 'app/Services/ExternalIntegrations/Oxygen/oxy_init.php';
         }
 
+        (new EventTrackingHandler())->register();
+
+
         $this->registerBlockEditorBlocks();
+
+        if(defined('BRICKS_VERSION')) {
+            (new BricksBuilderIntegration())->register();
+        }
     }
 
     public function registerBlockEditorBlocks()
     {
         wp_register_script(
             'fluentcrm-blocks-block-editor',
-            fluentCrmMix('block_editor/fluent_conditional_block.js'),
+            apply_filters('fluent_crm/fluent_conditional_block_js_url', fluentCrmMix('block_editor/fluent_conditional_block.js')),
             ['wp-blocks', 'wp-element', 'wp-editor'],
             FLUENTCRM_PLUGIN_VERSION
         );
@@ -45,7 +57,7 @@ class Integrations
 
         wp_register_style(
             'fluentcrm-blocks-block-editor',
-            fluentCrmMix('block_editor/fluent_conditional_block.css'),
+            apply_filters('fluent_crm/fluent_conditional_block_css_url', fluentCrmMix('block_editor/fluent_conditional_block.css')),
             array(),
             FLUENTCRM_PLUGIN_VERSION
         );

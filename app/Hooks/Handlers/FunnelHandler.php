@@ -23,6 +23,8 @@ use FluentCrm\App\Services\Funnel\FunnelHelper;
 use FluentCrm\App\Services\Funnel\FunnelProcessor;
 use FluentCrm\App\Services\Funnel\SequencePoints;
 use FluentCrm\App\Services\Funnel\Triggers\FluentFormSubmissionTrigger;
+use FluentCrm\App\Services\Funnel\Triggers\FluentFormSubscriptionCancelledTrigger;
+use FluentCrm\App\Services\Funnel\Triggers\FluentFormSubscriptionPaymentReceivedTrigger;
 use FluentCrm\App\Services\Funnel\Triggers\UserRegistrationTrigger;
 use FluentCrm\App\Services\Helper;
 use FluentCrm\App\Services\PermissionManager;
@@ -60,6 +62,16 @@ class FunnelHandler
 
         if ($triggers) {
             foreach ($triggers as $triggerName) {
+                /**
+                 * Determine the number of arguments passed to the funnel trigger in FluentCRM.
+                 *
+                 * This filter allows you to modify the number of arguments that are passed to the funnel trigger
+                 * based on the trigger name.
+                 *
+                 * @since 2.5.6
+                 * 
+                 * @param int $argNum The number of arguments to pass to the funnel trigger. Default is 1.
+                 */
                 $argNum = apply_filters('fluentcrm_funnel_arg_num_' . $triggerName, 1);
                 add_action($triggerName, function () use ($triggerName, $argNum) {
                     $this->mapTriggers($triggerName, func_get_args(), $argNum);
@@ -73,14 +85,14 @@ class FunnelHandler
             }
         }
 
-        add_action('fluentcrm_process_scheduled_tasks_init', function () {
-            if($this->funnelFired) {
+        add_action('fluent_crm_process_automation', function () {
+            if ($this->funnelFired) {
                 return;
             }
 
             $this->funnelFired = true;
             $lastProcessor = get_option('_fc_last_funnel_processor');
-            if($lastProcessor && (time() - $lastProcessor) < 60 ) {
+            if ($lastProcessor && (time() - $lastProcessor) < 60) {
                 return; // We want to run the processor only once per 60 seconds
             }
 
@@ -161,6 +173,10 @@ class FunnelHandler
     {
         new UserRegistrationTrigger();
         new FluentFormSubmissionTrigger();
+        if (defined('FLUENTFORMPRO'))  {
+            new FluentFormSubscriptionPaymentReceivedTrigger();
+            new FluentFormSubscriptionCancelledTrigger();
+        }
     }
 
     private function initBlockActions()
@@ -216,7 +232,7 @@ class FunnelHandler
         if (!$hasPermission) {
             wp_send_json([
                 'message' => __('Sorry, You do not have permission to do this action', 'fluent-crm')
-            ], 423);
+            ], 422);
         }
 
         $request = FluentCrm('request');
@@ -241,12 +257,23 @@ class FunnelHandler
 
         $funnelId = intval($_REQUEST['funnel_id']);
         $funnel = Funnel::findOrFail($funnelId);
+        /**
+         * Determine the funnel editor details based on the funnel's trigger name.
+         *
+         * The dynamic portion of the hook name, `$funnel->trigger_name`, refers to the trigger name of the funnel.
+         *
+         * @since 2.0.0
+         *
+         * @param object $funnel The funnel object containing the editor details.
+         */
         $funnel = apply_filters('fluentcrm_funnel_editor_details_' . $funnel->trigger_name, $funnel);
+
+        $funnel->labels = $funnel->getFormattedLabels();
 
         $funnel->sequences = FunnelHelper::getFunnelSequences($funnel, true);
 
         $funnel->site_hash = md5(site_url());
-        $funnel->export_date = date('Y-m-d H:i:s');
+        $funnel->export_date = gmdate('Y-m-d H:i:s');
 
         header('Content-disposition: attachment; filename=' . sanitize_title($funnel->title, 'funnel', 'display') . '-' . $funnelId . '.json');
         header('Content-type: application/json');
@@ -261,7 +288,7 @@ class FunnelHandler
         if (!$hasPermission) {
             wp_send_json([
                 'message' => __('Sorry, You do not have permission to do this action', 'fluent-crm')
-            ], 423);
+            ], 422);
         }
 
         $request = FluentCrm('request');
@@ -296,7 +323,7 @@ class FunnelHandler
             $funnelCampaignId = $campaign->id;
         }
 
-        if(Arr::get($funnelCampaign, 'design_template') == 'visual_builder') {
+        if (Arr::get($funnelCampaign, 'design_template') == 'visual_builder') {
             $design = Arr::get($funnelCampaign, '_visual_builder_design', []);
             fluentcrm_update_campaign_meta($funnelCampaignId, '_visual_builder_design', $design);
         } else {
@@ -319,7 +346,7 @@ class FunnelHandler
         if (!$hasPermission) {
             wp_send_json([
                 'message' => __('Sorry, You do not have permission to do this action', 'fluent-crm')
-            ], 423);
+            ], 422);
         }
 
         $request = FluentCrm('request');
@@ -330,7 +357,7 @@ class FunnelHandler
         if (empty($data)) {
             wp_send_json([
                 'message' => __('Invalid Data', 'fluent-crm')
-            ], 423);
+            ], 422);
         }
 
         $updateData = Arr::only($data, [
@@ -362,7 +389,7 @@ class FunnelHandler
 
         $nextStep = Arr::get($data, 'next_step');
 
-        if($nextStep) {
+        if ($nextStep) {
             do_action('fluent_crm/update_campaign_compose', $data, $campaign);
             fluentcrm_update_campaign_meta($id, '_next_config_step', $nextStep);
         }

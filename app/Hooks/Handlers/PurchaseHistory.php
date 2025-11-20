@@ -16,9 +16,29 @@ class PurchaseHistory
 {
     public function getCommerceStatWidget($subscriber)
     {
+        /**
+         * Determine the commerce provider for the purchase history in FluentCRM.
+         *
+         * This filter allows you to modify the commerce provider used in FluentCRM.
+         *
+         * @since 2.8.0
+         * 
+         * @param string $commerceProvider The current commerce provider.
+         * @return string The modified commerce provider.
+         */
         $commerceProvider = apply_filters('fluentcrm_commerce_provider', '');
 
         if ($commerceProvider) {
+            /**
+             * Determine the purchase statistics for a specific commerce provider for a specific subscriber in FluentCRM.
+             *
+             * The dynamic portion of the hook name, `$commerceProvider`, refers to the specific commerce provider.
+             *
+             * @since 2.8.0
+             *
+             * @param array $stats An array of purchase statistics.
+             * @param int $subscriber->id The ID of the subscriber.
+             */
             $stats = apply_filters('fluent_crm/contact_purchase_stat_' . $commerceProvider, [], $subscriber->id);
             if (!$stats) {
                 return false;
@@ -38,9 +58,9 @@ class PurchaseHistory
 
         if (defined('WC_PLUGIN_FILE')) {
             $summary = $this->getWooCustomerSummary($subscriber);
-            if($summary) {
+            if ($summary) {
                 return [
-                    'title'   => 'Customer Summary',
+                    'title'   => __('Customer Summary', 'fluent-crm'),
                     'content' => $summary
                 ];
             }
@@ -51,29 +71,29 @@ class PurchaseHistory
 
             $customer = fluentCrmDb()->table('edd_customers')
                 ->where('email', $subscriber->email);
-            if($subscriber->user_id) {
+            if ($subscriber->user_id) {
                 $customer = $customer->orWhere('user_id', $subscriber->user_id);
             }
-            $customer =  $customer->first();
-            if(!$customer) {
+            $customer = $customer->first();
+            if (!$customer) {
                 return false;
             }
 
             $summaryData = [
-                'order_count'     => $customer->purchase_count,
-                'lifetime_value'  => number_format($customer->purchase_value, 2),
-                'avg_value'       => ($customer->purchase_count) ? round($customer->purchase_value / $customer->purchase_count, 2) : 'n/a',
-                'stat_avg_count'  => 0,
-                'stat_avg_spend'  => 0,
-                'stat_avg_value'  => 0,
-                'currency_sign'   => edd_currency_symbol(),
+                'order_count'      => $customer->purchase_count,
+                'lifetime_value'   => number_format($customer->purchase_value, 2),
+                'avg_value'        => ($customer->purchase_count) ? round($customer->purchase_value / $customer->purchase_count, 2) : 'n/a',
+                'stat_avg_count'   => 0,
+                'stat_avg_spend'   => 0,
+                'stat_avg_value'   => 0,
+                'currency_sign'    => edd_currency_symbol(),
                 'first_order_date' => $customer->date_created
             ];
 
             $html = $this->formatSummaryData($summaryData, true);
 
             return [
-                'title'   => 'Customer Summary',
+                'title'   => __('Customer Summary', 'fluent-crm'),
                 'content' => $html
             ];
         }
@@ -98,109 +118,77 @@ class PurchaseHistory
         $page = (int)$app->request->get('page', 1);
         $per_page = (int)$app->request->get('per_page', 10);
 
-        $args = array(
-            'limit'    => $per_page,
-            'offset'   => $per_page * ($page - 1),
-            'paginate' => true
-        );
+        $sort_by   = sanitize_sql_orderby($app->request->get('sort_by', 'id'));
+        $sort_type = sanitize_sql_orderby($app->request->get('sort_type', 'DESC'));
 
-        $args['customer'] = $subscriber->email;
+        $valid_columns = ['id', 'date_created', 'total_amount'];
+        $valid_directions = ['ASC', 'DESC'];
 
-        $customer_orders = wc_get_orders($args);
-
-        if (empty($customer_orders->orders) && empty($args['customer'])) {
-            $args['customer'] = $subscriber->email;
-            $customer_orders = wc_get_orders($args);
+        if (!in_array($sort_by, $valid_columns)) {
+            $sort_by = 'id';
+        }
+        if (!in_array(strtoupper($sort_type), $valid_directions)) {
+            $sort_type = 'DESC';
         }
 
-        $formattedOrders = [];
-        $lastOrder = false;
-        foreach ($customer_orders->orders as $order) {
-            if (!$lastOrder) {
-                $lastOrder = $order;
-            }
+        $orders = $this->getWooOrders($subscriber, $sort_by, $sort_type);
+        $totalOrders = count($orders);
+        $orders = array_slice($orders, ($page - 1) * $per_page, $per_page);
 
+        $formattedOrders = [];
+
+        foreach ($orders as $order) {
             $item_count = $order->get_item_count() - $order->get_item_count_refunded();
             $actionsHtml = '<a target="_blank" href="' . $order->get_edit_order_url() . '">' . __('View Order', 'fluent-crm') . '</a>';
             $formattedOrders[] = [
                 'order'   => '#' . $order->get_order_number(),
                 'date'    => esc_html(wc_format_datetime($order->get_date_created())),
                 'status'  => $order->get_status(),
+                /* translators: 1: formatted order total (with currency), 2: number of items */
                 'total'   => wp_kses_post(sprintf(_n('%1$s for %2$s item', '%1$s for %2$s items', $item_count, 'fluent-crm'), $order->get_formatted_order_total(), $item_count)),
                 'actions' => $actionsHtml
             ];
         }
 
+        /**
+         * Determine the WooCommerce purchase history sidebar HTML in FluentCRM.
+         *
+         * This filter allows customization of the HTML content displayed in the WooCommerce purchase sidebar.
+         *
+         * @since 2.7.0
+         *
+         * @param string The current HTML content of the sidebar.
+         * @param object $subscriber The subscriber object containing subscriber data.
+         * @param int $page The current page identifier as an integer.
+         */
         $sidebarHtml = apply_filters('fluent_crm/woo_purchase_sidebar_html', '', $subscriber, $page);
 
-        if ($sidebarHtml == '' && $page == 1 && $formattedOrders) {
-
-            $customerQuery = fluentCrmDb()->table('wc_customer_lookup')
-                ->where('email', $subscriber->email);
-
-            if ($subscriber->user_id) {
-                $customerQuery = $customerQuery->orWhere('user_id', $subscriber->user_id);
-            }
-
-            $customer = $customerQuery->first();
-
-            if ($customer) {
-                $statuses = wc_get_is_paid_statuses();
-                $statuses = array_map(function ($status) {
-                    return 'wc-' . $status;
-                }, $statuses);
-
-                $orderStats = fluentCrmDb()->table('wc_order_stats')
-                    ->where('customer_id', $customer->customer_id)
-                    ->whereIn('status', $statuses)
-                    ->get();
-
-                $orderIds = [];
-                foreach ($orderStats as $order) {
-                    $orderIds[] = $order->order_id;
-                }
-
-                $orderIds = array_unique($orderIds);
-
-                $orderedProducts = fluentCrmDb()->table('wc_order_product_lookup')
-                    ->select([
-                        'posts.ID', 'posts.post_title', 'posts.guid'
-                    ])
-                    ->join('posts', 'wc_order_product_lookup.product_id', '=', 'posts.ID')
-                    ->whereIn('order_id', $orderIds)
-                    ->groupBy('posts.ID')
-                    ->get();
-
-                $sidebarHtml = '<h3>Purchased Products</h3><ul class="fc_full_listed">';
-
-                foreach ($orderedProducts as $product) {
-                    $sidebarHtml .= '<li><a target="_blank" rel="nofollow" href="' . $product->guid . '">' . $product->post_title . '</a></li>';
-                }
-
-                $sidebarHtml .= '</ul>';
-            }
-        }
-
         return [
-            'data'         => $formattedOrders,
-            'sidebar_html' => $sidebarHtml,
-            'total'        => $customer_orders->total,
-            'has_recount'  => $hasRecount,
+            'data'           => $formattedOrders,
+            'sidebar_html'   => $sidebarHtml,
+            'total'          => $totalOrders,
+            'has_recount'    => $hasRecount,
             'columns_config' => [
-                'order' => [
-                    'label' => __('Order', 'fluent-crm'),
-                    'width' => '100px'
+                'order'   => [
+                    'label'    => __('Order', 'fluent-crm'),
+                    'width'    => '100px',
+                    'sortable' => true,
+                    'key'      => 'id'
                 ],
-                'date' => [
-                    'label' => __('Date', 'fluent-crm')
+                'date'    => [
+                    'label'    => __('Date', 'fluent-crm'),
+                    'sortable' => true,
+                    'key'      => 'date_created_gmt'
                 ],
-                'status' => [
+                'status'  => [
                     'label' => __('Status', 'fluent-crm'),
                     'width' => '100px'
                 ],
-                'total' => [
-                    'label' => __('Total', 'fluent-crm'),
-                    'width' => '160px'
+                'total'   => [
+                    'label'    => __('Total', 'fluent-crm'),
+                    'width'    => '160px',
+                    'sortable' => true,
+                    'key'      => 'total_amount'
                 ],
                 'actions' => [
                     'label' => __('Actions', 'fluent-crm'),
@@ -232,7 +220,7 @@ class PurchaseHistory
                 ->whereIn('status', $statuses)
                 ->get();
 
-            if(!$orderStats) {
+            if (!$orderStats) {
                 return false;
             }
 
@@ -243,19 +231,19 @@ class PurchaseHistory
             $lastOrderDate = null;
 
             foreach ($orderStats as $order) {
-                if(!$firstOrderDate) {
+                if (!$firstOrderDate) {
                     $firstOrderDate = $order->date_created;
                 }
 
-                if(!$lastOrderDate) {
+                if (!$lastOrderDate) {
                     $lastOrderDate = $order->date_created;
                 }
 
-                if(strtotime($order->date_created) < strtotime($firstOrderDate)) {
+                if (strtotime($order->date_created) < strtotime($firstOrderDate)) {
                     $firstOrderDate = $order->date_created;
                 }
 
-                if(strtotime($order->date_created) > strtotime($lastOrderDate)) {
+                if (strtotime($order->date_created) > strtotime($lastOrderDate)) {
                     $lastOrderDate = $order->date_created;
                 }
 
@@ -267,19 +255,18 @@ class PurchaseHistory
 
             $orderCount = count($orderIds);
 
-
             $data_store = \WC_Data_Store::load('report-customers-stats');
             $stat = $data_store->get_data();
 
             $summaryData = [
-                'order_count'        => $orderCount,
-                'lifetime_value'     => $lifetimeValue,
-                'avg_value'          => round($lifetimeValue / $orderCount, 2),
-                'stat_avg_count'     => $stat->avg_orders_count,
-                'stat_avg_spend'     => $stat->avg_total_spend,
-                'stat_avg_value'     => $stat->avg_avg_order_value,
-                'currency_sign'      => get_woocommerce_currency_symbol(),
-                'last_order_date' => $lastOrderDate,
+                'order_count'      => $orderCount,
+                'lifetime_value'   => $lifetimeValue,
+                'avg_value'        => round($lifetimeValue / $orderCount, 2),
+                'stat_avg_count'   => $stat->avg_orders_count,
+                'stat_avg_spend'   => $stat->avg_total_spend,
+                'stat_avg_value'   => $stat->avg_avg_order_value,
+                'currency_sign'    => get_woocommerce_currency_symbol(),
+                'last_order_date'  => $lastOrderDate,
                 'first_order_date' => $firstOrderDate,
             ];
 
@@ -305,6 +292,8 @@ class PurchaseHistory
             (new \FluentCampaign\App\Services\Integrations\Edd\DeepIntegration)->syncCustomerBySubscriber($subscriber);
         }
 
+        $sort_by   = sanitize_sql_orderby($app->request->get('sort_by', 'id'));
+        $sort_type = sanitize_sql_orderby($app->request->get('sort_type', 'DESC'));
         $per_page = (int)$app->request->get('per_page', 10);
         $customer = new \EDD_Customer($subscriber->email);
 
@@ -326,9 +315,20 @@ class PurchaseHistory
                 return $data;
             }
 
+            $valid_columns = ['id', 'date_created', 'total'];
+            $valid_directions = ['ASC', 'DESC'];
+
+            if (!in_array($sort_by, $valid_columns)) {
+                $sort_by = 'id';
+            }
+            if (!in_array(strtoupper($sort_type), $valid_directions)) {
+                $sort_type = 'DESC';
+            }
+
+
             $orders = fluentCrmDb()->table('edd_orders')
                 ->where('customer_id', $customer->id)
-                ->orderBy('id', 'DESC')
+                ->orderBy($sort_by, $sort_type)
                 ->limit($per_page)
                 ->offset(($page - 1) * $per_page)
                 ->get();
@@ -382,6 +382,18 @@ class PurchaseHistory
             }
         }
 
+        /**
+         * Determine the HTML content displayed in the EDD purchase history sidebar for a subscriber in FluentCRM.
+         *
+         * This filter allows customization of the HTML content that appears in the EDD purchase
+         * history sidebar for a given subscriber on a specific page.
+         *
+         * @since 2.7.0
+         *
+         * @param string $beforeHtml The HTML content to be displayed before the purchase history.
+         * @param object $subscriber The subscriber object.
+         * @param int $page The current page identifier as an integer.
+         */
         $beforeHtml = apply_filters('fluent_crm/edd_purchase_sidebar_html', '', $subscriber, $page);
 
 //        if (!$beforeHtml && $subscriber->user_id && $page == 1 && $formattedOrders) {
@@ -399,29 +411,38 @@ class PurchaseHistory
 //        }
 
         return [
-            'data'         => $formattedOrders,
-            'total'        => $totalCount,
-            'sidebar_html' => $beforeHtml,
-            'has_recount'  => $hasRecount,
+            'data'           => $formattedOrders,
+            'total'          => $totalCount,
+            'sidebar_html'   => $beforeHtml,
+            'after_html'       => '<p><a target="_blank" rel="noopener" href="'.admin_url('edit.php?post_type=download&page=edd-customers&view=overview&id='.$customer->id).'">' . esc_html__('View Customer Profile', 'fluent-crm') . '</a></p>',
+            'has_recount'    => $hasRecount,
             'columns_config' => [
-                'order' => [
+                'order'  => [
                     'label' => __('Order', 'fluent-crm'),
-                    'width' => '100px'
+                    'width' => '100px',
+                    'sortable' => true,
+                    'key' => 'id'
                 ],
-                'date' => [
-                    'label' => __('Date', 'fluent-crm')
+                'date'   => [
+                    'label' => __('Date', 'fluent-crm'),
+                    'sortable' => true,
+                    'key' => 'edd_orders'
                 ],
                 'status' => [
                     'label' => __('Status', 'fluent-crm'),
-                    'width' => '140px'
+                    'width' => '140px',
+                    'sortable' => false
                 ],
-                'total' => [
+                'total'  => [
                     'label' => __('Total', 'fluent-crm'),
-                    'width' => '120px'
+                    'width' => '120px',
+                    'sortable' => true,
+                    'key' => 'total'
                 ],
                 'action' => [
                     'label' => __('Actions', 'fluent-crm'),
-                    'width' => '100px'
+                    'width' => '100px',
+                    'sortable' => false
                 ]
             ]
         ];
@@ -444,16 +465,18 @@ class PurchaseHistory
                 'wpf_submissions.payment_total',
                 'wpf_submissions.payment_method',
                 'wpf_submissions.created_at',
-                'posts.post_title'
+                'posts.post_title',
+                'wpf_subscriptions.recurring_amount',
             ])
             ->join('posts', 'posts.ID', '=', 'wpf_submissions.form_id')
+            ->leftJoin('wpf_subscriptions', 'wpf_subscriptions.submission_id', '=', 'wpf_submissions.id')
             ->where(function ($query) use ($subscriber) {
                 $query->where('wpf_submissions.customer_email', '=', $subscriber->email);
                 if ($subscriber->user_id) {
                     $query->orWhere('wpf_submissions.user_id', '=', $subscriber->user_id);
                 }
             })
-            ->where('wpf_submissions.payment_total', '>', 0)
+            // ->where('wpf_submissions.payment_total', '>', 0)
             ->limit($per_page)
             ->offset($per_page * ($page - 1))
             ->orderBy('wpf_submissions.id', 'desc');
@@ -467,7 +490,7 @@ class PurchaseHistory
             $formattedSubmissions[] = [
                 'id'             => '#' . $submission->id,
                 'Form Title'     => $submission->post_title,
-                'Payment Total'  => wpPayFormFormatMoney($submission->payment_total, $subscriber->form_id),
+                'Payment Total'  => $submission->recurring_amount ? wpPayFormFormatMoney($submission->recurring_amount, $subscriber->form_id) : wpPayFormFormatMoney($submission->payment_total, $subscriber->form_id),
                 'Payment Status' => $submission->payment_status,
                 'Payment Method' => $submission->payment_method,
                 'Submitted At'   => $submission->created_at,
@@ -486,11 +509,11 @@ class PurchaseHistory
     {
         $blocks = [];
         if (!empty($data['first_order_date'])) {
-            $blocks['Customer Since'] = date(get_option('date_format'), strtotime($data['first_order_date']));
+            $blocks['Customer Since'] = gmdate(get_option('date_format'), strtotime($data['first_order_date']));
         }
 
         if (!empty($data['last_order_date'])) {
-            $blocks['Last Order'] = date(get_option('date_format'), strtotime($data['last_order_date']));
+            $blocks['Last Order'] = gmdate(get_option('date_format'), strtotime($data['last_order_date']));
         }
 
         $blocks['Order Count (paid)'] = $data['order_count'] . $this->getPercentChangeHtml($data['order_count'], $data['stat_avg_count']);
@@ -518,11 +541,11 @@ class PurchaseHistory
 
         $body .= '</ul>';
 
-        if($bodyOnly) {
+        if ($bodyOnly) {
             return $body;
         }
 
-        return $body.'</div></div>';
+        return $body . '</div></div>';
     }
 
     private function getPercentChangeHtml($value, $refValue)
@@ -538,5 +561,239 @@ class PurchaseHistory
             return '<span class="el-icon-caret-bottom fc_negative fc_change_ref">' . $percentChange . '%' . '</span>';
         }
     }
+
+
+    private function getWooOrders($subscriber, $sort_by, $sort_type)
+    {
+        $email = $subscriber->email;
+
+        $user = get_user_by('email', $email);
+
+        // check HPOS is enabled or not
+        if (get_option('woocommerce_custom_orders_table_enabled') === 'yes') {
+            // high performance order is enabled
+            if ($user) {
+                $hposOrders = fluentCrmDb()->table('wc_orders')
+                    ->where('status', '!=', 'trash')
+                    ->select(['id'])
+                    ->where(function ($query) use ($user) {
+                        $query->where('customer_id', $user->ID)
+                            ->orWhere(function ($query) use ($user) {
+                                $query->where('billing_email', $user->user_email)
+                                    ->where('customer_id', 0);
+                            });
+                    })
+                    ->orderBy($sort_by, $sort_type)
+                    ->get();
+            } else {
+                $hposOrders = fluentCrmDb()->table('wc_orders')
+                    ->select(['id'])
+                    ->where('billing_email', $email)
+                    ->where('customer_id', 0)
+                    ->orderBy($sort_by, $sort_type)
+                    ->get();
+            }
+
+            if (!$hposOrders) {
+                return [];
+            }
+
+            $orders = [];
+            foreach ($hposOrders as $hposOrder) {
+                $order = wc_get_order($hposOrder->id);
+                if ($order) {
+                    $orders[$hposOrder->id] = $order;
+                }
+            }
+
+            return array_values($orders);
+        }
+
+
+        $orders = [];
+        // Get all orders by user id
+        $storeUseId = $user ? $user->ID : false;
+
+        if ($storeUseId) {
+            $userOrders = wc_get_orders([
+                'customer_id' => $storeUseId,
+                'limit'       => -1,
+                'orderby'     => $sort_by,
+                'order'       => $sort_type,
+            ]);
+
+            // Sort orders by total amount manually
+            if ($sort_by === 'total_amount') {
+                $this->wooSortOrdersByTotalAmount($userOrders, $sort_type);
+            }
+
+            foreach ($userOrders as $order) {
+                $orders[$order->get_id()] = $order;
+            }
+        }
+
+        // get orders by billing email
+        $guestOrders = wc_get_orders([
+            'customer' => $email,
+            'limit'    => -1,
+            'orderby'  => $sort_by,
+            'order'    => $sort_type,
+        ]);
+
+        if ($sort_by === 'total_amount') {
+            $this->wooSortOrdersByTotalAmount($userOrders, $sort_type);
+        }
+
+        foreach ($guestOrders as $order) {
+            $userId = $order->get_user_id();
+            if ($userId && $storeUseId != $userId) {
+                continue;
+            }
+            $orders[$order->get_id()] = $order;
+        }
+
+
+        return array_values($orders);
+    }
+
+    /**
+     * Sorts an array of WooCommerce orders by their total amount.
+     *
+     * This method sorts an array of WooCommerce order objects based on the total order amount.
+     * The sorting can be done in either ascending ('ASC') or descending ('DESC') order,
+     * as specified by the $sort_type parameter.
+     *
+     * @param array $orders Array of WooCommerce order objects to be sorted.
+     * @param string $sort_type Specifies the sorting order.
+     *                          Accepts 'ASC' for ascending or 'DESC' for descending.
+     *
+     * @return void The $orders array is sorted in place.
+     */
+    public function wooSortOrdersByTotalAmount(&$orders, $sort_type) {
+        usort($orders, function ($a, $b) use ($sort_type) {
+            $a_total = (float)$a->get_total();
+            $b_total = (float)$b->get_total();
+
+            return $sort_type === 'ASC' ? $a_total <=> $b_total : $b_total <=> $a_total;
+        });
+    }
+
+    public function pmproOrders($data, $subscriber)
+    {
+        if (!defined('PMPRO_VERSION')) {
+            return $data;
+        }
+
+        if (!defined('FLUENTCAMPAIGN')) {
+            return $data;
+        }
+
+        $customer = fluentCrmDb()->table('users')->where('user_email', $subscriber->email)->first();
+
+        if (!$customer) {
+            return false;
+        }
+
+        if (!$subscriber->user_id || $subscriber->user_id != $customer->ID) {
+            $subscriber->user_id = $customer->ID;
+            $subscriber->save();
+        }
+
+        $app = fluentCrm();
+
+        $page = (int)$app->request->get('page', 1);
+        $per_page = (int)$app->request->get('per_page', 10);
+
+        $sort_by   = sanitize_sql_orderby($app->request->get('sort_by', 'ID'));
+        $sort_type = sanitize_sql_orderby($app->request->get('sort_type', 'DESC'));
+
+        $valid_columns = ['ID', 'date', 'modified'];
+        $valid_directions = ['ASC', 'DESC'];
+
+        if (!in_array($sort_by, $valid_columns)) {
+            $sort_by = 'ID';
+        }
+        if (!in_array(strtoupper($sort_type), $valid_directions)) {
+            $sort_type = 'DESC';
+        }
+
+        // Fetch the array of MemberOrder OBJECTS
+        $user_order_objects = \MemberOrder::get_orders([
+            'user_id' => $subscriber->user_id,
+            'status'  => 'success',
+            'orderby' => $sort_by,
+            'order'   => $sort_type
+        ]);
+
+        // Create a new, simple array to hold the data for JSON conversion
+        $formattedOrders = [];
+
+        $totalOrders = count($user_order_objects);
+        $orders = array_slice($user_order_objects, ($page - 1) * $per_page, $per_page);
+
+
+        if (!empty($orders)) {
+            // Loop through each PHP object and extract its data into a simple array
+            foreach ($orders as $order) {
+                // Construct the URL using WordPress's admin_url() function
+                $order_page_url = admin_url('admin.php?page=pmpro-orders&order=' . $order->id);
+                $level = pmpro_getLevel($order->membership_id);
+                $actionsHtml = '<td><a href="' . esc_url($order_page_url) . '" target="_blank">View Order</a></td>';
+                $formattedOrders[] = [
+                    'order_code' => '#' . $order->code,
+                    'membership_level_name' => $level ? $level->name : null,
+                    'status' => $order->status,
+                    'total' => $order->total,
+                    'date' => gmdate('j F, Y', $order->timestamp),
+                    'gateway' => $order->gateway,
+                    'actions' => $actionsHtml
+                ];
+            }
+        }
+
+        return [
+            'data'           => $formattedOrders,
+            'sidebar_html'   => '',
+            'total'          => $totalOrders,
+            'has_recount'    => false,
+            'columns_config' => [
+                'order_code'   => [
+                    'label'    => __('Order Code', 'fluent-crm'),
+                    'width'    => '120px',
+                    'sortable' => false,
+                    'key'      => 'id'
+                ],
+                'membership_level_name'   => [
+                    'label'    => __('Membership Level', 'fluent-crm'),
+                    'sortable' => false,
+                ],
+                'date'    => [
+                    'label'    => __('Date', 'fluent-crm'),
+                    'sortable' => false,
+                    'key'      => 'date_created_gmt'
+                ],
+                'status'  => [
+                    'label' => __('Status', 'fluent-crm'),
+                    'width' => '100px'
+                ],
+                'total'   => [
+                    'label'    => __('Total', 'fluent-crm'),
+                    'width'    => '130px',
+                    'sortable' => false,
+                    'key'      => 'total_amount'
+                ],
+                'gateway'   => [
+                    'label'    => __('Gateway', 'fluent-crm'),
+                    'width'    => '120px',
+                    'sortable' => false,
+                ],
+                'actions' => [
+                    'label' => __('Actions', 'fluent-crm'),
+                    'width' => '100px'
+                ]
+            ]
+        ];
+    }
+
 
 }

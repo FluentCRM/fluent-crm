@@ -25,7 +25,9 @@ class SubscriberPivot
 
         $indexPrefix = $wpdb->prefix .'fc_srp_';
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $sql = "CREATE TABLE $table (
                 `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
                 `subscriber_id` BIGINT UNSIGNED NOT NULL,

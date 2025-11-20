@@ -3,6 +3,7 @@
 namespace FluentCrm\App\Services;
 
 use FluentCrm\App\Models\Subscriber;
+use FluentCrm\Framework\Support\Arr;
 
 class ContactsQuery
 {
@@ -53,13 +54,14 @@ class ContactsQuery
 
         if ($this->args['filter_type'] == 'advanced') {
             $filtersGroups = $this->args['filters_groups'];
-            $subscribersQuery->where(function ($subscribersQueryGroup) use ($filtersGroups) {
 
+            $subscribersQuery->where(function ($subscribersQueryGroup) use ($filtersGroups) {
                 foreach ($filtersGroups as $groupIndex => $group) {
                     $method = 'orWhere';
                     if ($groupIndex == 0) {
                         $method = 'where';
                     }
+
                     $subscribersQueryGroup->{$method}(function ($q) use ($group) {
                         foreach ($group as $providerName => $items) {
                             do_action_ref_array('fluentcrm_contacts_filter_' . $providerName, [&$q, $items]);
@@ -89,6 +91,15 @@ class ContactsQuery
         }
 
         if ($this->args['has_commerce']) {
+            /**
+             * Filter the commerce provider for quering contacts in FluentCRM.
+             *
+             * This filter allows you to modify the commerce provider used in the Contact Query.
+             *
+             * @since 2.5.1
+             *
+             * @param string The commerce provider.
+             */
             $commerceProvider = apply_filters('fluentcrm_commerce_provider', '');
             if ($commerceProvider) {
                 $subscribersQuery->with(['commerce_by_provider' => function ($query) use ($commerceProvider) {
@@ -172,7 +183,8 @@ class ContactsQuery
                 $group[$provider][] = [
                     'property' => $property,
                     'operator' => $filterItem['operator'],
-                    'value'    => $filterItem['value']
+                    'value'    => $filterItem['value'],
+                    'extra_value' => Arr::get($filterItem, 'extra_value')
                 ];
             }
 

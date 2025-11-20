@@ -5,6 +5,7 @@ namespace FluentCrm\App\Api\Classes;
 defined('ABSPATH') || exit;
 
 use FluentCrm\App\Models\Company;
+use FluentCrm\App\Models\CustomCompanyField;
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\Framework\Support\Arr;
 
@@ -39,7 +40,8 @@ class Companies
     {
         if (is_numeric($idOrName)) {
             return Company::where('id', $idOrName)->with($with)->first();
-        } else if (is_string($idOrName)) {
+        }
+        if (is_string($idOrName)) {
             return Company::where('email', $idOrName)->with($with)->first();
         }
         return false;
@@ -47,11 +49,13 @@ class Companies
 
     public function createOrUpdate($data)
     {
-        if (empty($data['name'])) {
-            return false;
-        }
+        $exist = null;
 
-        $exist = Company::where('id', $data['id'])->first();
+        if (!empty($data['id'])) {
+            $exist = Company::where('id', $data['id'])->first();
+        } else {
+            $exist = Company::where('name', $data['name'])->first();
+        }
 
         if ($exist) {
             if (!empty($data['owner_id']) && $data['owner_id'] != $exist->owner_id) {
@@ -65,15 +69,41 @@ class Companies
                 }
             }
 
+            if (isset($data['custom_values'])) {
+                $existingMeta = $exist->meta;
+                $values = Arr::get($data, 'custom_values', []);
+                $values = (new CustomCompanyField())->formatCustomFieldValues($values);
+                $temp = $existingMeta['custom_values'];
+                foreach ($values as $key => $value)
+                {
+                    $temp[$key] = $value;
+                }
+                $existingMeta['custom_values'] = $temp;
+
+                $exist->meta = $existingMeta;
+                unset($data['custom_values']);
+            }
+
             $exist->fill($data);
             $exist->save();
             do_action('fluent_crm/company_updated', $exist, $data);
             return $exist;
+        } else if (empty($data['name'])) {
+            return false;
         }
 
-        $data = Arr::only($data, (new Company())->getFillable());
+        $fillables = (new Company())->getFillable();
+        $fillables[] = 'custom_values';
+        $data = Arr::only($data, $fillables);
+        $values = Arr::get($data, 'custom_values', []);
+        $values = (new CustomCompanyField())->formatCustomFieldValues($values);
+
+        $data['meta'] = [
+            'custom_values' => $values
+        ];
 
         $company = Company::create($data);
+
         do_action('fluent_crm/company_created', $company, $data);
 
         if ($company->owner_id) {

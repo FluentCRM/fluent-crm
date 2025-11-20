@@ -3,6 +3,7 @@
 namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\Models\Tag;
+use FluentCrm\App\Services\Helper;
 use FluentCrm\Framework\Support\Arr;
 use FluentCrm\Framework\Request\Request;
 
@@ -43,14 +44,14 @@ class TagsController extends Controller
             'tags' => $tags
         ];
 
-        if($request->get('all_tags')) {
+        if ($request->get('all_tags')) {
             $allTags = Tag::get();
             $formattedTags = [];
             foreach ($allTags as $tag) {
                 $formattedTags[] = [
-                    'id' => strval($tag->id),
+                    'id'    => strval($tag->id),
                     'title' => $tag->title,
-                    'slug' => $tag->slug
+                    'slug'  => $tag->slug
                 ];
             }
             $data['all_tags'] = $formattedTags;
@@ -79,9 +80,9 @@ class TagsController extends Controller
         $allData = $request->all();
 
         if (empty($allData['slug'])) {
-            $allData['slug'] = sanitize_title($allData['title'], 'display');
+            $allData['slug'] = Helper::slugify($allData['title']);
         } else {
-            $allData['slug'] = sanitize_title($allData['slug'], 'display');
+            $allData['slug'] = sanitize_text_field($allData['slug']);
         }
 
         $allData = $this->validate($allData, [
@@ -90,8 +91,8 @@ class TagsController extends Controller
         ]);
 
         $tag = Tag::create([
-            'title' => sanitize_text_field($allData['title']),
-            'slug'  => $allData['slug'],
+            'title'       => sanitize_text_field($allData['title']),
+            'slug'        => $allData['slug'],
             'description' => sanitize_textarea_field(Arr::get($allData, 'description'))
         ]);
 
@@ -101,6 +102,7 @@ class TagsController extends Controller
 
         return $this->sendSuccess([
             'lists'   => $tag,
+            'item'    => $tag,
             'message' => __('Successfully saved the tag.', 'fluent-crm')
         ]);
     }
@@ -117,8 +119,8 @@ class TagsController extends Controller
             'title' => 'required'
         ]);
 
-        if(!empty($allData['slug'])) {
-            $allData['slug'] = sanitize_title($allData['slug'], 'display');
+        if (empty($allData['slug'])) {
+            $allData['slug'] = Helper::slugify($allData['title']);
         }
 
         if ($id == 0 && $request->get('update_by') == 'slug' && !empty($allData['slug'])) {
@@ -132,7 +134,7 @@ class TagsController extends Controller
             $id = $tag->id;
         } else {
             $tag = Tag::findOrFail($id);
-            if(empty($allData['slug'])) {
+            if (empty($allData['slug'])) {
                 $allData['slug'] = $tag->slug;
             }
         }
@@ -166,7 +168,7 @@ class TagsController extends Controller
     {
         $tags = $this->request->get('tags', []);
 
-        if(!$tags) {
+        if (!$tags) {
             $tags = $this->request->get('items', []);
         }
 
@@ -177,8 +179,8 @@ class TagsController extends Controller
                 continue;
             }
 
-            if(empty($tag['slug'])) {
-                $tag['slug'] = sanitize_title($tag['title'], 'display');
+            if (empty($tag['slug'])) {
+                $tag['slug'] = Helper::slugify($tag['title']);
             }
 
             $tag = Tag::updateOrCreate(
@@ -188,7 +190,7 @@ class TagsController extends Controller
 
             $createdIds[] = $tag->id;
 
-            if($tag->wasRecentlyCreated) {
+            if ($tag->wasRecentlyCreated) {
                 do_action('fluentcrm_tag_created', $tag->id);
                 do_action('fluent_crm/tag_created', $tag);
             } else {
@@ -200,7 +202,7 @@ class TagsController extends Controller
 
         return $this->sendSuccess([
             'message' => __('Successfully saved the tags.', 'fluent-crm'),
-            'ids' => $createdIds
+            'ids'     => $createdIds
         ]);
     }
 
@@ -230,7 +232,7 @@ class TagsController extends Controller
 
         $tagIds = array_filter($tagIds);
 
-        if($tagIds) {
+        if ($tagIds) {
             foreach ($tagIds as $tagId) {
                 Tag::where('id', $tagId)->delete();
                 do_action('fluentcrm_tag_deleted', $tagId);

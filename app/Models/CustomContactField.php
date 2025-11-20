@@ -34,6 +34,63 @@ class CustomContactField
 
     public function getFieldTypes()
     {
+        /**
+         * Modify the global custom contact field types for FluentCRM custom contact fields.
+         *
+         * The default field types are: 'text', 'textarea', 'number', 'single-select', 'multi-select', 'radio', 'checkbox', 'date', 'date_time'.
+         * 
+         * @since 2.7.0
+         *
+         * @param array {
+         *     An associative array of field types.
+         *
+         *     @type array $text {
+         *         @type string $type       The type of the field.
+         *         @type string $label      The label for the field.
+         *         @type string $value_type The value type of the field.
+         *     }
+         *     @type array $textarea {
+         *         @type string $type       The type of the field.
+         *         @type string $label      The label for the field.
+         *         @type string $value_type The value type of the field.
+         *     }
+         *     @type array $number {
+         *         @type string $type       The type of the field.
+         *         @type string $label      The label for the field.
+         *         @type string $value_type The value type of the field.
+         *     }
+         *     @type array $single-select {
+         *         @type string $type       The type of the field.
+         *         @type string $label      The label for the field.
+         *         @type string $value_type The value type of the field.
+         *     }
+         *     @type array $multi-select {
+         *         @type string $type       The type of the field.
+         *         @type string $label      The label for the field.
+         *         @type string $value_type The value type of the field.
+         *     }
+         *     @type array $radio {
+         *         @type string $type       The type of the field.
+         *         @type string $label      The label for the field.
+         *         @type string $value_type The value type of the field.
+         *     }
+         *     @type array $checkbox {
+         *         @type string $type       The type of the field.
+         *         @type string $label      The label for the field.
+         *         @type string $value_type The value type of the field.
+         *     }
+         *     @type array $date {
+         *         @type string $type       The type of the field.
+         *         @type string $label      The label for the field.
+         *         @type string $value_type The value type of the field.
+         *     }
+         *     @type array $date_time {
+         *         @type string $type       The type of the field.
+         *         @type string $label      The label for the field.
+         *         @type string $value_type The value type of the field.
+         *     }
+         * }
+         */
         return apply_filters('fluent_crm/global_field_types', [
             'text'          => [
                 'type'       => 'text',
@@ -111,7 +168,6 @@ class CustomContactField
             $formattedFields[] = $field;
         }
 
-
         fluentcrm_update_option($this->globalMetaName, $formattedFields);
 
         return $formattedFields;
@@ -175,9 +231,7 @@ class CustomContactField
             }
         }
 
-        return array_filter($values, function ($item) {
-            return $item != null;
-        });
+        return $values;
     }
 
     public function getFieldGroups()
@@ -193,5 +247,23 @@ class CustomContactField
             ];
         }
         return $fieldGroups;
+    }
+
+    public function updateGroupName($oldName, $newName)
+    {
+        $currentCustomFields = fluentcrm_get_option($this->globalMetaName);
+
+        $updatedCustomFields = [];
+
+        foreach ($currentCustomFields as $customField) {
+            if (isset($customField['group']) && $customField['group'] == $oldName) {
+                $customField['group'] = $newName;
+            }
+            $updatedCustomFields[] = $customField;
+        }
+
+        fluentcrm_update_option($this->globalMetaName, $updatedCustomFields);
+
+        return $updatedCustomFields;
     }
 }

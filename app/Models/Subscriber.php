@@ -3,9 +3,12 @@
 namespace FluentCrm\App\Models;
 
 use FluentCrm\App\Services\Helper;
+use FluentCrm\App\Services\Sanitize;
 use FluentCrm\Framework\Support\Arr;
 use FluentCrm\App\Services\Libs\Mailer\Handler;
 use FluentCrm\Framework\Database\Orm\Collection;
+use FluentCrm\Framework\Support\Str;
+
 
 /**
  *  Subscriber Model - DB Model for Contacts
@@ -62,6 +65,8 @@ class Subscriber extends Model
 
     public static function boot()
     {
+        parent::boot();
+
         static::saving(function ($model) {
             $model->hash = md5($model->email);
         });
@@ -78,13 +83,23 @@ class Subscriber extends Model
                 }
 
                 if ($user) {
-                    if ($model->first_name) {
+                    if ($model->first_name && $model->last_name != $user->first_name) {
                         update_user_meta($user->ID, 'first_name', $model->first_name);
                     }
-                    if ($model->last_name) {
+                    if ($model->last_name && $model->last_name != $user->last_name) {
                         update_user_meta($user->ID, 'last_name', $model->last_name);
                     }
 
+                    /**
+                     * Determine whether to update the WordPress user email when there is a mismatch.
+                     *
+                     * This filter allows you to control whether the WordPress user email should be updated
+                     * when there is a mismatch between the subscriber email and the WordPress user email.
+                     *
+                     * @param bool Whether to update the WordPress user email. Default false.
+                     * @since 2.3.1
+                     *
+                     */
                     if ($email_mismatch && apply_filters('fluentcrm_update_wp_user_email_on_change', false)) {
                         $user->user_email = $model->email;
                         wp_update_user($user);
@@ -200,6 +215,8 @@ class Subscriber extends Model
     {
         $prefix = 'fc_';
 
+        $keys = Sanitize::sanitizeTagIds($keys, false);
+
         return $query->whereIn('id', function ($q) use ($prefix, $keys, $filterBy) {
             $q->from($prefix . 'tags')
                 ->join(
@@ -225,6 +242,8 @@ class Subscriber extends Model
     public function scopeFilterByNotInTags($query, $keys, $filterBy = 'id')
     {
         $prefix = 'fc_';
+
+        $keys = Sanitize::sanitizeTagIds($keys, false);
 
         return $query->whereNotIn('id', function ($q) use ($prefix, $keys, $filterBy) {
             $q->from($prefix . 'tags')
@@ -252,6 +271,8 @@ class Subscriber extends Model
     {
         $prefix = 'fc_';
 
+        $keys = Sanitize::sanitizeListIds($keys, false);
+
         return $query->whereIn('id', function ($q) use ($prefix, $keys, $filterBy) {
             $q->from($prefix . 'lists')
                 ->join(
@@ -277,6 +298,8 @@ class Subscriber extends Model
     public function scopeFilterByNotInLists($query, $keys, $filterBy = 'id')
     {
         $prefix = 'fc_';
+
+        $keys = Sanitize::sanitizeListIds($keys, false);
 
         return $query->whereNotIn('id', function ($q) use ($prefix, $keys, $filterBy) {
             $q->from($prefix . 'lists')
@@ -309,6 +332,7 @@ class Subscriber extends Model
         )
             ->wherePivot('object_type', $class)
             ->withPivot('object_type')
+            ->orderBy('title', 'ASC')
             ->withTimestamps();
     }
 
@@ -481,6 +505,7 @@ class Subscriber extends Model
         )
             ->wherePivot('object_type', $class)
             ->withPivot('object_type')
+            ->orderBy('title', 'ASC')
             ->withTimestamps();
     }
 
@@ -549,6 +574,16 @@ class Subscriber extends Model
     }
 
     /**
+     * A subscriber has many tracking events.
+     *
+     * @return \FluentCrm\Framework\Database\Orm\Relations\HasMany
+     */
+    public function trackingEvents()
+    {
+        return $this->hasMany(EventTracker::class, 'subscriber_id', 'id');
+    }
+
+    /**
      * One2Many: Subscriber has to many custom fields value
      * @return array
      */
@@ -572,7 +607,7 @@ class Subscriber extends Model
         $items = $this->custom_field_meta()->whereIn('key', $keys)->get();
         $formattedValues = [];
         foreach ($items as $item) {
-            $formattedValues[$item->key] = $item->value;
+            $formattedValues[$item->key] = apply_filters('fluent_crm/modify_custom_field_value', $item->value);
         }
         return $formattedValues;
     }
@@ -729,6 +764,10 @@ class Subscriber extends Model
             return $this->attributes['avatar'];
         }
 
+        if (empty($this->attributes['email'])) {
+            return '';
+        }
+
         $fallBack = '';
         if (isset($this->attributes['first_name'])) {
             $fallBack = $this->attributes['first_name'];
@@ -780,6 +819,7 @@ class Subscriber extends Model
         $uniqueEmails = [];
 
         foreach ($data as $index => $record) {
+
             $email = $record['email'];
 
             if (!filter_var($email, FILTER_VALIDATE_EMAIL) || in_array(strtolower($email), $uniqueEmails)) {
@@ -807,6 +847,8 @@ class Subscriber extends Model
         $newContactCustomFields = [];
         $newRecords = [];
         $skips = [];
+        $newLists = [];
+        $newTags = [];
         foreach ($data as $item) {
             $item['hash'] = md5($item['email']);
             $lowEmail = strtolower($item['email']);
@@ -823,9 +865,23 @@ class Subscriber extends Model
                 if ($shouldUpdate && $customValues) {
                     $existingSubscribers[$lowEmail]->syncCustomFieldValues($customValues, false);
                 }
+
+                //if item has lists or tags that need to be processed then mapping to email
+                if (Arr::get($item, 'lists')) {
+                    $existingListIdsOfUser = $existingSubscribers[$lowEmail]->lists()->get()->pluck('id')->toArray();
+                    $newLists[$item['email']] = Helper::getNewAttachableLists(Arr::get($item, 'lists'), $existingListIdsOfUser, $lists);
+                }
+                if (Arr::get($item, 'tags')) {
+                    $existingTagIdsOfUser = $existingSubscribers[$lowEmail]->tags()->get()->pluck('id')->toArray();
+                    $newTags[$item['email']] = Helper::getNewAttachableTags(Arr::get($item, 'tags'), $existingTagIdsOfUser, $tags);
+                }
+
                 unset($item['custom_values']);
                 unset($item['id']);
                 unset($item['created_at']);
+                unset($item['lists']);
+                unset($item['tags']);
+
                 $item['updated_at'] = fluentCrmTimestamp();
                 $updateables[] = array_filter($item);
             } else {
@@ -844,10 +900,20 @@ class Subscriber extends Model
                     $newContactCustomFields[$item['email']] = $customValues;
                 }
 
+                //if item has lists or tags that need to be processed then mapping to email
+                if (Arr::get($item, 'lists')) {
+                    $newLists[$item['email']] = Arr::get($item, 'lists');
+                }
+                if (Arr::get($item, 'tags')) {
+                    $newTags[$item['email']] = Arr::get($item, 'tags');
+                }
+
                 $itemEmail = $item['email'];
 
                 unset($item['custom_values']);
                 unset($item['id']);
+                unset($item['lists']);
+                unset($item['tags']);
 
                 if (empty($item['source']) && $source) {
                     $item['source'] = $source;
@@ -861,6 +927,8 @@ class Subscriber extends Model
         $insertedModels = [];
         if ($insertables) {
             foreach ($insertables as $insertable) {
+                $attachableTags = $tags;
+                $attachableLists = $lists;
                 $insertedModel = self::create($insertable);
                 if ($newContactCustomFields) {
                     if (isset($newContactCustomFields[$insertedModel->email])) {
@@ -871,20 +939,35 @@ class Subscriber extends Model
                     }
                 }
 
-                if ($tags || $lists || $doubleOptin) {
-                    $tags && $insertedModel->attachTags($tags);
-                    $lists && $insertedModel->attachLists($lists);
+                //checking insertable email has tags, lists that need to be created or is already have
+                if (!empty($newTags[$insertedModel->email])) {
+                    $newlyCreateTagIds = Helper::createNewTags($newTags[$insertedModel->email]);
+                    $attachableTags = array_merge($tags, $newlyCreateTagIds);
+                }
+
+                if (!empty($newLists[$insertedModel->email])) {
+                    $newlyCreateListIds = Helper::createNewLists($newLists[$insertedModel->email]);
+                    $attachableLists = array_merge($lists, $newlyCreateListIds);
+                }
+
+                if ($attachableTags || $attachableLists || $doubleOptin) {
+                    $attachableTags && $insertedModel->attachTags($attachableTags);
+                    $attachableLists && $insertedModel->attachLists($attachableLists);
 
                     if ($doubleOptin && $insertedModel->status == 'pending') {
                         $insertedModel->sendDoubleOptinEmail();
                     }
                 }
 
+
+                if (!empty($insertable['company_id']) && Helper::isCompanyEnabled()) {
+                    $insertedModel->attachCompanies([$insertable['company_id']]);
+                }
+
                 /*
                  * @deprecated since 2.8.0. Use fluent_crm/contact_created instead
                  */
                 do_action('fluentcrm_contact_created', $insertedModel);
-
                 do_action('fluent_crm/contact_created', $insertedModel);
 
                 $insertedModels[] = $insertedModel;
@@ -902,9 +985,22 @@ class Subscriber extends Model
                 if ($updateData) {
                     $existingModel->save();
 
+                    if (!empty($updateable['company_id']) && Helper::isCompanyEnabled()) {
+                        $existingModel->attachCompanies([$updateable['company_id']]);
+                    }
+
                     if (!empty($updateable['status']) && $updateable['status'] != $oldStatus) {
                         $newStatus = $updateable['status'];
+                        do_action('fluent_crm/subscriber_status_changed', $existingModel, $oldStatus, $newStatus);
                         do_action('fluentcrm_subscriber_status_to_' . $newStatus, $existingModel, $oldStatus);
+                    }
+
+                    //attaching new lists, tags to subscriber
+                    if (!empty($newLists[$updateable['email']])) {
+                        $existingModel->attachLists($newLists[$updateable['email']]);
+                    }
+                    if (!empty($newTags[$updateable['email']])) {
+                        $existingModel->attachTags($newTags[$updateable['email']]);
                     }
 
                     do_action('fluentcrm_contact_updated', $existingModel, $updateData);
@@ -968,17 +1064,21 @@ class Subscriber extends Model
                 $subscriberData['status'] = $status;
             } else if ($exist && $exist->status == 'subscribed') {
                 unset($subscriberData['status']);
-            } else if ($exist && in_array($exist->status, ['bounced', 'complained'])) {
+            } else if ($exist && in_array($exist->status, ['bounced', 'complained', 'spammed'])) {
                 unset($subscriberData['status']);
             } else {
                 $subscriberData['status'] = $status;
             }
+
+            if ($status == 'unsubscribed') {
+                $subscriberData['status'] = 'unsubscribed';
+            }
         }
 
         $isSubscribed = false;
-        if (($exist && $exist->status != 'subscribed') && (!empty($subscriberData['status']) && $subscriberData['status']) == 'subscribed') {
+        if (($exist && $exist->status != 'subscribed') && (!empty($subscriberData['status']) && $subscriberData['status'] === 'subscribed')) {
             $isSubscribed = true;
-        } else if (!$exist && (!empty($subscriberData['status']) && $subscriberData['status']) == 'subscribed') {
+        } else if (!$exist && (!empty($subscriberData['status']) && $subscriberData['status'] === 'subscribed')) {
             $isSubscribed = true;
         }
 
@@ -991,12 +1091,10 @@ class Subscriber extends Model
 
             if ($dirtyFields) {
                 $exist->save();
-
                 if (isset($dirtyFields['email'])) {
                     do_action('fluent_crm/contact_email_changed', $exist, $oldEmail);
                 }
             }
-
         } else {
             if (!isset($subscriberData['created_at'])) {
                 $subscriberData['created_at'] = current_time('mysql');
@@ -1011,11 +1109,19 @@ class Subscriber extends Model
             $customFieldsChanges = $exist->syncCustomFieldValues($customValues, $deleteOtherValues);
         }
 
-        // Syncing Tags
-        $tags && $exist->attachTags($tags);
-
+        /*
+         * TODO: investigate this attachTags and attachLists method. for Masiur
+         */
         // Syncing Lists
-        $lists && $exist->attachLists($lists);
+        if ($lists) {
+            $exist->attachLists($lists);
+        }
+
+        // Syncing Tags
+        if ($tags) {
+            $exist->attachTags($tags);
+        }
+
 
         if (Helper::isCompanyEnabled()) {
             $companyId = $exist->company_id;
@@ -1027,8 +1133,15 @@ class Subscriber extends Model
             }
         }
 
-        if ($isNew) {
+        if ($detachTags = Arr::get($data, 'detach_tags', [])) {
+            $exist->detachTags($detachTags);
+        }
 
+        if ($detachLists = Arr::get($data, 'detach_lists', [])) {
+            $exist->detachLists($detachLists);
+        }
+
+        if ($isNew) {
             do_action('fluentcrm_contact_created', $exist); // @deprecated since 2.8.0. Use fluent_crm/contact_created instead
             do_action('fluent_crm/contact_created', $exist);
         } else if ($dirtyFields || $customFieldsChanges) {
@@ -1037,6 +1150,9 @@ class Subscriber extends Model
         }
 
         if ($isSubscribed && $exist->status == 'subscribed') {
+            if (!$isNew) {
+                do_action('fluent_crm/subscriber_status_changed', $this, $oldStatus, $this->status);
+            }
             do_action('fluentcrm_subscriber_status_to_subscribed', $exist, $oldStatus);
         }
 
@@ -1078,6 +1194,9 @@ class Subscriber extends Model
             return $this;
         }
 
+        $listIds = Sanitize::sanitizeListIds($listIds);
+
+        $this->load('lists');
         $existingLists = $this->lists;
         $existingListIds = [];
         foreach ($existingLists as $list) {
@@ -1105,6 +1224,8 @@ class Subscriber extends Model
             $this->lists()->attach($lists);
             $this->load('lists');
             fluentcrm_contact_added_to_lists($newListIds, $this);
+
+            do_action('fluent_crm/contact_added_to_lists', $this, $newListIds);
         }
 
         return $this;
@@ -1116,6 +1237,9 @@ class Subscriber extends Model
             return $this;
         }
 
+        $tagIds = Sanitize::sanitizeTagIds($tagIds);
+
+        $this->load('tags');
         $existingTags = $this->tags;
         $existingTagIds = [];
         foreach ($existingTags as $tag) {
@@ -1144,6 +1268,8 @@ class Subscriber extends Model
             $this->tags()->attach($tags);
             $this->load('tags');
             fluentcrm_contact_added_to_tags($newTagIds, $this);
+
+            do_action('fluent_crm/contact_added_to_tags', $this, $newTagIds);
         }
 
         return $this;
@@ -1154,6 +1280,8 @@ class Subscriber extends Model
         if (!$companyIds) {
             return $this;
         }
+
+        $this->load('companies');
 
         $existingCompanies = $this->companies;
         $existingCompanyIds = [];
@@ -1193,6 +1321,11 @@ class Subscriber extends Model
         if (!$listIds) {
             return $this;
         }
+
+        $listIds = Sanitize::sanitizeListIds($listIds, false);
+
+        $this->load('lists');
+
         $existingLists = $this->lists;
         $existingListIds = [];
         foreach ($existingLists as $list) {
@@ -1211,6 +1344,8 @@ class Subscriber extends Model
             $this->lists()->detach($validListIds);
             $this->load('lists');
             fluentcrm_contact_removed_from_lists($validListIds, $this);
+
+            do_action('fluent_crm/contact_removed_from_lists', $this, $validListIds);
         }
 
         return $this;
@@ -1222,6 +1357,10 @@ class Subscriber extends Model
             return $this;
         }
 
+        $tagsIds = Sanitize::sanitizeTagIds($tagsIds, false);
+
+        $this->load('tags');
+
         $existingTags = $this->tags;
         $existingTagIds = [];
         foreach ($existingTags as $tag) {
@@ -1229,7 +1368,6 @@ class Subscriber extends Model
         }
 
         $validTagIds = array_intersect($tagsIds, $existingTagIds);
-
 
         $validTagIds = array_map(function ($tagId) {
             return (int)$tagId;
@@ -1241,6 +1379,8 @@ class Subscriber extends Model
             $this->tags()->detach($validTagIds);
             $this->load('tags');
             fluentcrm_contact_removed_from_tags($validTagIds, $this);
+
+            do_action('fluent_crm/contact_removed_from_tags', $this, $validTagIds);
         }
 
         return $this;
@@ -1251,6 +1391,9 @@ class Subscriber extends Model
         if (!$companyIds) {
             return $this;
         }
+
+
+        $this->load('companies');
 
         $existingCompanies = $this->companies;
         $existingCompanyIds = [];
@@ -1298,6 +1441,11 @@ class Subscriber extends Model
         if (!$tagIds || !is_array($tagIds)) {
             return false;
         }
+
+        $tagIds = Sanitize::sanitizeTagIds($tagIds, false);
+
+        $this->load('tags');
+
         foreach ($this->tags as $tag) {
             if (in_array($tag->id, $tagIds)) {
                 return true;
@@ -1311,6 +1459,11 @@ class Subscriber extends Model
         if (!$listIds || !is_array($listIds)) {
             return false;
         }
+
+        $listIds = Sanitize::sanitizeListIds($listIds, false);
+
+        $this->load('lists');
+
         foreach ($this->lists as $list) {
             if (in_array($list->id, $listIds)) {
                 return true;
@@ -1391,15 +1544,15 @@ class Subscriber extends Model
             case 'days_before':
                 $daysToSeconds = intval($filter['value']) * 24 * 60 * 60;
                 $filter['operator'] = '<';
-                $filter['value'] = date('Y-m-d', current_time('timestamp') - $daysToSeconds);
+                $filter['value'] = gmdate('Y-m-d', current_time('timestamp') - $daysToSeconds);
                 break;
 
             case 'days_within':
                 $daysToSeconds = intval($filter['value']) * 24 * 60 * 60;
                 $filter['operator'] = 'BETWEEN';
                 $filter['value'] = [
-                    date('Y-m-d 00:00:01', current_time('timestamp') - $daysToSeconds),
-                    date('Y-m-d') . ' 23:59:59'
+                    gmdate('Y-m-d 00:00:01', current_time('timestamp') - $daysToSeconds),
+                    gmdate('Y-m-d') . ' 23:59:59'
                 ];
                 break;
         }
@@ -1409,13 +1562,14 @@ class Subscriber extends Model
 
     public static function applyGeneralFilterQuery($query, $filter, $referenceColumn = 'value')
     {
+
         $exactOperators = ['=', '!=', '>', '<'];
 
         $operator = self::parseCustomFieldsFilterOperator($filter);
 
         if (in_array($operator, $exactOperators)) {
             if ($operator == '>' || $operator == '<') {
-                $filter['value'] = (int)$filter['value'];
+                $filter['value'] = (float)$filter['value'];
             } else {
                 $filter['value'] = sanitize_text_field($filter['value']);
             }
@@ -1552,6 +1706,27 @@ class Subscriber extends Model
                     $filter['method'] = 'whereDoesntHave';
                 }
                 $carry['contactCommerceCheck'][] = $filter;
+            } else if ($filter['property'] == 'variation_purchased') {
+                $filter['property'] = 'item_sub_id';
+                $filter['method'] = 'whereHas';
+                if ($filter['operator'] == 'not_exist') {
+                    $filter['method'] = 'whereDoesntHave';
+                }
+
+                if (is_array($filter['value']) && $filter['value']) {
+                    $formattedVariationIds = [];
+                    foreach ($filter['value'] as $value) {
+                        $ids = explode('||', $value);
+                        if ($ids && count($ids) == 2) {
+                            $formattedVariationIds[] = (int)$ids[1];
+                        }
+                    }
+                    $formattedVariationIds = array_values(array_unique($formattedVariationIds));
+                    if ($formattedVariationIds) {
+                        $filter['value'] = $formattedVariationIds;
+                        $carry['contactSubFieldItems'][] = $filter;
+                    }
+                }
             } else {
                 $carry['contactRelations'][] = $filter;
             }
@@ -1576,13 +1751,18 @@ class Subscriber extends Model
 
         if (array_key_exists('contactRelationsItems', $filters)) {
             foreach ($filters['contactRelationsItems'] as $filter) {
-
                 if ($filter['operator'] == 'not_in_all') {
                     $query = static::buildChildRelationFilterQuery('commerce_by_provider', 'items', $query, 'whereDoesntHave', 'item_id', $filter['value'], true, $provider);
                 } else {
                     list($method, $subMethod) = static::parseRelationalFilterQueryMethods($filter);
                     $query = static::buildRelationFilterQuery('contact_commerce_items', $query, $method, $subMethod, 'item_id', $filter, $provider);
                 }
+            }
+        }
+
+        if (array_key_exists('contactSubFieldItems', $filters)) {
+            foreach ($filters['contactSubFieldItems'] as $filter) {
+                $query = static::buildRelationFilterQuery('contact_commerce_items', $query, $filter['method'], 'whereIn', $filter['property'], $filter, $provider);
             }
         }
 
@@ -1717,6 +1897,11 @@ class Subscriber extends Model
                     continue;
                 }
 
+                $query = $query->where(function ($q) use ($filter) {
+                    $q->whereNotNull($filter['property'])
+                        ->where($filter['property'], '!=', '0000-00-00');
+                });
+
                 $query = self::applyGeneralFilterQuery($query, $filter, $filter['property']);
             } else if ($filter['property'] == 'search') {
                 $query = $this->buildSearchableQuery($query, $searchTerm, $operator);
@@ -1793,20 +1978,58 @@ class Subscriber extends Model
                 continue;
             }
 
-            if (in_array($filter['property'], ['tags', 'lists', 'companies'])) {
+            $prop = $filter['property'];
+
+            if (in_array($prop, ['tags', 'lists', 'companies'])) {
                 if ($filter['operator'] == 'not_in_all') {
-                    $query->has($filter['property'], '<', count($filter['value']), 'and', function ($query) use ($filter) {
+                    $query->has($prop, '<', count($filter['value']), 'and', function ($query) use ($filter) {
                         $query->whereIn('object_id', $filter['value']);
                     });
                 } else {
                     list($method, $subMethod) = static::parseRelationalFilterQueryMethods($filter);
                     $query = static::buildRelationFilterQuery($filter['property'], $query, $method, $subMethod, 'object_id', $filter);
                 }
+            } else if ($prop == 'user_role') {
+                $userRole = esc_sql($filter['value']);
+
+                $operator = $filter['operator'];
+                $method = ($operator == 'in' || $operator == 'contains') ? 'whereHas' : 'whereDoesntHave';
+
+                $query = $query->{$method}('user', function ($userQuery) use ($userRole) {
+                    return $userQuery->whereExists(function ($subQuery) use ($userRole) {
+                        global $wpdb;
+                        return $subQuery->select(fluentCrmDb()->raw(1))
+                            ->from('usermeta')
+                            ->whereRaw("{$wpdb->prefix}usermeta.user_id = {$wpdb->prefix}users.ID")
+                            ->where('usermeta.meta_key', '=', $wpdb->prefix . 'capabilities')
+                            ->where('usermeta.meta_value', 'LIKE', '%"' . $userRole . '"%');
+                    });
+                });
+            } else if ($prop == 'company_industry') {
+                $operator = $filter['operator'];
+                $queryOperator = '>=';
+                if ($operator == 'not_in') {
+                    $queryOperator = '<';
+                }
+
+                $query = $query->has('companies', $queryOperator, 1, 'and', function ($q) use ($filter) {
+                    $values = (array)$filter['value'];
+                    $q->whereIn('industry', $values);
+                });
+            } else if ($prop == 'company_type') {
+                $queryOperator = '>=';
+                if ($operator == 'not_in') {
+                    $queryOperator = '<';
+                }
+                $query = $query->has('companies', $queryOperator, 1, 'and', function ($q) use ($filter) {
+                    $values = (array)$filter['value'];
+                    $q->whereIn('type', $values);
+                });
             } else {
                 $operator = $filter['operator'];
                 $method = ($operator == 'in' || $operator == 'contains') ? 'whereIn' : 'whereNotIn';
 
-                $query = $query->{$method}($filter['property'], (array)$filter['value']);
+                $query = $query->{$method}($prop, (array)$filter['value']);
             }
         }
 
@@ -1820,7 +2043,6 @@ class Subscriber extends Model
      */
     public function buildCustomFieldsFilterQuery($query, $filters)
     {
-
         $filters = array_reduce($filters, function ($carry, $filter) {
             $operator = $filter['operator'];
 
@@ -1940,7 +2162,7 @@ class Subscriber extends Model
     public function buildActivitiesFilterQuery($query, $filters)
     {
         foreach ($filters as $filter) {
-            if (empty($filter['value'])) {
+            if (empty($filter['value']) && $filter['property'] !== 'email_opened' && $filter['property'] !== 'email_link_clicked') {
                 continue;
             }
 
@@ -1956,6 +2178,20 @@ class Subscriber extends Model
             ];
 
             $filterProp = $filter['property'];
+
+            if ($filterProp == 'email_opened' && $filter['operator'] == 'never') {
+                $query->whereDoesntHave('campaignEmails', function ($q) {
+                    $q->where('is_open', 1);
+                });
+                continue;
+            }
+
+            if ($filterProp == 'email_link_clicked' && $filter['operator'] == 'never') {
+                $query->whereDoesntHave('campaignEmails', function ($q) {
+                    $q->whereNotNull('click_counter');
+                });
+                continue;
+            }
 
             if ($filterProp == 'campaign_email_activity') {
                 $campaignId = (int)$filter['value'];
@@ -2089,6 +2325,11 @@ class Subscriber extends Model
         return false;
     }
 
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'ID');
+    }
+
     public function getWpUser()
     {
         if ($this->user_id) {
@@ -2100,6 +2341,13 @@ class Subscriber extends Model
         if ($user) {
             $this->user_id = $user->ID;
             $this->save();
+
+            // remove the same user_id for other subscribers
+            self::where('user_id', $user->ID)
+                ->where('id', '!=', $this->id)
+                ->update([
+                    'user_id' => NULL
+                ]);
         }
 
         return $user;
@@ -2151,12 +2399,37 @@ class Subscriber extends Model
             return $hash;
         }
 
-        $hash = md5(mt_rand(100, 10000) . '_' . $this->id . '_' . $this->email . '_' . time());
+        $hash = md5(wp_rand(100, 10000) . '_' . $this->id . '_' . $this->email . '_' . time());
 
         $hash = str_replace('e', 'd', $hash);
 
         $this->updateMeta('_secure_hash', $hash, 'internal');
 
         return $hash;
+    }
+
+    public function trackEvent($eventData, $isUnique = false)
+    {
+        $eventData['subscriber'] = $this;
+        return FluentCrmApi('event_tracker')->track($eventData, $isUnique);
+    }
+
+    public function updateStatus($status)
+    {
+
+        if ($this->status == $status) {
+            return $this;
+        }
+
+        $oldStatus = $this->status;
+        $newStatus = $status;
+
+        $this->status = $status;
+        $this->save();
+
+        do_action('fluent_crm/subscriber_status_changed', $this, $oldStatus, $newStatus);
+        do_action('fluentcrm_subscriber_status_to_' . $newStatus, $this, $oldStatus);
+
+        return $this;
     }
 }

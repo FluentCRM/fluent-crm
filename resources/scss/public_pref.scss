@@ -1,0 +1,504 @@
+body.fc_unsub {
+    background-color: #eeeeee !important;
+}
+
+.fluentcrm_unsubscribe_wrapper {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 100px 0px 0px 0px;
+
+    .fluentcrm_un_title {
+        text-align: center;
+        margin-bottom: 20px;
+
+        img {
+            max-height: 100px;
+            margin: 0 auto;
+        }
+
+        h3 {
+            margin: 0;
+        }
+    }
+
+    .fluentcrm_un_form_wrapper {
+        line-height: 150%;
+        font-size: 14px;
+        color: #333333;
+        padding: 20px;
+        border-radius: 6px;
+        background-color: #ffffff;
+
+        h3 {
+            margin: 0 0 5px;
+            padding: 0;
+            font-size: 28px;
+        }
+        .hide_wrap {
+            display: none;
+        }
+    }
+
+    h4.mainling_list_group_title {
+        font-size: 17px;
+        margin: 10px 0 10px;
+    }
+
+    .fluentcrm_form_item {
+        margin-bottom: 20px;
+        > label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
+        }
+        .fluentcrm_form_control {
+            display: block;
+            width: 100%;
+        }
+    }
+    .fluentcrm_radio_group {
+        > label {
+            display: block;
+        }
+    }
+
+}
+
+.fluentcrm_error {
+    color: #FF5722;
+    border: 1px solid #FF5722;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.fluentcrm_success {
+    font-size: 16px;
+    text-align: center;
+    padding: 20px 0px;
+}
+.fc_pref_form_wrap {
+    max-width: 700px !important;
+    width: 100%;
+    margin: auto !important;
+    border-radius: 10px;
+    padding: 50px;
+    background: #f3f6fd;
+    overflow: hidden;
+    box-sizing: border-box;
+
+    @media (max-width: 550px) {
+        padding: 30px;
+    }
+    * {
+        box-sizing: border-box;
+    }
+    .fluentcrm_success {
+        background: #7757e6;
+        color: white;
+    }
+}
+
+.fluentcrm_web_body {
+    padding: 0;
+    margin: 0;
+
+    background-color: #ebebeb;
+
+    .fluentcrm_web_view_header {
+        display: flex;
+        width: 100%;
+        margin: 0;
+        text-align: center;
+        justify-content: center;
+        align-items: center;
+        background: white;
+        padding: 10px 0;
+
+        .fluentcrm_web_logo {
+            display: inline-block;
+            margin-right: 20px;
+
+            img {
+                max-height: 44px;
+            }
+        }
+
+        .fluentcrm_web_heading {
+            display: inline-block;
+
+            h1 {
+                font-size: 22px;
+                margin: 0;
+                padding: 0;
+            }
+        }
+    }
+
+    .fluentcrm_email_wrapper {
+        max-width: 800px;
+        margin: 20px auto;
+        padding:0;
+        background: white;
+
+        .templateContainer {
+            margin: 0 auto;
+        }
+    }
+
+    .fluentcrm_email_footer {
+        padding-top: 20px;
+        text-align: center;
+    }
+}
+
+form.fc_public_form {
+    *:before,
+    *:after,
+    * {
+        box-sizing: border-box;
+    }
+    .fc_field {
+        display: block;
+        width: 100%;
+        margin-bottom: 25px;
+        overflow: hidden;
+
+        > label {
+            display: block;
+            width: 100%;
+            font-weight: 500;
+            color: #1C1C1C;
+            opacity: 0.9;
+            font-size: 15px;
+            line-height: 1;
+            margin-bottom: 10px;
+        }
+
+        #fc_name_prefix,
+        .fc_input_control {
+            margin: 0;
+            background: #fff;
+            width: 100%;
+            border: 1px solid rgb(16 24 40 / 20%);
+            font-size: 16px;
+            border-radius: 5px;
+            padding: 8px 15px;
+            display: block;
+            &:read-only {
+                background: #e9ecef;
+                cursor: no-drop;
+            }
+
+            &:focus {
+                border-color: #7756e6 !important;
+                outline: none;
+            }
+        }
+
+        &.fc_field_date_of_birth {
+            .combodate {
+                display: flex;
+                flex: none;
+                select {
+                    flex: 1;
+                    border: 1px solid rgba(16, 24, 40, 0.2);
+                    border-radius: 5px;
+                    padding: 8px 2px;
+                    &:focus {
+                        border-color: #7756e6 !important;
+                        outline: none;
+                    }
+                }
+            }
+        }
+
+        &.fc_pref_submit {
+            margin-bottom: 0;
+        }
+    }
+
+    .fc_2_col {
+        display: flex;
+        flex-wrap: wrap;
+        &.fc_email_phone_date {
+            flex-wrap: nowrap;
+            gap: 20px;
+            @media (max-width: 767px) {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                flex-wrap: wrap;
+                .fc_field {
+                    margin-bottom: 0;
+                }
+            }
+            @media (max-width: 550px) {
+                grid-template-columns: 1fr;
+            }
+        }
+    }
+    .fc_field_lists > label,
+    .fc_address_info_heading
+     {
+        margin: 15px 0 20px;
+        font-size: 22px;
+        font-weight: 600;
+        border-top: 1px solid rgb(28 28 28 / 20%);
+        padding-top: 20px;
+        @media (max-width: 550px) {
+            margin-top: 30px;
+        }
+    }
+    .fc_custom_fields_heading {
+        width: 100%;
+        margin: 15px 0 20px;
+        border-top: 1px solid rgb(28 28 28 / 20%);
+    }
+    .fc_input_control.fc_multiple_select_choice {
+        background-color: white;
+        color: #333;
+        border: 1px solid #ccc;
+        cursor: pointer;
+        opacity: 1;
+        user-select: text;
+        pointer-events: auto;
+        font-family: Arial, Bangla267, sans-serif;
+        height: auto;
+        min-height: 100px;
+    }
+
+    .fc_custom_field_group_box {
+        margin-top: 30px;
+        margin-bottom: 20px;
+        padding: 10px 15px 20px 15px;
+        border: 1px solid #e3e8ee;
+        border-radius: 8px;
+        background: #f7fafc;
+        .fc_custom_field_group_heading {
+            display: flex;
+            align-items: center;
+            font-size: 16px;
+            line-height: 20px;
+            color: #1B2533;
+            gap: 10px;
+            font-weight: 500;
+            border-bottom: 1px solid #EAECF0;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            margin-top: 0;
+            width: 100%;
+        }
+    }
+    .fc_addresses {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        @media (max-width: 550px) {
+            grid-template-columns: 1fr;
+        }
+        .fc_field {
+            margin-bottom: 0;
+            select {
+                margin: 0;
+                background: #fff;
+                width: 100%;
+                border: 1px solid rgb(16 24 40 / 20%);
+                font-size: 16px;
+                border-radius: 5px;
+                padding: 8px 15px;
+                display: block;
+                &:focus {
+                    border-color: #7756e6 !important;
+                    outline: none;
+                }
+            }
+            &:last-child {
+                margin-bottom: 25px;
+            }
+        }
+    }
+    .fc_custom_fields {
+        .fc_field {
+            select {
+                margin: 0;
+                background: #fff;
+                width: 100%;
+                border: 1px solid rgb(16 24 40 / 20%);
+                font-size: 16px;
+                border-radius: 5px;
+                padding: 8px 15px;
+                display: block;
+                &:focus {
+                    border-color: #7756e6 !important;
+                    outline: none;
+                }
+            }
+        }
+        .fc_field_radio {
+            .fc_radio_buttons {
+                .fc_radio_item {
+                    font-size: 14px;
+                    cursor: pointer;
+                    margin-right: 8px;
+                    input {
+                        &:focus{
+                            outline: none !important;
+                            box-shadow: none !important;
+                        }
+                    }
+                }
+            }
+        }
+        .fc_field_checkboxes {
+            .fc_checkboxes {
+                .fc_list_items {
+                    font-size: 14px;
+                    cursor: pointer;
+                    margin-right: 8px;
+                    input {
+                        &:focus{
+                            outline: none !important;
+                            box-shadow: none !important;
+                        }
+                    }
+                }
+            }
+        }
+        .choices__list.choices__list--multiple {
+            .choices__item.choices__item--selectable {
+                background: #015bc8df;
+                border-color: #015bc8df;
+                button {
+                    border-left: 1px solid white;
+                }
+            }
+        }
+    }
+
+    .fc_field_lists {
+        > label {
+            margin-top: 25px;
+        }
+        .fc_checkboxes {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            column-gap: 30px;
+            row-gap: 16px;
+            .fc_list_items {
+                color: rgb(28 28 28 / 80%);
+                font-size: 16px;
+                margin: 0;
+                line-height: 1;
+                font-weight: 500;
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                cursor: pointer;
+                input[type=checkbox] {
+                    width: 22px;
+                    height: 22px;
+                    border: 0 !important;
+                    border-radius: 4px;
+                    margin: 0;
+                    position: relative;
+                    flex: none;
+                    outline: none !important;
+                    box-shadow: none !important;
+                    -webkit-appearance: none;
+                    appearance: none;
+                    &:checked:before {
+                        background: #7756e6;
+                        border-color: #7756e6;
+                    }
+                    &:before {
+                        content: '';
+                        position: absolute;
+                        width: 100%;
+                        height: 100%;
+                        left: 0;
+                        top: 0;
+                        border: 1px solid rgba(16, 24, 40, 0.2);
+                        background: #ffffff;
+                        border-radius: 4px;
+                        cursor: pointer;
+                    }
+                    &:checked:after {
+                        content: "";
+                        position: absolute;
+                        width: 5px;
+                        height: 10px;
+                        border-right: 1.5px solid #ffffff;
+                        border-bottom: 1.5px solid #ffffff;
+                        left: 9px;
+                        top: 5px;
+                        transform: rotate(40deg);
+                        cursor: pointer;
+                    }
+                }
+            }
+        }
+    }
+
+    .fc_3_col {
+        display: flex;
+        flex-wrap: wrap;
+        .fc_name_prefix {
+            max-width: 80px;
+        }
+        &.fc_names {
+            flex-wrap: nowrap;
+            gap: 20px;
+            padding: 0;
+            @media (max-width: 550px) {
+                flex-wrap: wrap;
+                margin-bottom: 20px;
+                .fc_field {
+                    margin-bottom: 0;
+                }
+            }
+            > div {
+                flex-basis: auto;
+            }
+        }
+    }
+    #fluentcrm_preferences_submit {
+        background-color: #7756e6;
+        cursor: pointer;
+        border-radius: 5px;
+        margin-top: 0;
+        &:hover {
+            background-color: #6244c4;
+        }
+    }
+}
+
+
+#fluentcrm_unsubscribe_submit, #fluentcrm_preferences_submit {
+    background-color: #5d5d5d;
+    color: #ffffff;
+    display: inline-block;
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 42px;
+    width: auto;
+    white-space: nowrap;
+    height: 42px;
+    margin: 12px 5px 0 0;
+    padding: 0 22px;
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    border: 0;
+    border-radius: 3px;
+    vertical-align: top;
+
+    &:hover {
+        background-color: #6244c4;
+        color: #ffffff;
+    }
+}
+.choices__list--dropdown {
+  position: static !important;
+  border: 1px solid #ddd;
+  box-shadow: none;
+}

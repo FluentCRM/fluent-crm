@@ -252,6 +252,7 @@ class FunnelHelper
             }
 
             $sequence = apply_filters('fluentcrm_funnel_sequence_saving_' . $sequence['action_name'], $sequence, $funnel);
+
             if (Arr::get($sequence, 'type') == 'benchmark') {
                 $delay = $sequence['delay'];
             }
@@ -294,6 +295,7 @@ class FunnelHelper
         if (empty($sequence['id'])) {
             $sequence['created_by'] = get_current_user_id();
             $createdSequence = FunnelSequence::create($sequence);
+            do_action('fluent_crm/sequence_created_' . $createdSequence->action_name, $createdSequence);
             return $createdSequence->id;
         }
 
@@ -328,11 +330,18 @@ class FunnelHelper
         } else if ($unit == 'minutes') {
             $converter = 60;
         }
+
         $time = Arr::get($settings, 'wait_time_amount');
-        return (int) $time * $converter;
+        $delay = (int)$time * $converter;
+
+        if (!$delay || $delay < 1) {
+            $delay = 1;
+        }
+
+        return $delay;
     }
 
-    public static function getCurrentDelayInSeconds($settings)
+    public static function getCurrentDelayInSeconds($settings, $sequence = null, $funnerSubId = null)
     {
         $waitType = Arr::get($settings, 'wait_type');
 
@@ -345,26 +354,85 @@ class FunnelHelper
             if ($waitTimes < 1) {
                 $waitTimes = 0;
             }
-            return apply_filters('fluent_crm/funnel_seq_delay_in_seconds', $waitTimes, $settings);
+            return apply_filters('fluent_crm/funnel_seq_delay_in_seconds', $waitTimes, $settings, $sequence, $funnerSubId);
         }
 
         if ($waitType && $waitType == 'to_day') {
-            $nextDays = Arr::get($settings, 'to_day');
+            $nextDays = Arr::get($settings, 'to_day', []);
             $timeStampNow = current_time('timestamp');
 
+            $nextDays = array_map(function ($dayName) {
+                return substr($dayName, 0, 3);
+            }, $nextDays);
+
             if (empty($nextDays)) { // if no day is selected
-                $nextDays = [date('D', $timeStampNow), date('D', strtotime('+1 day', $timeStampNow))];
+                $nextDays = [gmdate('D', $timeStampNow), gmdate('D', strtotime('+1 day', $timeStampNow))];
             }
 
             $nextTime = Arr::get($settings, 'to_day_time');
             if (!$nextTime) {
-                $nextTime = date('H:i', $timeStampNow);
+                $nextTime = gmdate('H:i', $timeStampNow);
             }
 
             $date = self::getEarliestDay($nextDays, $nextTime);
+
             $seconds = strtotime($date) - current_time('timestamp');
             $waitTimes = ($seconds < 1) ? 0 : $seconds;
-            return apply_filters('fluent_crm/funnel_seq_delay_in_seconds', $waitTimes, $settings);
+            return apply_filters('fluent_crm/funnel_seq_delay_in_seconds', $waitTimes, $settings, $sequence, $funnerSubId);
+        }
+
+
+        if ($waitType == 'by_custom_field') {
+            if (!$funnerSubId) {
+                return apply_filters('fluent_crm/funnel_seq_delay_in_seconds', 60, $settings, $sequence, $funnerSubId);
+            }
+
+            $funnelSub = FunnelSubscriber::where('id', $funnerSubId)->first();
+
+            if (!$funnelSub || !$funnelSub->subscriber) {
+                return apply_filters('fluent_crm/funnel_seq_delay_in_seconds', 60, $settings, $sequence, $funnerSubId);
+            }
+
+            $customFieldKey = Arr::get($settings, 'by_custom_field', '');
+
+            if (!$customFieldKey) {
+                return apply_filters('fluent_crm/funnel_seq_delay_in_seconds', 60, $settings, $sequence, $funnerSubId);
+            }
+
+            $dateTime = null;
+
+            if ($customFieldKey == '__date_of_birth__') {
+                $dateTime = $funnelSub->subscriber->date_of_birth;
+
+                if ($dateTime) {
+                    // should be this current year's date
+                    $dateTime = gmdate('Y') . '-' . gmdate('m-d', strtotime($dateTime));
+
+                    // if the date is passed, then next year
+                    if (strtotime($dateTime) < current_time('timestamp')) {
+                        $dateTime = (gmdate('Y') + 1) . '-' . gmdate('m-d', strtotime($dateTime));
+                    }
+                }
+            } else {
+                $meta = $funnelSub->subscriber->custom_field_meta()->where('key', $customFieldKey)->first();
+                if ($meta) {
+                    $dateTime = $meta->value;
+                }
+            }
+
+            if (!$dateTime) {
+                return apply_filters('fluent_crm/funnel_seq_delay_in_seconds', 60, $settings, $sequence, $funnerSubId);
+            }
+
+            $timeStamp = strtotime($dateTime);
+
+            $waitTimes = $timeStamp - current_time('timestamp');
+
+            if ($waitTimes < 1) {
+                $waitTimes = 60;
+            }
+
+            return apply_filters('fluent_crm/funnel_seq_delay_in_seconds', $waitTimes, $settings, $sequence, $funnerSubId);
         }
 
         $unit = Arr::get($settings, 'wait_time_unit');
@@ -376,9 +444,13 @@ class FunnelHelper
         }
 
         $time = Arr::get($settings, 'wait_time_amount');
-        $waitTimes = (int) $time * $converter;
+        $waitTimes = (int)$time * $converter;
 
-        return apply_filters('fluent_crm/funnel_seq_delay_in_seconds', $waitTimes, $settings);
+        if (!$waitTimes || $waitTimes < 1) {
+            $waitTimes = 1;
+        }
+
+        return apply_filters('fluent_crm/funnel_seq_delay_in_seconds', $waitTimes, $settings, $sequence, $funnerSubId);
     }
 
     /*
@@ -394,11 +466,11 @@ class FunnelHelper
             $timeStampsArray[] = $timestamp + ($i * 86400);
         }
 
-        $earliest = date('Y-m-d ' . $time . ':s', $timestamp);
+        $earliest = gmdate('Y-m-d ' . $time . ':s', $timestamp);
 
         foreach ($timeStampsArray as $timeStampVal) {
-            if (in_array(date('D', $timeStampVal), $days)) {
-                $earliest = date('Y-m-d ' . $time . ':s', $timeStampVal);
+            if (in_array(gmdate('D', $timeStampVal), $days)) {
+                $earliest = gmdate('Y-m-d ' . $time . ':s', $timeStampVal);
                 if (strtotime($earliest) - $timestamp > -60) {
                     return $earliest;
                 }
@@ -869,7 +941,7 @@ class FunnelHelper
 
     public static function getCountryShortName($countryName)
     {
-        if(!function_exists('getFluentFormCountryList')) {
+        if (!function_exists('getFluentFormCountryList')) {
             return null;
         }
 
@@ -885,4 +957,21 @@ class FunnelHelper
         return null;
     }
 
+    public static function getFunnelSubscriberStatus($defaultStatus, $funnel, $subscriber)
+    {
+        if ($defaultStatus == 'active' || $defaultStatus == 'waiting') {
+            return $defaultStatus;
+        }
+
+        $processableStatuses = ['subscribed', 'transactional'];
+        if (in_array($subscriber->status, $processableStatuses, true)) {
+            return 'active';
+        }
+
+        if (Arr::get($funnel->settings, '__force_run_actions') == 'yes') {
+            return 'active';
+        }
+
+        return $defaultStatus;
+    }
 }

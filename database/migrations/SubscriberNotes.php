@@ -20,7 +20,9 @@ class SubscriberNotes
 
         $indexPrefix = $wpdb->prefix .'fc_sn_';
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $sql = "CREATE TABLE $table (
                 `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
                 `subscriber_id` BIGINT UNSIGNED NOT NULL,
@@ -33,17 +35,19 @@ class SubscriberNotes
                 `description` LONGTEXT NULL,
                 `created_at` TIMESTAMP NULL,
                 `updated_at` TIMESTAMP NULL,
-                INDEX `{$indexPrefix}_s_id_idx` (`subscriber_id` DESC),
-                INDEX `{$indexPrefix}_s_idx` (`status` DESC),
+                INDEX `{$indexPrefix}_s_id_idx` (`subscriber_id` ASC),
+                INDEX `{$indexPrefix}_s_idx` (`status` ASC),
                 KEY `type` (`type`)
             ) $charsetCollate;";
 
             dbDelta($sql);
         } else {
             $charsetCollate = $wpdb->collate;
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $sql = "ALTER TABLE {$table} CHANGE `description` `description` longtext COLLATE '".$charsetCollate."' NULL AFTER `title`;";
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
             $wpdb->query($sql);
-
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $indexes = $wpdb->get_results("SHOW INDEX FROM $table");
             $indexedColumns = [];
             foreach ($indexes as $index) {
@@ -51,7 +55,9 @@ class SubscriberNotes
             }
 
             if(!in_array('type', $indexedColumns)) {
+                // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
                 $indexSql = "ALTER TABLE `{$table}` ADD INDEX `type` (`type`);";
+                // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
                 $wpdb->query($indexSql);
             }
         }

@@ -6,10 +6,10 @@ use FluentCrm\Framework\Support\Arr;
 
 class Mailer
 {
-    public static function send($data, $subscriber = null)
+    public static function send($data, $subscriber = null, $emailModel = null)
     {
 
-        $headers = static::buildHeaders($data, $subscriber);
+        $headers = static::buildHeaders($data, $subscriber, $emailModel);
 
         if (apply_filters('fluent_crm/is_simulated_mail', false, $data, $headers)) {
             return true;
@@ -35,9 +35,9 @@ class Mailer
         );
     }
 
-    protected static function buildHeaders($data, $subscriber = null)
+    protected static function buildHeaders($data, $subscriber = null, $emailModel = null)
     {
-        $headers[] = 'Content-Type: text/html; charset=UTF-8';
+        $headers[] = "Content-Type: text/html; charset=UTF-8";
 
         $from = Arr::get($data, 'headers.From');
         $replyTo = Arr::get($data, 'headers.Reply-To');
@@ -48,33 +48,31 @@ class Mailer
 
         // Set Reply-To Header
         if ($replyTo) {
-            $headers[] = "Reply-To: $replyTo";
+            $headers[] = "Reply-To: {$replyTo}";
         }
 
-        if (apply_filters('fluent_crm/enable_unsub_header', true, $data)) {
-            $sendingEmail = Arr::get($data, 'to.email');
+        if ($subscriber && apply_filters('fluent_crm/enable_unsub_header', true, $data, $subscriber, $emailModel)) {
+            $campaign = ($emailModel && $emailModel->campaign) ? $emailModel->campaign : null;
+            $isTransactional = $campaign && Arr::get($campaign->settings, 'is_transactional') == 'yes';
 
-            if ($subscriber) {
-
-                $unsubscribeUrl = add_query_arg([
+            if (!$isTransactional) {
+                $args = [
                     'fluentcrm'   => 1,
                     'route'       => 'unsubscribe',
-                    'secure_hash' => fluentCrmGetContactSecureHash($subscriber->id)
-                ], site_url('/'));
+                    'secure_hash' => fluentCrmGetContactManagedHash($subscriber->id)
+                ];
+                if ($emailModel) {
+                    $args['ce_id'] = $emailModel->id;
+                }
 
-                $headers[] = 'List-Unsubscribe: <' . $unsubscribeUrl . '>';
-            } else if ($sendingEmail) {
-                $unsubscribeUrl = add_query_arg([
-                    'fluentcrm' => 1,
-                    'route'     => 'unsubscribe',
-                    'hash'      => md5($sendingEmail)
-                ], site_url('/'));
-                $headers[] = 'List-Unsubscribe: <' . $unsubscribeUrl . '>';
+                $unsubscribeUrl = add_query_arg($args, site_url('index.php'));
+
+                $headers[] = "List-Unsubscribe: <{$unsubscribeUrl}>";
+                $headers[] = "List-Unsubscribe-Post: List-Unsubscribe=One-Click";
             }
-
         }
 
-        return apply_filters('fluent_crm/email_headers', $headers, $data);
+        return apply_filters('fluent_crm/email_headers', $headers, $data, $subscriber, $emailModel);
     }
 
     private static function willIncludeName()

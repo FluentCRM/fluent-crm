@@ -1,0 +1,63 @@
+const fs = require('fs');
+const path = require('path');
+
+const targetDir = 'resources'; // Define the starting directory
+const textDomain = 'fluent-crm';
+
+// Function to read directory contents recursively
+function readDirRecursively(dir, allFiles = []) {
+    const files = fs.readdirSync(dir);
+
+    files.forEach(file => {
+        const filepath = path.join(dir, file);
+        if (fs.statSync(filepath).isDirectory()) {
+            readDirRecursively(filepath, allFiles);
+        } else if (path.extname(file) === '.vue' || path.extname(file) === '.js') { // Check for .vue and .js files
+            allFiles.push(filepath);
+        }
+    });
+
+    return allFiles;
+}
+
+// Function to extract strings from $t() in file content
+function extractStrings(files) {
+    const results = {};
+    // Updated regex to capture strings with mixed quotes
+    const regex = /\$t\(['"]([^'"]*?(?:\\['"][^'"]*?)*?)['"]\)/g;
+
+    files.forEach(file => {
+        const content = fs.readFileSync(file, 'utf8');
+        let match;
+
+        while ((match = regex.exec(content)) !== null) {
+            results[match[1]] = true; // Use the match as a key to avoid duplicates
+        }
+    });
+
+    return Object.keys(results); // Return unique strings only
+}
+
+// Write results to a text file in PHP array format
+function writeResults(strings) {
+    const sortedStrings = strings.sort(); // Sort strings in ascending order
+    const formattedStrings = sortedStrings.map(str => `'${str}' => __('${str}', '${textDomain}')`).join(",\n");
+    const finalData = "<?php [\n" + formattedStrings + "\n];";
+
+    fs.writeFile('translationStrings.php', finalData, err => {
+        if (err) {
+            console.error('Error writing to file:', err);
+        } else {
+            console.log('Saved translation strings to translationStrings.php');
+        }
+    });
+}
+
+// Main process function
+function processVueFiles() {
+    const vueFiles = readDirRecursively(targetDir);
+    const uniqueStrings = extractStrings(vueFiles);
+    writeResults(uniqueStrings);
+}
+
+processVueFiles();

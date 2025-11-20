@@ -48,11 +48,26 @@ class WaitTimeAction extends BaseAction
             $sequence['settings']['to_day_time'] = '';
         }
 
+        if (!empty($sequence['settings']['to_day'])) {
+            $sequence['settings']['to_day'] = array_map(function ($day) {
+                return substr($day, 0, 3);
+            }, $sequence['settings']['to_day']);
+        }
+
         return $sequence;
     }
 
     public function getBlockFields()
     {
+
+        $customFields = FluentCrmApi('contacts')->getCustomFields(['date_time', 'date'], true);
+
+        // add date of birth field at the beginning
+        array_unshift($customFields, [
+            'id'    => '__date_of_birth__',
+            'title' => __('Contact\'s Next Date of Birth', 'fluent-crm')
+        ]);
+
         return [
             'title'     => __('Wait X Days/Hours', 'fluent-crm'),
             'sub_title' => __('Wait defined timespan before execute the next action', 'fluent-crm'),
@@ -63,15 +78,19 @@ class WaitTimeAction extends BaseAction
                     'options' => [
                         [
                             'id'    => 'unit_wait',
-                            'title' => 'Wait for a specific period'
+                            'title' => __('Wait by period', 'fluent-crm')
                         ],
                         [
                             'id'    => 'timestamp_wait',
-                            'title' => 'Wait until a specific date-time'
+                            'title' => __('Wait Until Date', 'fluent-crm')
                         ],
                         [
                             'id'    => 'to_day',
-                            'title' => 'To a day of the week'
+                            'title' => __('Wait by Weekday', 'fluent-crm')
+                        ],
+                        [
+                            'id'    => 'by_custom_field',
+                            'title' => __('Wait by Custom Field', 'fluent-crm')
                         ]
                     ]
                 ],
@@ -121,17 +140,17 @@ class WaitTimeAction extends BaseAction
                     ]
                 ],
                 'to_day'           => [
-                    'type'     => 'checkboxes',
-                    'label'    => 'Wait until next day(s) of the week',
+                    'type'          => 'checkboxes',
+                    'label'         => 'Wait until next day(s) of the week',
                     'wrapper_class' => 'fc_2col_inline pad-r-20',
-                    'options'  => [
+                    'options'       => [
                         [
                             'id'    => 'Mon',
                             'title' => 'Mon'
                         ],
                         [
-                            'id'    => 'Tues',
-                            'title' => 'Tues'
+                            'id'    => 'Tue',
+                            'title' => 'Tue'
                         ],
                         [
                             'id'    => 'Wed',
@@ -154,7 +173,7 @@ class WaitTimeAction extends BaseAction
                             'title' => 'Sun'
                         ]
                     ],
-                    'dependency'  => [
+                    'dependency'    => [
                         'depends_on' => 'wait_type',
                         'value'      => 'to_day',
                         'operator'   => '=',
@@ -164,18 +183,29 @@ class WaitTimeAction extends BaseAction
                     'label'          => 'Time of the day',
                     'type'           => 'time_selector',
                     'placeholder'    => 'Select Time',
-                    'wrapper_class' => 'fc_2col_inline',
+                    'wrapper_class'  => 'fc_2col_inline',
                     'picker_options' => [
                         'start' => '00:00',
                         'step'  => '00:10',
                         'end'   => '23:59'
                     ],
-                    'dependency'  => [
+                    'dependency'     => [
                         'depends_on' => 'wait_type',
                         'value'      => 'to_day',
                         'operator'   => '=',
                     ]
-                ]
+                ],
+                'by_custom_field'   => [
+                    'label'         => __('Select Contact\'s Custom Field', 'fluent-crm'),
+                    'type'          => 'select',
+                    'inline_help' => __('If no value is found in the contact\'s custom field or past date then it will wait only 1 minute by default', 'fluent-crm'),
+                    'options'       => $customFields,
+                    'dependency'    => [
+                        'depends_on' => 'wait_type',
+                        'value'      => 'by_custom_field',
+                        'operator'   => '=',
+                    ]
+                ],
             ]
         ];
     }

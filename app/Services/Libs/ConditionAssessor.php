@@ -62,8 +62,8 @@ class ConditionAssessor
             $sourceValue = Arr::get($inputs, $conditional['data_key']);
             $dataValue = $conditional['data_value'];
 
-            if ( $conditional['data_key'] === 'order_status'  && !strpos('wc-', $sourceValue )) {
-                $sourceValue = str_replace($sourceValue, 'wc-'.$sourceValue, $sourceValue);
+            if ($conditional['data_key'] === 'order_status' && !strpos('wc-', $sourceValue)) {
+                $sourceValue = str_replace($sourceValue, 'wc-' . $sourceValue, $sourceValue);
             }
 
             switch ($conditional['operator']) {
@@ -136,13 +136,20 @@ class ConditionAssessor
                     return strlen($sourceValue) > $dataValue;
                     break;
                 case 'match_all':
+                    // Exact match (order-independent)
+                    $sourceValue = (array) $sourceValue;
+                    $dataValue = (array) $dataValue;
+                    sort($sourceValue);
+                    sort($dataValue);
+                    $dataValue = array_map('intval', $dataValue);
+                    return $sourceValue == $dataValue;
                 case 'in_all':
                     $sourceValue = (array)$sourceValue;
                     $dataValue = (array)$dataValue;
                     sort($sourceValue);
                     sort($dataValue);
-                    return $sourceValue == $dataValue;
-                    break;
+                    $dataValue = array_map('intval', $dataValue);
+                    return empty(array_diff($dataValue, $sourceValue));
                 case 'match_none_of':
                 case 'not_in_all':
                     $sourceValue = (array)$sourceValue;
@@ -151,10 +158,10 @@ class ConditionAssessor
                     break;
                 case 'in':
                     $dataValue = (array)$dataValue;
-                    if (is_array($sourceValue)) {
-                        return !!(array_intersect($sourceValue, $dataValue));
+                    if (!is_array($sourceValue)) {
+                        $sourceValue = array_map('trim', explode(',', $sourceValue));
                     }
-                    return in_array($sourceValue, $dataValue);
+                    return !!array_intersect($sourceValue, $dataValue);
                 case 'not_in':
                     $dataValue = (array)$dataValue;
                     if (is_array($sourceValue)) {
@@ -162,14 +169,29 @@ class ConditionAssessor
                     }
                     return !in_array($sourceValue, $dataValue);
                 case 'before':
-                    return strtotime($sourceValue) < strtotime($dataValue);
+                    if (!$sourceValue || $sourceValue == '0000-00-00') {
+                        return false;
+                    }
+
+                    return  strtotime($sourceValue) < strtotime($dataValue);
                 case 'after':
+                    if (!$sourceValue || $sourceValue == '0000-00-00') {
+                        return false;
+                    }
+
                     return strtotime($sourceValue) > strtotime($dataValue);
                 case 'date_equal':
-                    return date('YMD', strtotime($sourceValue)) == date('YMD', strtotime($dataValue));
+                    return gmdate('YMD', strtotime($sourceValue)) == gmdate('YMD', strtotime($dataValue));
                 case 'days_before':
+                    if (!$sourceValue || $sourceValue == '0000-00-00') {
+                        return false;
+                    }
+
                     return strtotime($sourceValue) < strtotime("-{$dataValue} days", current_time('timestamp'));
                 case 'days_within':
+                    if (!$sourceValue || $sourceValue == '0000-00-00') {
+                        return false;
+                    }
                     return strtotime($sourceValue) > strtotime("-{$dataValue} days", current_time('timestamp'));
                 case 'is_null':
                     return !$sourceValue;

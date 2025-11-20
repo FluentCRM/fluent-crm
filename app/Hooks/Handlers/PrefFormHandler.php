@@ -4,6 +4,7 @@ namespace FluentCrm\App\Hooks\Handlers;
 
 use FluentCrm\App\Services\Helper;
 use FluentCrm\Framework\Support\Arr;
+use FluentCrm\App\Models\CustomContactField as CustomFields;
 
 /**
  *  Integrations Class
@@ -38,6 +39,33 @@ class PrefFormHandler
             return $noContactContent;
         }
 
+        /**
+         * Determine the preference form labels in FluentCRM.
+         *
+         * This filter allows modification of the labels used in the preference form.
+         *
+         * @since 2.5.95
+         *
+         * @param array {
+         *     An associative array of labels.
+         *
+         *     @type string $first_name      Label for the first name field.
+         *     @type string $last_name       Label for the last name field.
+         *     @type string $prefix          Label for the title field.
+         *     @type string $email           Label for the email field.
+         *     @type string $phone           Label for the phone/mobile field.
+         *     @type string $dob             Label for the date of birth field.
+         *     @type string $address_line_1  Label for the address line 1 field.
+         *     @type string $address_line_2  Label for the address line 2 field.
+         *     @type string $city            Label for the city field.
+         *     @type string $state           Label for the state field.
+         *     @type string $postal_code     Label for the ZIP code field.
+         *     @type string $country         Label for the country field.
+         *     @type string $update          Label for the update info button.
+         *     @type string $address_heading Label for the address information section.
+         *     @type string $list_label      Label for the mailing list groups section.
+         * }
+         */
         $labels = apply_filters('fluent_crm/pref_labels', [
             'first_name'      => __('First Name', 'fluent-crm'),
             'last_name'       => __('Last Name', 'fluent-crm'),
@@ -54,6 +82,7 @@ class PrefFormHandler
             'update'          => __('Update info', 'fluent-crm'),
             'address_heading' => __('Address Information', 'fluent-crm'),
             'list_label'      => __('Mailing List Groups', 'fluent-crm'),
+            'custom_fields'   => __('Custom Fields', 'fluent-crm')
         ]);
 
         $formFields = $this->getFormFields($settings, $subscriber, $labels, false);
@@ -81,6 +110,17 @@ class PrefFormHandler
             ];
         }
 
+        /**
+         * Determine the preference form fields against a subscriber or contact data in FluentCRM.
+         *
+         * This filter allows modification of the preference form fields before they are displayed.
+         *
+         * @since 2.5.95
+         *
+         * @param array $formFields The current form fields.
+         * @param object $subscriber The subscriber object.
+         * @return array Modified form fields.
+         */
         $formFields = apply_filters('fluent_crm/pref_form_fields', $formFields, $subscriber);
 
         $formFields[] = [
@@ -170,7 +210,7 @@ class PrefFormHandler
         if (!isset($_POST['_fc_nonce']) || !wp_verify_nonce($_POST['_fc_nonce'], 'fluent_crm_account_form_fields')) {
             wp_send_json_error([
                 'message' => 'Sorry, your nonce did not verify.'
-            ], 423);
+            ], 422);
         }
 
         $settings = Helper::getGlobalEmailSettings();
@@ -178,7 +218,7 @@ class PrefFormHandler
         if (Arr::get($settings, 'pref_form') != 'yes' || empty(Arr::get($settings, 'pref_general'))) {
             wp_send_json_error([
                 'message' => 'Sorry! you can not update your profile'
-            ], 423);
+            ], 422);
         }
 
         if (isset($_REQUEST['_fc_hash_secure']) && !is_user_logged_in()) {
@@ -193,7 +233,7 @@ class PrefFormHandler
         if (!$subscriber) {
             wp_send_json_error([
                 'message' => 'Sorry! you can not update your profile'
-            ], 423);
+            ], 422);
         }
 
         $validInputs = $this->getFormFields($settings, $subscriber, [], true);
@@ -210,7 +250,13 @@ class PrefFormHandler
             if (Arr::get($input, 'required') && empty($validData[$key])) {
                 $errors[] = $key . ' is required';
             }
-            $validData[$key] = sanitize_text_field(Arr::get($validData, $key, ''));
+            
+            // Handle array values for multi-select and checkboxes
+            if (isset($validData[$key]) && is_array($validData[$key])) {
+                $validData[$key] = array_map('sanitize_text_field', $validData[$key]);
+            } else {
+                $validData[$key] = sanitize_text_field(Arr::get($validData, $key, ''));
+            }
         }
 
         if ($errors) {
@@ -218,7 +264,64 @@ class PrefFormHandler
                 'message' => __('Please fill up all required fields', 'fluent-crm'),
                 'errors'  => $errors,
                 'inputs'  => $validData
-            ], 423);
+            ], 422);
+        }
+
+        // Handle custom fields
+        $enabledCustomFieldSlugs = Arr::get($settings, 'pref_custom', []);
+        $allCustomFields = (new CustomFields)->getGlobalFields()['fields'];
+        
+        if (!empty($allCustomFields) && !empty($enabledCustomFieldSlugs)) {
+            foreach ($allCustomFields as $field) {
+                $fieldKey = $field['slug'];
+                
+                // Only process fields that are enabled in pref_custom
+                if (!in_array($fieldKey, $enabledCustomFieldSlugs)) {
+                    continue;
+                }
+                
+                if (isset($validData[$fieldKey])) {
+                    $value = $validData[$fieldKey];
+                    
+                    // Handle different field types
+                    switch ($field['type']) {
+                        case 'checkbox':
+                            if (is_array($value)) {
+                                $value = array_map('sanitize_text_field', $value);
+                            }
+                            break;
+                            
+
+                        case 'select-multi':
+
+                            if (is_array($value)) {
+                                $value = array_map('sanitize_text_field', $value);
+                            } else {
+                                $value = [];
+                            }
+                            break;
+
+                        case 'number':
+                            $value = floatval($value);
+                            break;
+                            
+                        case 'textarea':
+                            $value = isset($_POST[$fieldKey]) ? sanitize_textarea_field($_POST[$fieldKey]) : '';
+                            break;
+                            
+                        case 'date':
+                            $value = sanitize_text_field($value);
+                            break;
+                            
+                        default:
+                            $value = sanitize_text_field($value);
+                    }
+                    
+                    // Update the meta with proper type
+                    $subscriber->updateMeta($field['slug'], $value, 'custom_field');
+                    unset($validData[$fieldKey]); // Remove from main data
+                }
+            }
         }
 
         $subscriber->fill($validData);
@@ -271,13 +374,8 @@ class PrefFormHandler
 
         do_action('fluent_crm/pref_form_self_contact_updated', $subscriber, $_REQUEST);
 
-
         if ($updateData) {
-            /*
-            * deprecated
-            */
             do_action('fluentcrm_contact_updated', $subscriber, $updateData);
-
             do_action('fluent_crm/contact_updated', $subscriber, $updateData);
         }
 
@@ -285,12 +383,12 @@ class PrefFormHandler
             'message' => __('Your information has been updated', 'fluent-crm'),
             'data'    => $validData
         ], 200);
-
     }
 
     private function getFormFields($settings, $subscriber, $labels, $inputOnly = false)
     {
         $generalFields = Arr::get($settings, 'pref_general');
+        $customFields = Arr::get($settings, 'pref_custom');
 
         $formFields = [];
 
@@ -389,8 +487,8 @@ class PrefFormHandler
                 'id'       => 'fc_date_of_birth',
                 'atts'     => [
                     'type'          => 'text',
-                    'data-max-year' => date('Y'),
-                    'data-min-year' => date('Y') - 120,
+                    'data-max-year' => gmdate('Y'),
+                    'data-min-year' => gmdate('Y') - 120,
                     'class'         => 'fc_date_item',
                     'data-format'   => 'YYYY-MM-DD',
                     'placeholder'   => __('Date of Birth', 'fluent-crm'),
@@ -407,12 +505,22 @@ class PrefFormHandler
             'html' => '</div>'
         ];
 
+
         if (in_array('address_fields', $generalFields)) {
             $formFields[] = [
                 'type' => 'raw_html',
                 'html' => '<h4 class="fc_address_info_heading">' . Arr::get($labels, 'address_heading', 'Address Information') . '</h4>'
             ];
 
+            /**
+             * Filter to modify the list of country names for the Preference Form Field in FluentCRM.
+             *
+             * This filter allows you to modify the list of country names used in FluentCRM.
+             *
+             * @since 2.7.0
+             * 
+             * @param array An array of country names.
+             */
             $countryNames = apply_filters('fluent_crm/countries', []);
 
             $formattedCountries = [];
@@ -492,6 +600,84 @@ class PrefFormHandler
             ];
         }
 
+        // Add custom fields section
+        if (!empty($customFields)) { 
+            $allCustomFields = (new CustomFields)->getGlobalFields()['fields'];
+            $enabledCustomFields = [];
+            
+            // Filter custom fields based on pref_custom settings
+            foreach ($allCustomFields as $field) {
+                if (in_array($field['slug'], $customFields)) {
+                    $enabledCustomFields[] = $field;
+                }
+            }
+            
+            if (!empty($enabledCustomFields)) {
+                $formFields[] = [
+                    'type' => 'raw_html',
+                    'html' => '<p class="fc_custom_fields_heading"></p>'
+                ];
+                
+                // Group fields by their group attribute
+                $groupedFields = [];
+                $ungroupedFields = [];
+                
+                foreach ($enabledCustomFields as $field) {
+                    if (!empty($field['group'])) {
+                        $group = $field['group'];
+                        if (!isset($groupedFields[$group])) {
+                            $groupedFields[$group] = [];
+                        }
+                        $groupedFields[$group][] = $field;
+                    } else {
+                        $ungroupedFields[] = $field;
+                    }
+                }
+
+                // Add ungrouped fields first
+                if (!empty($ungroupedFields)) {
+                    $ungroupedContainer = [
+                        'type'            => 'container',
+                        'container_class' => 'fc_custom_fields fc_2_col',
+                        'fields'          => []
+                    ];
+
+                    foreach ($ungroupedFields as $field) {
+                        $fieldType = $field['type'];
+                        $fieldKey = $field['slug'];
+                        $fieldConfig = $this->getCustomFieldConfig($field, $subscriber);
+                        $ungroupedContainer['fields'][$fieldKey] = $fieldConfig;
+                    }
+
+                    $formFields['custom_fields_ungrouped'] = $ungroupedContainer;
+                }
+
+                // Create containers for each group
+                foreach ($groupedFields as $groupName => $fields) {
+                    $customFieldsContainer = [
+                        'type'            => 'container',
+                        'container_class' => 'fc_custom_fields fc_2_col fc_custom_field_group_box',
+                        'fields'          => []
+                    ];
+
+                    $customFieldsContainer['fields']['group_heading'] = [
+                        'type' => 'raw_html',
+                        'html' => '<h5 class="fc_custom_field_group_heading">' . esc_html($groupName) . '</h5>'
+                    ];
+
+                    foreach ($fields as $field) {
+                        $fieldType = $field['type'];
+                        $fieldKey = $field['slug'];
+                        $fieldConfig = $this->getCustomFieldConfig($field, $subscriber);
+                        $customFieldsContainer['fields'][$fieldKey] = $fieldConfig;
+                    }
+
+                    $formFields['custom_fields_' . sanitize_title($groupName)] = $customFieldsContainer;
+                }
+            }
+        }
+
+
         if (!$inputOnly) {
             return $formFields;
         }
@@ -503,7 +689,7 @@ class PrefFormHandler
     {
         $inputFields = [];
 
-        $inputTypes = ['hidden', 'input', 'checkboxes', 'select', 'radio', 'date'];
+        $inputTypes = ['hidden', 'input', 'checkboxes', 'select', 'radio', 'date', 'textarea', 'select-multi', 'custom_date', 'custom_date_time'];
 
         foreach ($fields as $inputKey => $field) {
             $type = Arr::get($field, 'type');
@@ -515,6 +701,112 @@ class PrefFormHandler
         }
 
         return $inputFields;
+    }
+
+    private function getCustomFieldConfig($field, $subscriber)
+    {
+        $fieldType = $field['type'];
+        $fieldKey = $field['slug'];
+
+        $fieldConfig = [
+            'type'     => 'input',
+            'name'     => $fieldKey,
+            'id'       => 'fc_' . $fieldKey,
+            'label'    => $field['label'],
+            'required' => !empty($field['required']),
+            'value'    => $subscriber->getMeta($field['slug'], 'custom_field')
+        ];
+
+        // Add field-specific configurations
+        switch ($fieldType) {
+            case 'text':
+                $fieldConfig['type'] = 'input';
+                $fieldConfig['atts'] = [
+                    'type'        => 'text',
+                    'placeholder' => $field['label'],
+                    'class'       => 'fc_input_control'
+                ];
+                break;
+
+            case 'textarea':
+                $fieldConfig['type'] = 'textarea';
+                $fieldConfig['atts'] = [
+                    'placeholder' => $field['label'],
+                    'class'       => 'fc_input_control',
+                    'name'        => $fieldKey
+                ];
+                break;
+
+            case 'number':
+                $fieldConfig['type'] = 'input';
+                $fieldConfig['atts'] = [
+                    'type'        => 'number',
+                    'placeholder' => $field['label'],
+                    'class'       => 'fc_input_control'
+                ];
+                break;
+
+            case 'select-one':
+                $fieldConfig['type'] = 'select';
+                $fieldConfig['options'] = array_combine($field['options'], $field['options']);
+                $fieldConfig['placeholder'] = $field['label'];
+                $fieldConfig['atts'] = [
+                    'class' => 'fc_input_control select-one'
+                ];
+                break;
+
+            case 'select-multi':
+                $fieldConfig['type'] = 'select-multi';
+                $fieldConfig['options'] = array_combine($field['options'], $field['options']);
+                $fieldConfig['value'] = is_array($fieldConfig['value']) ? $fieldConfig['value'] : [];
+                $fieldConfig['name'] = $fieldKey . '[]';
+                $fieldConfig['atts'] = [
+                    'class' => 'fc_input_control select-multi',
+                    'multiple' => 'multiple'
+                ];
+                break;
+
+            case 'radio':
+                $fieldConfig['type'] = 'radio';
+                $fieldConfig['options'] = array_combine($field['options'], $field['options']);
+                $fieldConfig['atts'] = [
+                    'class' => 'fc_input_control'
+                ];
+                break;
+
+            case 'checkbox':
+                $fieldConfig['type'] = 'checkboxes';
+                $fieldConfig['options'] = is_array($field['options']) ? $field['options'] : [];
+                $fieldConfig['value'] = is_array($fieldConfig['value']) ? $fieldConfig['value'] : [];
+                $fieldConfig['atts'] = [
+                    'class' => 'fc_input_control'
+                ];
+                break;
+
+            case 'date':
+                $fieldConfig['type'] = 'custom_date';
+                $fieldConfig['atts'] = [
+                    'type'          => 'date',
+                    'class'         => 'fc_date_item fc_input_control',
+                    'data-format'   => 'YYYY-MM-DD',
+                    'placeholder'   => $field['label'],
+                    'data-template' => 'DD - MM - YYYY'
+                ];
+                break;
+
+            case 'date_time':
+                $fieldConfig['type'] = 'custom_date_time';
+                $fieldConfig['atts'] = [
+                    'type'          => 'text',
+                    'class'         => 'fc_date_item fc_input_control',
+                    'data-format'   => 'YYYY-MM-DD HH:mm:ss',
+                    'placeholder'   => $field['label'],
+                    'data-template' => 'DD - MM - YYYY HH:mm'
+                ];
+                break;
+        }
+
+        return $fieldConfig;
     }
 
 }

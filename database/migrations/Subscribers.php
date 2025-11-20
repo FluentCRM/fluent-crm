@@ -20,7 +20,9 @@ class Subscribers
 
         $indexPrefix = $wpdb->prefix .'fc_index_';
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $sql = "CREATE TABLE $table (
                 `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
                 `user_id` BIGINT UNSIGNED NULL,
@@ -38,7 +40,7 @@ class Subscribers
                 `city` VARCHAR(192) NULL,
                 `state` VARCHAR(192) NULL,
                 `country` VARCHAR(192) NULL,
-                `ip` VARCHAR(20) NULL,
+                `ip` VARCHAR(40) NULL,
                 `latitude` DECIMAL(10, 8) NULL,
                 `longitude` DECIMAL(10, 8) NULL,
                 `total_points` INT UNSIGNED NOT NULL DEFAULT 0,
@@ -57,6 +59,13 @@ class Subscribers
             ) $charsetCollate;";
 
             dbDelta($sql);
+        } else {
+            // change ip column from 20 to 40 to support ipv6
+            $column_name = 'ip';
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            $sql = "ALTER TABLE {$table} MODIFY {$column_name} VARCHAR(40) NULL;";
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+            $wpdb->query($sql);
         }
     }
 }

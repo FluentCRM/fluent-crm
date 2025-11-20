@@ -30,6 +30,10 @@ class SetupController extends Controller
             $this->installFluentForm();
         }
 
+        if($request->get('install_fluentcart', 'no') === 'yes' && !defined('FLUENTCART_VERSION')) {
+            $this->installFluentCart();
+        }
+
         $optinEmail = $request->get('optin_email', 'no');
         if ($optinEmail && is_email($optinEmail)) {
             $this->shareEmail($optinEmail);
@@ -159,6 +163,17 @@ class SetupController extends Controller
             'name'      => __('Fluent Forms', 'fluent-crm'),
             'repo-slug' => 'fluentform',
             'file'      => 'fluentform.php',
+        ];
+        $this->backgroundInstaller($plugin, $plugin_id);
+    }
+
+    private function installFluentCart()
+    {
+        $plugin_id = 'fluent-cart';
+        $plugin = [
+            'name'      => __('FluentCart', 'fluent-crm'),
+            'repo-slug' => 'fluent-cart',
+            'file'      => 'fluent-cart.php',
         ];
         $this->backgroundInstaller($plugin, $plugin_id);
     }

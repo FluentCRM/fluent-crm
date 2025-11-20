@@ -1,0 +1,103 @@
+.fc_flow_condition {
+    display: flex;
+    align-items: center;
+    column-gap: 10px;
+    font-size: 16px;
+}
+
+.fc_flow_items {
+    background: #f5f7fa;
+
+    .step-container {
+        max-width: 860px;
+        margin: 0 auto;
+
+        .fc_flow_settings {
+            background: white;
+            padding: 20px 30px;
+            margin-bottom: 30px;
+            box-shadow: 0px 1px 8px 0px rgb(0 0 0 / 10%);
+            transition: background 0.3s, border 0.3s, border-radius 0.3s, box-shadow 0.3s;
+
+            &:hover {
+                box-shadow: 0px 4px 16px 0px rgb(0 0 0 / 20%);
+            }
+        }
+    }
+}
+
+.flow_nav {
+    margin-top: 20px;
+}
+
+.fc_flow_condition_block {
+    margin-bottom: 15px;
+    display: block;
+    overflow: hidden;
+}
+
+.fc_flow_more {
+    margin-top: 30px;
+    display: block;
+    overflow: hidden;
+}
+
+p.fc_or {
+    text-align: center;
+    border-bottom: 1px solid #3f9eff;
+    position: relative;
+    margin-top: 30px;
+    margin-bottom: 30px;
+
+    span {
+        position: absolute;
+        top: -10px;
+        padding: 0px 10px;
+        border: 1px solid #3f9eff;
+        left: 48%;
+        border-radius: 11px;
+        color: white;
+        background: #3f9eff;
+    }
+}
+
+.fluentcrm_body.recurring_campaign_settings, .fluentcrm_body.past_recurring_emails {
+    background-color: rgb(246, 246, 250) !important;
+
+    .fc_flow_items {
+        background-color: rgb(246, 246, 250) !important;
+    }
+}
+
+.fluentcrm_body.fc_flow_items {
+    background-color: rgb(246, 246, 250) !important;
+}
+
+
+.fc_mail_card {
+    background: white;
+    margin: 10px 0;
+    padding: 15px;
+
+    p.fc_top_sub {
+        padding: 0;
+        margin: 0;
+        color: #6c6d72;
+        font-size: 14px;
+    }
+
+    .fc_mail_desc h3 {
+        margin: 5px 0;
+    }
+
+
+    .fc_mail_actions {
+        text-align: right;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex-direction: row;
+        margin-top: 10px;
+    }
+
+}

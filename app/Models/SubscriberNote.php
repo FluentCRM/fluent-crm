@@ -11,7 +11,6 @@ namespace FluentCrm\App\Models;
  *
  * @version 1.0.0
  */
-
 class SubscriberNote extends Model
 {
     protected $table = 'fc_subscriber_notes';
@@ -30,8 +29,10 @@ class SubscriberNote extends Model
 
     public static function boot()
     {
+        parent::boot();
+
         static::creating(function ($model) {
-            if(empty($model->created_at)) {
+            if (empty($model->created_at)) {
                 $model->created_at = fluentCrmTimestamp();
             }
 
@@ -44,10 +45,11 @@ class SubscriberNote extends Model
         });
 
         static::addGlobalScope('status', function ($builder) {
-            $builder->where('status', '!=', '_company_note_');
+            $builder->whereNotIn('status', ['_company_note_', '_system_log_']);
         });
 
     }
+
     /**
      * One2One: SubscriberNote belongs to one Subscriber
      * @return \FluentCrm\Framework\Database\Orm\Relations\BelongsTo
@@ -55,7 +57,7 @@ class SubscriberNote extends Model
     public function subscriber()
     {
         return $this->belongsTo(
-            __NAMESPACE__.'\Subscriber', 'subscriber_id', 'id'
+            __NAMESPACE__ . '\Subscriber', 'subscriber_id', 'id'
         );
     }
 
@@ -68,16 +70,16 @@ class SubscriberNote extends Model
 
     public function createdBy()
     {
-        if(!$this->created_by) {
+        if (!$this->created_by) {
             return false;
         }
 
         $user = get_user_by('ID', $this->created_by);
 
         return [
-            'ID' => $user->ID,
-            'first_name' => $user->first_name,
-            'last_name' => $user->last_name,
+            'ID'           => $user->ID,
+            'first_name'   => $user->first_name,
+            'last_name'    => $user->last_name,
             'display_name' => $user->display_name
         ];
     }

@@ -5,8 +5,10 @@ namespace FluentCrm\App\Http\Controllers;
 use FluentCrm\App\Http\Controllers\Controller;
 use FluentCrm\App\Models\Company;
 use FluentCrm\App\Models\CompanyNote;
+use FluentCrm\App\Models\CustomCompanyField;
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\SubscriberNote;
+use FluentCrm\App\Services\AutoSubscribe;
 use FluentCrm\App\Services\Helper;
 use FluentCrm\App\Services\Libs\FileSystem;
 use FluentCrm\App\Services\Sanitize;
@@ -18,14 +20,34 @@ class CompanyController extends Controller
     public function index(Request $request)
     {
         $order = [
-            'by' => $request->getSafe('sort_by', 'id', 'sanitize_sql_orderby'),
+            'by'    => $request->getSafe('sort_by', 'id', 'sanitize_sql_orderby'),
             'order' => $request->getSafe('sort_order', 'DESC', 'sanitize_sql_orderby')
         ];
 
         $companies = Company::orderBy($order['by'], $order['order'])
             ->with(['owner'])
-            ->searchBy($request->getSafe('search'))
-            ->paginate();
+            ->searchBy($request->getSafe('search'));
+
+        $inlineFilters = $request->get('inline_filters', []);
+
+        if ($inlineFilters && is_array($inlineFilters)) {
+            $inlineFilters = array_filter($inlineFilters);
+
+            foreach ($inlineFilters as $key => $values) {
+                if (!is_array($values)) {
+                    continue;
+                }
+                $values = array_map('sanitize_text_field', $values);
+
+                if ($key == 'company_categories') {
+                    $companies->whereIn('industry', $values);
+                } else if ($key == 'company_types') {
+                    $companies->whereIn('type', $values);
+                }
+            }
+        }
+
+        $companies = $companies->paginate();
 
         foreach ($companies as $company) {
             $company->contacts_count = $company->getContactsCount();
@@ -117,12 +139,12 @@ class CompanyController extends Controller
 
         $result = FluentCrmApi('companies')->attachContactsByIds($subscriberIds, $companyIds);
 
-        if(!$result) {
-            return $this->sendError('Invalid data', 423);
+        if (!$result) {
+            return $this->sendError('Invalid data', 422);
         }
 
         return [
-            'message' => __('Selected Companies has been attached successfully', 'fluent-crm'),
+            'message'   => __('Selected Companies has been attached successfully', 'fluent-crm'),
             'companies' => $result['companies']
         ];
     }
@@ -134,10 +156,10 @@ class CompanyController extends Controller
 
         $result = FluentCrmApi('companies')->detachContactsByIds($subscriberIds, $companyIds);
 
-        if(!$result) {
-            return $this->sendError('Invalid data', 423);
+        if (!$result) {
+            return $this->sendError('Invalid data', 422);
         }
-        $result['message'] =  __('Company has been successfully detached', 'fluent-crm');
+        $result['message'] = __('Company has been successfully detached', 'fluent-crm');
 
         return $result;
     }
@@ -151,24 +173,21 @@ class CompanyController extends Controller
         $findBy = $request->getSafe('find_by', 'id');
         $findByValue = $request->getSafe('find_by_value');
 
-
         $customFindBys = ['name', 'email', 'phone'];
 
         if (in_array($findBy, $customFindBys)) {
             $company = Company::where($findBy, $findByValue)->find();
             if (!$company) {
-                return $this->sendError('Company not found', 423);
+                return $this->sendError('Company not found', 422);
             }
         } else {
             $company = Company::findOrFail($id);
         }
 
-
         $company->load(['owner']);
         if ($company->owner) {
             $company->owner->stats = $company->owner->stats();
         }
-
 
         $company->contacts_count = $company->getContactsCount();
 
@@ -200,7 +219,7 @@ class CompanyController extends Controller
 
         if ($contactId = $request->get('intended_contact_id')) {
             $contact = Subscriber::find($contactId);
-            if($contact) {
+            if ($contact) {
                 $contact->attachCompanies([$company->id]);
                 if (!$contact->company_id) {
                     $contact->company_id = $company->id;
@@ -230,11 +249,10 @@ class CompanyController extends Controller
         if (Company::where('id', '!=', $id)->where('name', $name)->first()) {
             return $this->sendError([
                 'message' => 'Company name already exists. Please use a different company name'
-            ], 423);
+            ], 422);
         }
 
         $data = $this->getSanitizedData($allData);
-
 
         $company = FluentCrmApi('companies')->createOrUpdate($data);
 
@@ -256,12 +274,12 @@ class CompanyController extends Controller
         $statuses = Helper::companyTypes();
 
         $this->validate([
-            'column' => $column,
-            'value' => $value,
+            'column'      => $column,
+            'value'       => $value,
             'company_ids' => $companyIds
         ], [
-            'column' => 'required',
-            'value' => 'required',
+            'column'      => 'required',
+            'value'       => 'required',
             'company_ids' => 'required'
         ]);
 
@@ -285,13 +303,13 @@ class CompanyController extends Controller
 
         foreach ($companies as $company) {
 
-            if($column == 'refetch_logo') {
+            if ($column == 'refetch_logo') {
                 $newLogo = $this->getLogoWebsiteUrl($company->website);
-                if($newLogo) {
+                if ($newLogo) {
                     $company->logo = $newLogo;
                     $company->save();
                     return [
-                        'message' => 'Logo has been updated successfully',
+                        'message'      => 'Logo has been updated successfully',
                         'updated_logo' => $newLogo
                     ];
                 }
@@ -334,17 +352,50 @@ class CompanyController extends Controller
 
         $companyIds = array_map('intval', $request->get('company_ids', []));
         $companyIds = array_filter($companyIds);
+        $lastId = $request->get('last_id', 0);
 
         if (!$companyIds) {
-            return $this->sendError([
-                'message' => __('Companies selection is required', 'fluent-crm')
-            ]);
+        
+
+            $companyQuery = Company::orderBy('id', 'ASC')
+                ->searchBy($request->getSafe('search'));
+
+            $inlineFilters = $request->get('company_query.inline_filters', []);
+
+            if ($inlineFilters && is_array($inlineFilters)) {
+                $inlineFilters = array_filter($inlineFilters);
+
+                foreach ($inlineFilters as $key => $values) {
+                    if (!is_array($values)) {
+                        continue;
+                    }
+                    $values = array_map('sanitize_text_field', $values);
+
+                    if ($key == 'company_categories') {
+                        $companyQuery->whereIn('industry', $values);
+                    } else if ($key == 'company_types') {
+                        $companyQuery->whereIn('type', $values);
+                    }
+                }
+            }
+            $companyQuery = $companyQuery->limit(50)
+                ->where('id', '>', $lastId);
+        } else {
+            $companyQuery = Company::whereIn('id', $companyIds);
         }
 
+        $companies = $companyQuery->get();
+        if ($companies->isEmpty()) {
+            return [
+                'is_completed'       => true,
+                'completed_companies' => 0,
+                'message'            => __('All companies has been processed', 'fluent-crm')
+            ];
+        }
+        $companyIds = $companyQuery->pluck('id')->toArray();
+        $lastCompanyId = end($companyIds);
+
         if ($actionName == 'delete_companies') {
-
-            $companies = Company::whereIn('id', $companyIds)->get();
-
             foreach ($companies as $company) {
                 $id = $company->id;
                 do_action('fluent_crm/before_company_delete', $company);
@@ -353,6 +404,8 @@ class CompanyController extends Controller
             }
 
             return $this->sendSuccess([
+                'last_company_id'    => $lastCompanyId,
+                'completed_companies' => count($companyIds),
                 'message' => __('Selected Companies has been deleted permanently', 'fluent-crm'),
             ]);
         } elseif ($actionName == 'change_company_status') {
@@ -362,8 +415,6 @@ class CompanyController extends Controller
                     'message' => __('Please select status', 'fluent-crm')
                 ]);
             }
-
-            $companies = Company::whereIn('id', $companyIds)->get();
 
             foreach ($companies as $company) {
                 $oldStatus = $company->status;
@@ -375,10 +426,11 @@ class CompanyController extends Controller
             }
 
             return [
+                'last_company_id'    => $lastCompanyId,
+                'completed_companies' => count($companyIds),
                 'message' => __('Status has been changed for the selected companies', 'fluent-crm')
             ];
         } else if ($actionName == 'change_company_type') {
-            $companies = Company::whereIn('id', $companyIds)->get();
             $newType = sanitize_text_field($request->get('new_status', ''));
             if (!$newType) {
                 return $this->sendError([
@@ -395,10 +447,11 @@ class CompanyController extends Controller
             }
 
             return [
+                'last_company_id'    => $lastCompanyId,
+                'completed_companies' => count($companyIds),
                 'message' => __('Company Type has been updated for the selected companies', 'fluent-crm')
             ];
         } else if ($actionName == 'change_company_category') {
-            $companies = Company::whereIn('id', $companyIds)->get();
             $newCategory = sanitize_text_field($request->get('new_status', ''));
             if (!$newCategory) {
                 return $this->sendError([
@@ -415,11 +468,15 @@ class CompanyController extends Controller
             }
 
             return [
+                'last_company_id'    => $lastCompanyId,
+                'completed_companies' => count($companyIds),
                 'message' => __('Company Category has been updated for the selected companies', 'fluent-crm')
             ];
         }
 
         return [
+            'last_company_id'    => $lastCompanyId,
+            'completed_companies' => count($companyIds),
             'message' => __('Selected bulk action has been successfully completed', 'fluent-crm')
         ];
     }
@@ -457,11 +514,12 @@ class CompanyController extends Controller
         return Arr::only($data, array_keys($allData));
     }
 
-    private function makeHttpUrl($url) {
-        if(!$url) {
+    private function makeHttpUrl($url)
+    {
+        if (!$url) {
             return $url;
         }
-        $parsed_url = parse_url($url);
+        $parsed_url = wp_parse_url($url);
         if (!$parsed_url || empty($parsed_url['scheme'])) {
             $url = 'https://' . $url;
         }
@@ -471,14 +529,15 @@ class CompanyController extends Controller
 
     private function getLogoWebsiteUrl($url)
     {
-        if(!$url) {
+        if (!$url) {
             return NULL;
         }
 
         $url = $this->makeHttpUrl($url);
 
         $response = wp_remote_get($url, [
-            'timeout' => 10, // Set a timeout of 10 seconds
+            'sslverify'  => false, // Disable SSL verification to avoid 403 Forbidden error
+            'timeout'    => 10, // Set a timeout of 10 seconds
             'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3' // Set a User-Agent header to avoid 403 Forbidden error
         ]);
 
@@ -491,7 +550,6 @@ class CompanyController extends Controller
         $html = wp_remote_retrieve_body($response);
 
         preg_match('/<link rel="apple-touch-icon"(?:.*?)href="([^"]+)"/i', $html, $matches);
-
         // Use regular expressions to find the logo image URL
         if (!isset($matches[1])) {
             preg_match('/<link rel="(?:shortcut|icon)"(?:.*?)href="([^"]+)"/i', $html, $matches);
@@ -500,27 +558,55 @@ class CompanyController extends Controller
         // If a logo URL is found, download the image to the uploads directory
         if (isset($matches[1])) {
             $logoUrl = $matches[1];
+
+            $extension = strtolower(substr($logoUrl, strrpos($logoUrl, '.') + 1));
+            if (!in_array($extension, ['png', 'jpg', 'jpeg', 'gif', 'ico'])) {
+                return NULL;
+            }
+
+
             $uploadDir = wp_upload_dir(); // Get the uploads directory
 
             $filename = md5($url . time()) . '-' . basename($logoUrl); // Get the filename from the URL
             $filepath = $uploadDir['basedir'] . '/fluentcrm/' . $filename; // Combine the uploads directory path with the filename
 
             // Download the image using wp_remote_get() and save it to the uploads directory
-            $image = wp_remote_get($logoUrl);
+            $image = wp_remote_get($logoUrl, [
+                'timeout'   => 10, // Set a timeout of 10 seconds
+                'sslverify' => false // Disable SSL verification to avoid 403 Forbidden error
+            ]);
+
             if (!is_wp_error($image)) {
                 // Check if the downloaded file is actually an image
                 $headers = wp_remote_retrieve_headers($image);
-                $content_type = wp_remote_retrieve_header($headers, 'content-type');
+                $imageBody = wp_remote_retrieve_body($image);
+                if (defined('FILEINFO_MIME_TYPE') && class_exists('\finfo')) {
+                    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                    $content_type = $finfo->buffer($imageBody);
+                } else {
+                    $content_type = wp_remote_retrieve_header($headers, 'content-type');
+                    if (!$content_type) {
+                        $content_type = Arr::get($headers, 'content-type');
+                    }
 
-                if (!$content_type) {
-                    $content_type = $headers['content-type'];
+                    if (strpos($content_type, 'image/') !== 0) {
+                        return null;
+                    }
+
+                    // Temporary file to validate the image
+                    $tmpFilePath = tempnam(sys_get_temp_dir(), 'tmpimg');
+                    file_put_contents($tmpFilePath, $imageBody);
+                    $imgSize = getimagesize($tmpFilePath);
+                    wp_delete_file($tmpFilePath);
+                    if (!$imgSize) {
+                        return null;
+                    }
                 }
 
                 if (strpos($content_type, 'image/') === 0) {
                     global $wp_filesystem;
-
-                    if(!$wp_filesystem) {
-                        require_once ( ABSPATH . '/wp-admin/includes/file.php' );
+                    if (!$wp_filesystem) {
+                        require_once(ABSPATH . '/wp-admin/includes/file.php');
                         WP_Filesystem();
                     }
 
@@ -529,12 +615,12 @@ class CompanyController extends Controller
                         'basedir' => $uploadDir['basedir'],
                     ]);
 
-                    $wp_filesystem->put_contents($filepath, wp_remote_retrieve_body($image));
+                    $wp_filesystem->put_contents($filepath, $imageBody);
                     // Return the URL of the saved image
-                    return $uploadDir['baseurl'] .FLUENTCRM_UPLOAD_DIR.'/' . $filename;
+                    return $uploadDir['baseurl'] . FLUENTCRM_UPLOAD_DIR . '/' . $filename;
                 } else {
                     // If the downloaded file is not an image, delete the file and return null
-                    @unlink($filepath);
+                    wp_delete_file($filepath);
                 }
             }
         }
@@ -545,6 +631,7 @@ class CompanyController extends Controller
 
     public function getNotes()
     {
+
         $companyId = $this->request->get('id');
         $search = $this->request->get('search');
 
@@ -560,9 +647,11 @@ class CompanyController extends Controller
         foreach ($notes as $note) {
             $note->added_by = $note->createdBy();
         }
+        $fields['fields'] = Helper::getNoteSyncFields();
 
         return $this->sendSuccess([
-            'notes' => $notes
+            'notes'  => $notes,
+            'fields' => $fields
         ]);
     }
 
@@ -658,5 +747,53 @@ class CompanyController extends Controller
         return $this->sendSuccess([
             'message' => __('Note successfully deleted', 'fluent-crm')
         ]);
+    }
+
+    public function getCustomGlobalFields(CustomCompanyField $model)
+    {
+        return $this->sendSuccess(
+            $model->getGlobalFields(
+                $this->request->get('with', [])
+            )
+        );
+    }
+
+    public function saveCustomGlobalFields(CustomCompanyField $model)
+    {
+        $fields = $model->saveGlobalFields(
+            $this->request->getJson('fields')
+        );
+
+        return $this->sendSuccess([
+            'fields'  => $fields,
+            'message' => __('Fields saved successfully!', 'fluent-crm')
+        ]);
+    }
+
+    public function getCompanyExternalView(Request $request, $companyId)
+    {
+        $company = Company::findOrFail($companyId);
+        $sectionId = $request->get('section_provider');
+
+        return apply_filters('fluent_crm/company_profile_section_' . $sectionId, [
+            'heading'      => '',
+            'content_html' => ''
+        ], $company);
+    }
+
+    public function saveExternalViewData(Request $request, $companyId)
+    {
+        $company = Company::findOrFail($companyId);
+        $sectionId = $request->get('section_provider');
+
+        $response = apply_filters('fluent_crm/company_profile_section_save_' . $sectionId, '', $request->get('data', []), $company);
+
+        if (!$response) {
+            return $this->sendError([
+                'message' => __('Handler could not be found.', 'fluent-crm')
+            ]);
+        }
+
+        return $response;
     }
 }

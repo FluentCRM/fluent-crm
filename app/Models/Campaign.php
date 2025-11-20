@@ -26,6 +26,7 @@ class Campaign extends Model
 
     public static function boot()
     {
+        parent::boot();
         static::creating(function ($model) {
             $defaultTemplate = $model->design_template ? $model->design_template : Helper::getDefaultEmailTemplate();
             $model->email_body = $model->email_body ?: '';
@@ -61,7 +62,8 @@ class Campaign extends Model
                 ],
                 'advanced_filters'    => [[]],
                 'template_config'     => Helper::getTemplateConfig($defaultTemplate),
-                'sending_type'        => 'instant'
+                'sending_type'        => 'instant',
+                'is_transactional'    => 'no'
             ];
         });
 
@@ -271,6 +273,23 @@ class Campaign extends Model
             $segmentSettings['offset'] = 0;
             $segmentSettings['limit'] = false;
 
+            /**
+             * Filter the dynamic segment details based on the segment slug.
+             *
+             * This filter allows you to modify the details of a dynamic segment.
+             *
+             * @param array  The details of the dynamic segment.
+             * @param int $segmentSettings ['id']      The ID of the segment.
+             * @param array {
+             *     Additional context for the segment.
+             *
+             * @type bool  Whether to include the model in the context.
+             * }
+             *
+             * @return array Modified segment details.
+             * @since 2.5.93
+             *
+             */
             $segmentDetails = apply_filters('fluentcrm_dynamic_segment_' . $segmentSettings['slug'], [], $segmentSettings['id'], [
                 'model' => true
             ]);
@@ -483,8 +502,10 @@ class Campaign extends Model
             $subscribers = Subscriber::whereIn('id', $subscriberIds)->get();
         }
 
+        $validStatuses = ['subscribed', 'transactional'];
+
         foreach ($subscribers as $subscriber) {
-            if ($subscriber->status != 'subscribed') {
+            if (!in_array($subscriber->status, $validStatuses)) {
                 continue; // We don't want to send emails to non-subscribed members
             }
 
@@ -507,7 +528,17 @@ class Campaign extends Model
                 $email['email_subject_id'] = $subjectItem->id;
             }
 
-            $email['email_subject'] = apply_filters('fluent_crm/parse_campaign_email_text', $emailSubject, $subscriber);;
+            /**
+             * Filter the campaign email subject text.
+             *
+             * This filter allows you to modify the email subject text for a campaign.
+             *
+             * @param string $emailSubject The original email subject text.
+             * @param object $subscriber The subscriber object.
+             *
+             * @return string The filtered email subject text.
+             */
+            $email['email_subject'] = apply_filters('fluent_crm/parse_campaign_email_text', $emailSubject, $subscriber);
 
             $email['email_body'] = $this->email_body;
 
@@ -567,7 +598,7 @@ class Campaign extends Model
 
         $priorities = $subjects->pluck('key')->toArray();
         $count = count($priorities);
-        $num = mt_rand(0, array_sum($priorities));
+        $num = wp_rand(0, array_sum($priorities));
 
         $i = $n = 0;
         while ($i < $count) {
@@ -626,12 +657,12 @@ class Campaign extends Model
             ->where('status', 'sent')
             ->count();
 
-        $clicks = CampaignUrlMetric::where('campaign_id', $this->id)
-            ->where('type', 'click')
+        $clicks = CampaignEmail::where('campaign_id', $this->id)
+            ->whereNotNull('click_counter')
             ->count();
 
-        $views = CampaignUrlMetric::where('campaign_id', $this->id)
-            ->where('type', 'open')
+        $views = CampaignEmail::where('campaign_id', $this->id)
+            ->where('is_open', 1)
             ->count();
 
         $unSubscribed = CampaignUrlMetric::where('campaign_id', $this->id)
@@ -652,7 +683,7 @@ class Campaign extends Model
         if ($revenue && $revenue->value) {
             $data = (array)$revenue->value;
             foreach ($data as $currency => $cents) {
-                if ($cents) {
+                if ($cents && $currency !== 'orderIds') {
                     $stats['revenue'] = [
                         'label'    => __('Revenue', 'fluent-crm') . ' (' . $currency . ')',
                         'total'    => number_format($cents / 100, 2),
@@ -673,12 +704,11 @@ class Campaign extends Model
             ->count();
     }
 
-
     public function maybeDeleteDuplicates()
     {
         $duplicates = fluentCrmDb()->table('fc_campaign_emails')
             ->where('campaign_id', $this->id)
-            ->select(['id', 'subscriber_id', fluentCrmDb()->raw('COUNT(subscriber_id) as count')])
+            ->select([fluentCrmDb()->raw('MIN(`id`) AS min_id'), 'subscriber_id', fluentCrmDb()->raw('COUNT(subscriber_id) as count')])
             ->groupBy('subscriber_id')
             ->havingRaw('COUNT(subscriber_id) > ?', [1])
             ->get();
@@ -691,7 +721,7 @@ class Campaign extends Model
         $exceptIds = [];
         foreach ($duplicates as $duplicate) {
             $subscriberIds[] = $duplicate->subscriber_id;
-            $exceptIds[] = $duplicate->id;
+            $exceptIds[] = $duplicate->min_id;
         }
 
         fluentCrmDb()->table('fc_campaign_emails')
@@ -716,7 +746,8 @@ class Campaign extends Model
         if ($hash) {
             return $hash;
         }
-        $hash = md5(mt_rand(100, 10000) . '_' . $this->id . '_' . $this->title . '_' . time());
+
+        $hash = md5(wp_rand(100, 10000) . '_' . $this->id . '_' . $this->title . '_' . time() . '_' . wp_generate_uuid4());
         $hash = str_replace('e', 'd', $hash);
         fluentcrm_update_campaign_meta($this->id, '_campaign_hash', $hash);
 
@@ -744,16 +775,15 @@ class Campaign extends Model
         }
 
 
-
         $ranges = Arr::get($settings, 'schedule_range', ['', '']);
 
-        if(!$ranges) {
+        if (!$ranges) {
             return null;
         }
 
         return [
-            'start' => date('Y-m-d H:i:s', $ranges[0]),
-            'end'   => date('Y-m-d H:i:s', $ranges[1])
+            'start' => gmdate('Y-m-d H:i:s', $ranges[0]),
+            'end'   => gmdate('Y-m-d H:i:s', $ranges[1])
         ];
     }
 
@@ -780,6 +810,93 @@ class Campaign extends Model
             $timeStamp = current_time('timestamp') + 60;
         }
 
-        return date('Y-m-d H:i:s', $timeStamp);
+        return gmdate('Y-m-d H:i:s', $timeStamp);
+    }
+
+    public function getShareableUrl()
+    {
+        $shareId = fluentcrm_get_campaign_meta($this->id, '_campaign_share_id', true);
+        if (!$shareId) {
+            $shareId = md5($this->getHash() . '_' . $this->id . '_' . time());
+            fluentcrm_update_campaign_meta($this->id, '_campaign_share_id', $shareId);
+        }
+
+        return add_query_arg([
+            'fluentcrm'     => 1,
+            'route'         => 'email_preview',
+            'fc_newsletter' => $shareId
+        ], site_url());
+    }
+
+    public function labelsTerm()
+    {
+        return $this->belongsToMany(Label::class, 'fc_term_relations', 'object_id', 'term_id')
+            ->wherePivot('object_type', __CLASS__);
+    }
+
+    public function labels()
+    {
+        $labelIds = TermRelation::where('object_id', $this->id)
+            ->where('object_type', __CLASS__)
+            ->pluck('term_id')
+            ->toArray();
+        return Label::whereIn('id', $labelIds)->get();
+    }
+
+    public function getFormattedLabels()
+    {
+        $labels = $this->labels();
+        return $labels->map(function ($label) {
+            return [
+                'id'    => $label->id,
+                'slug'  => $label->slug,
+                'title' => $label->title,
+                'color' => $label->settings['color'] ?? ''
+            ];
+        });
+    }
+
+    public function attachLabels($labelIds)
+    {
+        $labelIds = is_array($labelIds) ? $labelIds : [$labelIds];
+
+        if (empty($labelIds)) {
+            return $this;
+        }
+
+        $existingLabelIds = TermRelation::where('object_id', $this->id)
+            ->where('object_type', __CLASS__)
+            ->pluck('term_id')
+            ->toArray();
+
+        $newLabelIds = array_diff($labelIds, $existingLabelIds);
+
+        if (!empty($newLabelIds)) {
+            foreach ($newLabelIds as $labelId) {
+                TermRelation::create([
+                    'object_id'   => $this->id,
+                    'object_type' => __CLASS__,
+                    'term_id'     => $labelId
+                ]);
+            }
+        }
+
+        return $this;
+    }
+
+    public function detachLabels($labelIds)
+    {
+        $labelIds = is_array($labelIds) ? $labelIds : [$labelIds];
+
+        if (empty($labelIds)) {
+            return $this;
+        }
+
+        TermRelation::where('object_id', $this->id)
+            ->where('object_type', __CLASS__)
+            ->whereIn('term_id', $labelIds)
+            ->delete();
+
+        return $this;
     }
 }

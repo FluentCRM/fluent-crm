@@ -2,10 +2,13 @@
 
 namespace FluentCrm\App\Hooks\Handlers;
 
+use FluentCrm\App\Models\Campaign;
 use FluentCrm\App\Models\CampaignUrlMetric;
 use FluentCrm\App\Models\CampaignEmail;
+use FluentCrm\App\Models\Meta;
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\SubscriberNote;
+use FluentCrm\App\Models\SubscriberPivot;
 use FluentCrm\App\Models\Webhook;
 use FluentCrm\App\Services\BlockParser;
 use FluentCrm\App\Services\Helper;
@@ -38,7 +41,8 @@ class ExternalPages
         'bnu'                 => 'handleBenchmarkUrl', // GET ?fluentcrm=1&route=bnu&aid=${sequence_id}
         'smart_url'           => 'SmartUrlHandler',
         'webhook'             => 'handleGeneralWebhook', // ?fluentcrm=1&route=webhook&handler=handler_name
-        'email_preview'       => 'handlePreviewEmail'
+        'email_preview'       => 'handlePreviewEmail',
+        'general'             => 'handleGeneralRequest'
     ];
 
     protected function getRoute()
@@ -60,6 +64,7 @@ class ExternalPages
         }
 
         if ($route = $this->getRoute()) {
+            do_action('litespeed_control_set_nocache', 'nocache due to fluentcrm dynamic data');
             $this->{$route}();
         }
     }
@@ -69,7 +74,7 @@ class ExternalPages
         $provider = sanitize_text_field($this->request->get('provider'));
 
         if ($provider == 'ses') {
-            $this->bounceHandlerSES();;
+            $this->bounceHandlerSES();
         }
     }
 
@@ -81,9 +86,9 @@ class ExternalPages
 
         if ($verifyKey != $sesBounceKey) {
             wp_send_json([
-                'status'  => 423,
+                'status'  => 422,
                 'message' => __('verify_key verification failed', 'fluent-crm')
-            ], 423);
+            ], 422);
         }
 
         $postdata = \file_get_contents('php://input');
@@ -93,7 +98,7 @@ class ExternalPages
             wp_send_json([
                 'status'  => 423,
                 'message' => __('failed', 'fluent-crm')
-            ], 423);
+            ], 422);
         }
 
         $postdata = \json_decode($postdata, true);
@@ -173,9 +178,11 @@ class ExternalPages
             $subscriber = Subscriber::where('email', $data['email'])->first();
             if ($subscriber) {
                 $oldStatus = $subscriber->status;
-                $subscriber->status = $data['status'];
-                $subscriber->save();
+                if ($oldStatus == $data['status']) {
+                    return false;
+                }
 
+                $subscriber = $subscriber->updateStatus($data['status']);
                 $key = 'reason';
 
                 if ($data['status'] == 'unsubscribed') {
@@ -183,21 +190,23 @@ class ExternalPages
                 }
 
                 fluentcrm_update_subscriber_meta($subscriber->id, $key, $data['reason']);
-                do_action('fluentcrm_subscriber_status_to_' . $data['status'], $subscriber, $oldStatus);
             } else {
-                $contactData = Arr::only($data, ['email', 'status']);
-                if (!isset($contactData['created_at'])) {
-                    $contactData['created_at'] = current_time('mysql');
+                $willStore = apply_filters('fluent_crm/bounced_email_store', true);
+                if ($willStore) {
+                    $contactData = Arr::only($data, ['email', 'status']);
+                    if (!isset($contactData['created_at'])) {
+                        $contactData['created_at'] = current_time('mysql');
+                    }
+
+                    $key = 'reason';
+
+                    if ($data['status'] == 'unsubscribed') {
+                        $key = 'unsubscribe_reason';
+                    }
+
+                    $contact = Subscriber::store($contactData);
+                    fluentcrm_update_subscriber_meta($contact->id, $key, $data['reason']);
                 }
-
-                $key = 'reason';
-
-                if ($data['status'] == 'unsubscribed') {
-                    $key = 'unsubscribe_reason';
-                }
-
-                $contact = Subscriber::store($contactData);
-                fluentcrm_update_subscriber_meta($contact->id, $key, $data['reason']);
             }
             return true;
         }
@@ -227,17 +236,25 @@ class ExternalPages
                 $existingCount = 0;
             }
 
+            /**
+             * Modify the soft bounce limit.
+             *
+             * This filter allows you to change the default soft bounce limit.
+             *
+             * @param int The default soft bounce limit. Default is 1.
+             * @since 2.7.0
+             *
+             */
             $softCountLimit = apply_filters('fluent_crm/soft_bounce_limit', 1);
             if ($existingCount <= $softCountLimit) {
                 fluentcrm_update_subscriber_meta($subscriber->id, '_soft_bounce_count', ($existingCount + 1));
             } else {
                 $oldStatus = $subscriber->status;
-                $subscriber->status = 'bounced';
-                $subscriber->save();
-                do_action('fluentcrm_subscriber_status_to_bounced', $subscriber, $oldStatus);
-                fluentcrm_update_subscriber_meta($subscriber->id, 'reason', $data['reason']);
+                if ($oldStatus != 'bounced') {
+                    $subscriber = $subscriber->updateStatus('bounced');
+                    fluentcrm_update_subscriber_meta($subscriber->id, 'reason', $data['reason']);
+                }
             }
-
         }
     }
 
@@ -247,21 +264,41 @@ class ExternalPages
         nocache_headers();
 
         $campaignEmailId = $this->request->get('ce_id');
+        $managedSecureHash = $this->request->get('secure_hash');
+        $subscriber = null;
 
-        $secureHash = $this->request->get('secure_hash');
-
-        if ($secureHash) {
-            $subscriber = fluentCrmApi('contacts')->getContactBySecureHash($secureHash);
-        } else {
-            $subscriber = null;
+        if ($managedSecureHash) {
+            $subscriber = fluentCrmApi('contacts')->getContactByManagedSecureHash($managedSecureHash);
         }
 
-        if (!$subscriber) {
-            $subscriber = FluentCrmApi('contacts')->getCurrentContact();
-            if ($subscriber) {
-                $campaignEmailId = null;
-                $secureHash = $subscriber->getSecureHash();
+        // check if this is a POST request
+        if ($this->request->method() == 'POST') {
+            // This is List-Unsubscribe request
+            if ($subscriber && $subscriber->status != 'unsubscribed') {
+                if ($campaignEmailId) {
+                    $campaignEmail = CampaignEmail::find($campaignEmailId);
+                } else {
+                    $campaignEmail = null;
+                }
+
+                do_action('fluent_crm/before_contact_unsubscribe_from_email', $subscriber, $campaignEmail, 'from_header');
+
+                $subscriber = $subscriber->updateStatus('unsubscribed');
+
+                fluentcrm_update_subscriber_meta($subscriber->id, 'unsubscribe_reason', 'Unsubscribe From List Header');
+                if ($campaignEmail) {
+                    CampaignUrlMetric::maybeInsert([
+                        'campaign_id'   => $campaignEmail->campaign_id,
+                        'subscriber_id' => $campaignEmail->subscriber_id,
+                        'type'          => 'unsubscribe'
+                    ]);
+                }
             }
+
+            wp_send_json_success([
+                'message' => __("You've successfully unsubscribed from our email list.", 'fluent-crm')
+            ], 200);
+            return;
         }
 
         if (!$subscriber) {
@@ -269,16 +306,14 @@ class ExternalPages
             return;
         }
 
-        if ($secureHash) {
-            setcookie("fc_hash_secure", $secureHash, time() + 7776000, COOKIEPATH, COOKIE_DOMAIN);  /* expire in 90 days */
-        }
+        setcookie("fc_hash_secure", $subscriber->getSecureHash(), time() + 7776000, COOKIEPATH, COOKIE_DOMAIN);  /* expire in 90 days */
 
         if ($campaignEmailId) {
             $campaignEmailId = (int)$campaignEmailId;
             $campaignEmail = CampaignEmail::where('id', $campaignEmailId)->first();
             if (!$campaignEmail || !$subscriber || $campaignEmail->subscriber_id != $subscriber->id) {
-                echo __('Sorry! This is not a valid unsubscribe url', 'fluent-crm');
-                wp_die();
+                $this->unsubscribeRequestForm();
+                return;
             }
         } else {
             $campaignEmail = (object)[
@@ -293,6 +328,22 @@ class ExternalPages
         $absEmail = $this->hideEmail($subscriber->email);
         $absEmailHash = md5($absEmail);
 
+        /**
+         * Define the unsubscribe texts displayed on the unsubscribe page in FluentCRM.
+         *
+         * @param array {
+         *     An array of texts to be displayed on the unsubscribe page.
+         *
+         * @type string $heading The heading text.
+         * @type string $heading_description The description text under the heading.
+         * @type string $email_label The label for the email address input field.
+         * @type string $reason_label The label for the reason input field.
+         * @type string $button_text The text for the unsubscribe button.
+         * }
+         * @param object $subscriber The subscriber object.
+         * @since 2.7.0
+         *
+         */
         $texts = apply_filters('fluent_crm/unsubscribe_texts', [
             'heading'             => __('Unsubscribe', 'fluent-crm'),
             'heading_description' => __('We\'re sorry to see you go!', 'fluent-crm'),
@@ -301,16 +352,18 @@ class ExternalPages
             'button_text'         => __('Unsubscribe', 'fluent-crm')
         ], $subscriber);
 
+        $complianceSettings = Helper::getComplianceSettings();
         $data = [
-            'business'       => $businessSettings,
-            'campaign_email' => $campaignEmail,
-            'subscriber'     => $subscriber,
-            'mask_email'     => $absEmail,
-            'abs_hash'       => $absEmailHash,
-            'combined_hash'  => md5($subscriber->email . $absEmail),
-            'reasons'        => $this->unsubscribeReasons(),
-            'secure_hash'    => $secureHash,
-            'texts'          => $texts
+            'business'              => $businessSettings,
+            'campaign_email'        => $campaignEmail,
+            'subscriber'            => $subscriber,
+            'mask_email'            => $absEmail,
+            'abs_hash'              => $absEmailHash,
+            'combined_hash'         => md5($subscriber->email . $absEmail),
+            'reasons'               => $this->unsubscribeReasons(),
+            'secure_hash'           => fluentCrmGetContactManagedHash($subscriber->id),
+            'texts'                 => $texts,
+            'one_click_unsubscribe' => Arr::get($complianceSettings, 'one_click_unsubscribe')
         ];
 
         add_action('wp_loaded', function () use ($data) {
@@ -335,9 +388,24 @@ class ExternalPages
         }, 1);
     }
 
+    public function manageSubscriptionRequestForm()
+    {
+        do_action('fluent_crm/doing_unsubscribe_request_form');
+
+        $businessSettings = fluentcrmGetGlobalSettings('business_settings', []);
+        $this->loadAssets();
+        $data = [
+            'business' => $businessSettings,
+        ];
+
+        add_action('wp_loaded', function () use ($data) {
+            fluentCrm('view')->render('external.manage_subscription_request_form', $data);
+            exit();
+        }, 1);
+    }
+
     public function handleUnsubscribeRequestAjax()
     {
-
         $email = Arr::get($_REQUEST, 'email');
 
         if (!$email || !is_email($email)) {
@@ -366,7 +434,7 @@ class ExternalPages
             'unsubscribe_url' => add_query_arg(array_filter([
                 'fluentcrm'   => 1,
                 'route'       => 'unsubscribe',
-                'secure_hash' => fluentCrmGetContactSecureHash($subscriber->id)
+                'secure_hash' => fluentCrmGetContactManagedHash($subscriber->id)
             ]), site_url('/')),
             'subscriber'      => $subscriber
         ];
@@ -379,6 +447,7 @@ class ExternalPages
         Mailer::send([
             'to'      => [
                 'email' => $subscriber->email,
+                'name'  => $subscriber->full_name
             ],
             'subject' => $emailSubject,
             'body'    => $emailBody
@@ -389,11 +458,74 @@ class ExternalPages
         ]);
     }
 
+    public function handleManageSubRequestAjax()
+    {
+
+        $email = Arr::get($_REQUEST, 'email');
+
+        if (!$email || !is_email($email)) {
+            wp_send_json_error([
+                'message' => __('Please provide a valid email address', 'fluent-crm')
+            ], 422);
+        }
+
+        $subscriber = Subscriber::where('email', $email)->first();
+
+        if (!$subscriber) {
+            wp_send_json_error([
+                'message' => __('Sorry! We could not verify your email address', 'fluent-crm')
+            ], 422);
+        }
+
+        // Let's send unsubscribe email with link
+        $data = [
+            'business'                => fluentcrmGetGlobalSettings('business_settings', []),
+            'manage_subscription_url' => add_query_arg(array_filter([
+                'fluentcrm'   => 1,
+                'route'       => 'manage_subscription',
+                'ce_id'       => $subscriber->id,
+                'secure_hash' => fluentCrmGetContactManagedHash($subscriber->id)
+            ]), site_url('/')),
+            'subscriber'              => $subscriber
+        ];
+
+        $emailBody = (string)fluentCrm('view')->make('external.manage_sub_request_email', $data);
+        $emailSubject = __('Your Email preferences URL', 'fluent-crm');
+
+        do_action('fluent_crm/before_manage_sub_request_email', $subscriber, $data);
+
+        Mailer::send([
+            'to'      => [
+                'email' => $subscriber->email,
+                'name'  => $subscriber->full_name
+            ],
+            'subject' => $emailSubject,
+            'body'    => $emailBody
+        ]);
+
+        wp_send_json_success([
+            'message' => __("We've sent an email to your inbox that contains a link to email management from. Please check your email address to get the link.", 'fluent-crm')
+        ]);
+    }
+
     public function unsubscribeReasons()
     {
         /**
-         * Unsubscribe reasons
-         * @param array Unsubscribe Reasons
+         * Define the list of unsubscribe reasons in FluentCRM.
+         *
+         * This filter allows modification of the reasons provided to users when they choose to unsubscribe from emails.
+         *
+         * @param array {
+         *     An associative array of unsubscribe reasons.
+         *
+         * @type string $no_longer Reason for no longer wanting to receive emails.
+         * @type string $never_signed_up Reason for never signing up for the email list.
+         * @type string $emails_inappropriate Reason for finding the emails inappropriate.
+         * @type string $emails_spam Reason for considering the emails as spam.
+         * @type string $other Reason for other, with a prompt to fill in the reason.
+         * }
+         * @since 2.5.1
+         *
          */
         return apply_filters('fluent_crm/unsubscribe_reasons', [
             'no_longer'            => __('I no longer want to receive these emails', 'fluent-crm'),
@@ -409,29 +541,34 @@ class ExternalPages
         $request = FluentCrm('request');
         $data = $request->all();
 
+        $subscriber = null;
+
         if ($secureHash = $request->get('secure_hash')) {
-            $subscriber = fluentCrmApi('contacts')->getContactBySecureHash($secureHash);
-        } else {
-            $subscriber = Subscriber::where('hash', $data['sub_hash'])->first();
+            $subscriber = fluentCrmApi('contacts')->getContactByManagedSecureHash($secureHash);
         }
 
         if (!$subscriber) {
             wp_send_json_error([
                 'message' => __('Sorry, No email found based on your data', 'fluent-crm')
-            ], 423);
+            ], 422);
         }
 
         $oldStatus = $subscriber->status;
 
+
+        $emailId = intval($request->get('_e_id'));
+        if ($emailId) {
+            $campaignEmail = CampaignEmail::find($emailId);
+        } else {
+            $campaignEmail = null;
+        }
+
+        do_action('fluent_crm/before_contact_unsubscribe_from_email', $subscriber, $campaignEmail, 'web_ui');
+
+
         if ($oldStatus != 'unsubscribed') {
-            $subscriber->status = 'unsubscribed';
-            $subscriber->save();
-            /**
-             * Fires when a subscriber is unsubscribed
-             * @param Subscriber $subscriber
-             * @param string $oldStatus
-             */
-            do_action('fluentcrm_subscriber_status_to_unsubscribed', $subscriber, $oldStatus);
+            $subscriber = $subscriber->updateStatus('unsubscribed');
+
             /**
              * Fires when a subscriber is unsubscribed from Web UI
              * @param Subscriber $subscriber
@@ -440,7 +577,7 @@ class ExternalPages
             do_action('fluent_crm/subscriber_unsubscribed_from_web_ui', $subscriber, $data);
         }
 
-        $emailId = intval($request->get('_e_id'));
+
         $reason = sanitize_text_field($request->get('reason'));
 
         if ($reason == 'other') {
@@ -453,8 +590,6 @@ class ExternalPages
                 $reason = sanitize_text_field($reasons[$reason]);
             }
         }
-
-        $campaignEmail = CampaignEmail::find($emailId);
 
         fluentcrm_update_subscriber_meta($subscriber->id, 'unsubscribe_reason', $reason);
 
@@ -473,6 +608,16 @@ class ExternalPages
         }
 
         if ($redirect) {
+            /**
+             * Determine the redirect URL for a campaign email in FluentCRM.
+             *
+             * This filter allows you to modify the redirect URL for a campaign email.
+             *
+             * @param string $redirect The redirect URL.
+             * @param object $subscriber The subscriber object.
+             * @since 2.7.40
+             *
+             */
             $redirect = apply_filters('fluent_crm/parse_campaign_email_text', $redirect, $subscriber);
             $redirect = str_replace(['&amp;', '+'], ['&', '%2B'], $redirect);
         }
@@ -484,12 +629,37 @@ class ExternalPages
             'subscriber_id' => $subscriber->id,
             'type'          => 'system_log',
             'title'         => __('Unsubscribed', 'fluent-crm'),
-            'description'   => sprintf(__('Subscriber unsubscribed from IP Address: %1s <br />Reason: %2s', 'fluent-crm'), FluentCrm()->request->getIp(fluentCrmWillAnonymizeIp()), $reason)
+            /* translators: 1: IP address of the subscriber (may be anonymized), 2: unsubscribe reason */
+            'description'   => wp_kses(sprintf(__('Subscriber unsubscribed from IP Address: %1$s <br />Reason: %2$s', 'fluent-crm'),
+                    esc_html(FluentCrm()->request->getIp(fluentCrmWillAnonymizeIp())),
+                    esc_html($reason)
+                ),
+                array('br' => array())
+            )
         ]);
 
-        $message = __('You are successfully unsubscribed from the email list', 'fluent-crm');
+        $message = __("You've successfully unsubscribed from our email list.", 'fluent-crm');
         wp_send_json_success([
+            /**
+             * Determine the unsubscribe response message in FluentCRM.
+             *
+             * This filter allows modification of the message displayed to the user
+             * when they unsubscribe from a mailing list.
+             *
+             * @param string $message The default unsubscribe response message.
+             * @param object $subscriber The subscriber object containing subscriber or contact details.
+             * @since 2.7.0
+             *
+             */
             'message'      => apply_filters('fluent_crm/unsub_response_message', $message, $subscriber),
+            /**
+             * Determine the URL to which the user is redirected after unsubscribing in FluentCRM.
+             *
+             * @param string $redirect The default redirect URL.
+             * @param object $subscriber The subscriber or contact object.
+             * @since 2.7.0
+             *
+             */
             'redirect_url' => apply_filters('fluent_crm/unsub_redirect_url', $redirect, $subscriber)
         ], 200);
     }
@@ -498,7 +668,7 @@ class ExternalPages
     {
         $mailHash = sanitize_text_field($this->request->get('_e_hash'));
 
-        $emailId = (int) $this->request->get('_e_id');
+        $emailId = (int)$this->request->get('_e_id');
 
         if ($emailId) {
             $email = CampaignEmail::where('id', $emailId)->first();
@@ -510,19 +680,24 @@ class ExternalPages
             $email = null;
         }
 
-        if ($email && !$email->is_open) {
-            fluentCrmDb()->table('fc_campaign_emails')->where('id', $email->id)->update(
-                [
+        if ($email) {
+            $updated = fluentCrmDb()->table('fc_campaign_emails')
+                ->where('id', $email->id)
+                ->where('is_open', 0)
+                ->update([
                     'is_open' => 1
-                ]
-            );
+                ]); // returns affected rows
 
-            CampaignUrlMetric::maybeInsert([
-                'type'          => 'open',
-                'campaign_id'   => $email->campaign_id,
-                'subscriber_id' => $email->subscriber_id,
-                'ip_address'    => FluentCrm()->request->getIp(fluentCrmWillAnonymizeIp())
-            ]);
+            if ($updated) {
+                CampaignUrlMetric::maybeInsert([
+                    'type'          => 'open',
+                    'campaign_id'   => $email->campaign_id,
+                    'subscriber_id' => $email->subscriber_id,
+                    'ip_address'    => FluentCrm()->request->getIp(fluentCrmWillAnonymizeIp())
+                ]);
+
+                do_action('fluent_crm/email_opened', $email);
+            }
         }
 
         if (ini_get('ignore_user_abort')) {
@@ -531,10 +706,10 @@ class ExternalPages
 
         //turn off gzip compression
         if (function_exists('apache_setenv')) {
-            apache_setenv('no-gzip', 1);
+            @apache_setenv('no-gzip', 1);
         }
 
-        ini_set('zlib.output_compression', '0');
+        @ini_set('zlib.output_compression', 'Off');
 
         // we are sending 1x1 pixel transparent gif image
         header('Content-Encoding: none');
@@ -547,7 +722,9 @@ class ExternalPages
         // Transparent 1x1 GIF as hex format
         $image = base64_decode('R0lGODlhAQABAJAAAP8AAAAAACH5BAUQAAAALAAAAAABAAEAAAICBAEAOw==');
 
-        die($image);
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Intentionally outputting raw GIF bytes for the tracking pixel response
+        echo $image;
+        exit;
     }
 
     public function confirmationPage()
@@ -579,16 +756,8 @@ class ExternalPages
             do_action('fluent_crm/track_activity_by_subscriber', $subscriber);
 
             if ($subscriber->status != 'subscribed') {
-                $oldStatus = $subscriber->status;
-                $subscriber->status = 'subscribed';
-                $subscriber->save();
 
-                /**
-                 * Fires when a contact's status changed to subscribed
-                 * @param Subscriber $subscriber
-                 * @param string $oldStatus
-                 */
-                do_action('fluentcrm_subscriber_status_to_subscribed', $subscriber, $oldStatus);
+                $subscriber = $subscriber->updateStatus('subscribed');
 
                 do_action('fluentcrm_process_contact_jobs', $subscriber);
 
@@ -605,16 +774,60 @@ class ExternalPages
                     'description'   => __('Subscriber confirmed double opt-in from IP Address:', 'fluent-crm') . ' ' . $this->request->getIp()
                 ]);
 
+                /**
+                 * Determine whether to use cookies for FluentCRM.
+                 *
+                 * This filter allows you to control whether cookies should be used for FluentCRM. It is used in conjunction with the `setcookie` function when a user is not logged in.
+                 *
+                 * @param bool Whether to use cookies. Default true.
+                 * @since 2.7.0
+                 *
+                 */
                 if (!is_user_logged_in() && apply_filters('fluent_crm/will_use_cookie', true)) {
                     setcookie("fc_hash_secure", fluentCrmGetContactSecureHash($subscriber->id), time() + 7776000, COOKIEPATH, COOKIE_DOMAIN);  /* expire in 90 days */
                 }
             }
 
-            $config = Helper::getDoubleOptinSettings();
+            $listIdOfSubscriber = Helper::latestListIdOfSubscriber($subscriber->id);
 
+            $config = null;
+            if ($listIdOfSubscriber) {
+                $globalDoubleOptin = fluentcrm_get_list_meta($listIdOfSubscriber, 'global_double_optin');
+                if ($globalDoubleOptin && $globalDoubleOptin->value == 'no') {
+                    $meta = fluentcrm_get_meta($listIdOfSubscriber, 'FluentCrm\App\Models\Lists', 'double_optin_settings', []);
+                    $config = $meta ? $meta->value : null;
+                }
+            }
+
+            if (!$config) {
+                $config = Helper::getDoubleOptinSettings();
+            }
+
+            /**
+             * Determine the double opt-in options configuration in FluentCRM.
+             *
+             * This filter allows modification of the double opt-in options configuration.
+             *
+             * @param array $config The double opt-in options configuration array.
+             * @param object $subscriber The subscriber object.
+             * @return array The modified double opt-in options configuration array.
+             * @since 2.6.0
+             *
+             */
             $config = apply_filters('fluent_crm/double_optin_options', $config, $subscriber);
 
             if (Arr::get($config, 'after_confirmation_type') == 'redirect' && $url = Arr::get($config, 'after_conf_redirect_url')) {
+                /**
+                 * Determine the campaign email text URL in FluentCRM.
+                 *
+                 * This filter allows you to modify the URL used in the campaign email text.
+                 *
+                 * @param string $url The original URL.
+                 * @param object $subscriber The subscriber object.
+                 * @return string The filtered URL.
+                 * @since 2.7.0
+                 *
+                 */
                 $url = apply_filters('fluent_crm/parse_campaign_email_text', $url, $subscriber);
                 if ($url) {
                     $url = trim($url);
@@ -624,8 +837,28 @@ class ExternalPages
                 }
             }
 
+            /**
+             * Determine the campaign email text after confirmation message in FluentCRM.
+             *
+             * This filter allows modification of the campaign email text after the confirmation message.
+             *
+             * @param string $after_confirm_message The message displayed after confirmation.
+             * @param object $subscriber The subscriber object.
+             * @since 2.7.0
+             *
+             */
             $body = apply_filters('fluent_crm/parse_campaign_email_text', $config['after_confirm_message'], $subscriber);
 
+            /**
+             * Filter the confirmation text before it is parsed in FluentCRM.
+             *
+             * This filter allows you to modify the CRM text before it is parsed and processed.
+             *
+             * @param string $body The text to be parsed.
+             * @param object $subscriber The subscriber object containing subscriber data.
+             * @since 2.7.0
+             *
+             */
             $body = apply_filters('fluent_crm/parse_extended_crm_text', $body, $subscriber);
 
         }
@@ -656,7 +889,7 @@ class ExternalPages
             wp_send_json_error([
                 'message' => __('Webhook must need to be as POST Method', 'fluent-crm'),
                 'type'    => 'invalid_request_method'
-            ], 200);;
+            ], 200);
         }
 
         $postData = $this->request->get();
@@ -681,6 +914,19 @@ class ExternalPages
             ], 200);
         }
 
+        /**
+         * Manage the incoming webhook data in FluentCRM.
+         *
+         * This filter allows modification of the incoming webhook data before it is processed.
+         *
+         * @param array $postData The incoming webhook data.
+         * @param string $webhook The webhook identifier.
+         * @param object $request The request object containing the webhook data.
+         *
+         * @return array The filtered webhook data.
+         * @since 2.5.95
+         *
+         */
         $postData = apply_filters('fluent_crm/incoming_webhook_data', $postData, $webhook, $this->request);
 
         if ($keyBy = Arr::get($postData, '_key_by')) {
@@ -719,9 +965,9 @@ class ExternalPages
 
         foreach ($mainFields as $fieldKey => $value) {
             if (is_array($value)) {
-                $mainFields[$fieldKey] = map_deep($value, 'sanitize_textarea_field');
+                $mainFields[$fieldKey] = map_deep($value, 'sanitize_text_field');
             } else {
-                $mainFields[$fieldKey] = wp_unslash(sanitize_textarea_field($value));
+                $mainFields[$fieldKey] = wp_unslash(sanitize_text_field($value));
             }
         }
 
@@ -735,28 +981,35 @@ class ExternalPages
             $customValues = [];
             foreach (Arr::only($postData, $customColumns) as $itemKey => $value) {
                 if (is_string($value)) {
-                    $customValues[$itemKey] = sanitize_text_field($value);
+                    $customValues[$itemKey] = sanitize_textarea_field($value);
                 } else {
                     $customValues[$itemKey] = map_deep($value, 'sanitize_textarea_field');
                 }
             }
         }
 
-        $tags = Helper::maybeParseAndFilterWebhookData($webhook, $postData, 'tags');
-        $lists = Helper::maybeParseAndFilterWebhookData($webhook, $postData, 'lists');
-        $companies = Helper::maybeParseAndFilterWebhookData($webhook, $postData, 'companies');
+        $tags = array_filter((array)Arr::get($postData, 'tags', []));
+        $lists = array_filter((array)Arr::get($postData, 'lists', []));
 
-        $defaultStatus = Arr::get($webhook->value, 'status', '');
-
-        if ($postedStatus = Arr::get($postData, 'status')) {
-            $defaultStatus = $postedStatus;
+        if (!$tags) {
+            $tags = Arr::get($webhook->value, 'tags', []);
         }
 
+        if (!$lists) {
+            $lists = Arr::get($webhook->value, 'lists', []);
+        }
+
+
+        $companies = Helper::maybeParseAndFilterWebhookData($webhook, $postData, 'companies');
+        $defaultStatus = Arr::get($webhook->value, 'status', '');
+
         $extraData = [
-            'tags'      => $tags,
-            'lists'     => $lists,
-            'companies' => $companies,
-            'status'    => $defaultStatus
+            'detach_tags'  => Arr::get($postData, 'detach_tags', []),
+            'detach_lists' => Arr::get($postData, 'detach_lists', []),
+            'tags'         => $tags,
+            'lists'        => $lists,
+            'companies'    => $companies,
+            'status'       => $defaultStatus
         ];
 
         $data = array_merge(
@@ -768,11 +1021,15 @@ class ExternalPages
         $data = array_filter($data);
 
         /**
-         * Webhook Contact Data
+         * Manage the contact data for the webhook.
          *
-         * @param array $data
-         * @param array $postData
-         * @param Webhook $webhook
+         * This filter allows modification of the contact data before it is processed by the webhook.
+         *
+         * @param array $data The contact data to be filtered.
+         * @param array $postData The original post data received from the webhook.
+         * @param string $webhook The identifier for the webhook.
+         * @since 2.5.1
+         *
          */
         $data = apply_filters('fluent_crm/webhook_contact_data', $data, $postData, $webhook);
 
@@ -791,7 +1048,6 @@ class ExternalPages
         }
 
         $message = $subscriber->wasRecentlyCreated ? 'created' : 'updated';
-
         wp_send_json_success([
             'message' => $message,
             'id'      => $subscriber->id,
@@ -814,32 +1070,39 @@ class ExternalPages
 
     public function manageSubscription()
     {
-
         $contactId = (int)$_GET['ce_id'];
-
         $subscriber = false;
 
-        $secureHash = sanitize_text_field(Arr::get($_REQUEST, 'secure_hash'));
+        $managedSecureHash = sanitize_text_field(Arr::get($_REQUEST, 'secure_hash'));
 
-        if ($secureHash) {
-            $subscriber = fluentCrmApi('contacts')->getContactBySecureHash($secureHash);
+        if ($managedSecureHash) {
+            $subscriber = fluentCrmApi('contacts')->getContactByManagedSecureHash($managedSecureHash);
+
+            /*
+             * remove this at march 2024
+             */
+            if (!$subscriber) {
+                $subscriber = fluentCrmApi('contacts')->getContactBySecureHash($managedSecureHash);
+            }
+
             if ($subscriber && $subscriber->id != $contactId) {
                 return;
             }
         }
 
         if (!$subscriber) {
+            $this->manageSubscriptionRequestForm();
             return;
         }
 
         $this->loadAssets();
 
-        add_action('wp_loaded', function () use ($subscriber, $secureHash) {
-            echo $this->getManageSubscriptionHtml($subscriber, $secureHash); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        $managedSecureHash = fluentCrmGetContactManagedHash($subscriber->id);
+        add_action('wp_loaded', function () use ($subscriber, $managedSecureHash) {
+            echo $this->getManageSubscriptionHtml($subscriber, $managedSecureHash); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
             exit();
         }, 1);
     }
-
 
     public function getManageSubscriptionHtml($subscriber, $secureHash = '')
     {
@@ -881,22 +1144,16 @@ class ExternalPages
         $email = Arr::get($_REQUEST, 'email');
         $originalHash = Arr::get($_REQUEST, '_original_hash');
 
+        $subscriber = null;
         if ($secureHash) {
-            $secureContact = fluentCrmApi('contacts')->getContactBySecureHash($secureHash);
-            if (!$secureContact) {
-                wp_send_json_error([
-                    'message' => __('Sorry! No subscriber found in the database', 'fluent-crm')
-                ], 423);
-            }
-            $subscriber = Subscriber::with('lists')->where('id', $secureContact->id)->first();
-        } else {
-            $subscriber = Subscriber::with('lists')->where('hash', $originalHash)->first();
+            $subscriber = fluentCrmApi('contacts')->getContactByManagedSecureHash($secureHash);
         }
 
         if (!$subscriber) {
             wp_send_json_error([
                 'message' => __('Sorry! No subscriber found in the database', 'fluent-crm')
-            ], 423);
+            ], 422);
+            return;
         }
 
         $addedLists = [];
@@ -920,7 +1177,7 @@ class ExternalPages
             if (!is_email($email)) {
                 wp_send_json_error([
                     'message' => __('Email is not valid. Please provide a valid email', 'fluent-crm')
-                ], 423);
+                ], 422);
             }
 
             // Check if unique
@@ -928,7 +1185,7 @@ class ExternalPages
             if ($exist) {
                 wp_send_json_error([
                     'message' => __('The new email has been used to another account. Please use a new email address', 'fluent-crm')
-                ], 423);
+                ], 422);
             }
 
             $subscriber->status = 'pending';
@@ -946,8 +1203,13 @@ class ExternalPages
             }
 
             wp_send_json_success([
-                'message' => sprintf(__('A confirmation email has been sent to %s. Please confirm your email address to resubscribe with changed email address', 'fluent-crm'), $email)
+                'message' => sprintf(
+                    /* translators: %s: the new email address to which confirmation was sent */
+                    esc_html__('A confirmation email has been sent to %s. Please confirm your email address to resubscribe with changed email address', 'fluent-crm'),
+                    esc_html(sanitize_email($email))
+                )
             ], 200);
+            return;
         }
 
         // Just update the info
@@ -966,7 +1228,11 @@ class ExternalPages
         if ($subscriber->status != 'subscribed') {
             $subscriber->sendDoubleOptinEmail();
             wp_send_json_success([
-                'message' => sprintf(__('A confirmation email has been sent to %s. Please confirm your email address to resubscribe', 'fluent-crm'), $email)
+                'message' => sprintf(
+                    /* translators: %s: the email address to which confirmation was sent */
+                    esc_html__('A confirmation email has been sent to %s. Please confirm your email address to resubscribe', 'fluent-crm'),
+                    esc_html(sanitize_email($email))
+                )
             ], 200);
         }
 
@@ -1019,6 +1285,16 @@ class ExternalPages
 
         wp_localize_script('fluentcrm_public_pref', 'fluentcrm_public_pref', [
             'ajaxurl'          => admin_url('admin-ajax.php'),
+            /**
+             * Determine if auto unsubscribe should be enabled in FluentCRM.
+             *
+             * This filter allows customization of the auto unsubscribe behavior.
+             *
+             * @param bool|string Default value is 'no'. Can be overridden to 'yes' to enable auto unsubscribe.
+             * @return bool|string Filtered value to determine if auto unsubscribe should be enabled.
+             * @since 2.8.34
+             *
+             */
             'auto_unsubscribe' => apply_filters('fluent_crm/will_auto_unsubscribe', Arr::get($complianceSettings, 'one_click_unsubscribe', 'no'))
         ]);
     }
@@ -1042,7 +1318,6 @@ class ExternalPages
     {
         $callbackName = sanitize_text_field($_REQUEST['callback_name']);
         if (!wp_verify_nonce($_REQUEST['nonce'], 'fluentcrm_callback_for_background')) {
-            error_log($callbackName . ' Security Check Failed');
             die('Security Check Failed');
         }
         $data = $_REQUEST['payload'];
@@ -1067,10 +1342,22 @@ class ExternalPages
 
     public function handlePreviewEmail()
     {
+
+        nocache_headers();
+
         $emailHash = sanitize_text_field(Arr::get($_REQUEST, '_e_hash'));
 
-        $email = CampaignEmail::where('email_hash', $emailHash)->with(['campaign', 'subscriber'])->first();
+        if (!$emailHash) {
+            // Maybe it's the Campaign Share Email
+            $newsLetterShareId = sanitize_text_field(Arr::get($_REQUEST, 'fc_newsletter'));
 
+            if ($newsLetterShareId) {
+                $this->showNewesLetterView($newsLetterShareId);
+                return;
+            }
+        }
+
+        $email = CampaignEmail::where('email_hash', $emailHash)->with(['campaign', 'subscriber'])->first();
 
         $businessSettings = fluentcrmGetGlobalSettings('business_settings', []);
 
@@ -1078,6 +1365,7 @@ class ExternalPages
             fluentCrm('view')->render('external.view_on_browser', [
                 'business'      => $businessSettings,
                 'email_heading' => '',
+                'email'         => null,
                 'email_body'    => '<h2 style=\'text-align: center; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif\'>Sorry, web preview could not be loaded</h2>',
                 'cssAssets'     => [
                     FLUENTCRM_PLUGIN_URL . 'assets/public/public_pref.css?version=' . FLUENTCRM_PLUGIN_VERSION
@@ -1093,7 +1381,6 @@ class ExternalPages
             $templateConfig = Helper::getTemplateConfig('', false);
         }
 
-
         $rawTemplates = [
             'raw_html',
             'visual_builder'
@@ -1105,13 +1392,25 @@ class ExternalPages
             $emailBody = (new BlockParser($email->subscriber))->parse($email->campaign->email_body);
         }
 
-
         /**
          * Email Footer Text For WebUI
          * @param string $footerText
          * @param CampaignEmail $email
          */
         $footerText = Helper::getEmailFooterContent($email->campaign);
+
+        /**
+         * Determine the footer text of the web email in FluentCRM.
+         *
+         * This filter allows you to modify the footer text of the web email.
+         *
+         * @param string $footerText The current footer text.
+         * @param array $email The email data array.
+         *
+         * @return string The modified footer text.
+         * @since 2.8.40
+         *
+         */
         $footerText = apply_filters('fluent_crm/web_email_footer_text', $footerText, $email);
 
         $emailSubject = $email->email_subject;
@@ -1119,35 +1418,102 @@ class ExternalPages
 
         $subscriber = $email->subscriber;
         if ($subscriber) {
+            /**
+             * Determine the campaign email body content text in FluentCRM.
+             *
+             * This filter allows modification of the campaign email text before it is sent to the subscriber.
+             *
+             * @param string $emailBody The email body content.
+             * @param object $subscriber The subscriber object containing subscriber details.
+             *
+             * @return string The filtered email body content.
+             * @since 2.8.02
+             *
+             */
             $emailBody = apply_filters('fluent_crm/parse_campaign_email_text', $emailBody, $subscriber);
+            /**
+             * Determine the footer text of a campaign email in FluentCRM.
+             *
+             * This filter allows you to modify the footer text of a campaign email before it is sent to the subscriber.
+             *
+             * @param string $footerText The footer text of the campaign email.
+             * @param object $subscriber The subscriber object containing subscriber details.
+             *
+             * @return string The modified footer text.
+             * @since 2.8.02
+             *
+             */
             $footerText = apply_filters('fluent_crm/parse_campaign_email_text', $footerText, $subscriber);
+            /**
+             * Determine the campaign email subject text in FluentCRM.
+             *
+             * This filter allows you to modify the email subject text for a campaign.
+             *
+             * @param string $emailSubject The original email subject text.
+             * @param object $subscriber The subscriber object.
+             *
+             * @return string The filtered email subject text.
+             * @since 2.8.02
+             *
+             */
             $emailSubject = apply_filters('fluent_crm/parse_campaign_email_text', $emailSubject, $subscriber);
+            /**
+             * Determine the Email pre-header text of a campaign email in FluentCRM.
+             *
+             * This filter allows you to modify the pre-header text of a campaign email before it is sent to the subscriber.
+             *
+             * @param string $preHeader The pre-header text of the campaign email.
+             * @param object $subscriber The subscriber object containing subscriber details.
+             *
+             * @return string The filtered pre-header text.
+             * @since 2.8.02
+             *
+             */
             $preHeader = apply_filters('fluent_crm/parse_campaign_email_text', $preHeader, $subscriber);
         }
 
         $templateData = [
             'preHeader'   => $preHeader,
             'email_body'  => $emailBody,
-            'footer_text' => '',
+            'footer_text' => $footerText,
             'config'      => $templateConfig
         ];
 
         if ($email->campaign->design_template == 'visual_builder' || $email->campaign->design_template == 'raw_html') {
             $content = $emailBody;
-
             if ($email->campaign->design_template == 'visual_builder') {
+                /**
+                 * Determine the email design template content in the visual builder in FluentCRM.
+                 *
+                 * @param string $content The email content.
+                 * @param array $templateData The template data.
+                 * @param object $email ->campaign The email campaign object.
+                 * @param object $email ->subscriber The email subscriber object.
+                 * @since 2.7.40
+                 *
+                 */
                 $content = apply_filters('fluent_crm/email-design-template-visual_builder',
                     $content,
                     $templateData,
                     $email->campaign,
                     $email->subscriber
                 );
-
-                $content = str_replace('https://fonts.googleapis.com/css2', 'https://fonts.bunny.net/css', $content);
             }
 
             $footerText = '';
         } else {
+            /**
+             * Determine the email design template for web preview in FluentCRM.
+             *
+             * @param string $emailBody The email body content.
+             * @param array $templateData The template data.
+             * @param object $email ->campaign The email campaign object.
+             * @param object $email ->subscriber The email subscriber object.
+             *
+             * @return string The filtered email design template for web preview.
+             * @since 2.7.0
+             *
+             */
             $content = apply_filters('fluent_crm/email-design-template-web_preview',
                 $emailBody,
                 $templateData,
@@ -1156,30 +1522,261 @@ class ExternalPages
             );
         }
 
-
         if (strpos($content, '{{crm') || strpos($content, '##crm')) {
             $content = str_replace(['{{crm_global_email_footer}}', '{{crm_preheader_text}}'], ['', $preHeader], $content);
             if (strpos($content, '##crm.') || strpos($content, '{{crm.')) {
-                // we have CRM specific smartcodes
+                /**
+                 * Determine the Smartcode text content before it is parsed in FluentCRM.
+                 *
+                 * This filter allows you to modify the Smartcode text content before it is parsed.
+                 *
+                 * @param string $content The Smartcode text content to be parsed.
+                 * @param object $email ->subscriber The subscriber object associated with the email.
+                 * @since 2.7.0
+                 *
+                 */
                 $content = apply_filters('fluent_crm/parse_extended_crm_text', $content, $email->subscriber);
             }
         }
 
 
+        /**
+         * Determine the email design template content for various types in FluentCRM.
+         *
+         * This filter allows customization of the email design template content.
+         *
+         * @param string $content The email content.
+         * @param array $templateData The data used in the email template.
+         * @param object $campaign The campaign object.
+         * @param object $subscriber The subscriber object.
+         * @since 2.8.40
+         *
+         */
+        $content = apply_filters(
+            'fluent_crm/email-design-template-' . $email->campaign->design_template,
+            $content,
+            $templateData,
+            $email->campaign,
+            $subscriber
+        );
+
+        $preViewUrl = site_url('?fluentcrm=1&route=email_preview&_e_hash=' . $email->email_hash);
+        $content = str_replace(['##web_preview_url##', '{{crm_global_email_footer}}', '{{crm_preheader_text}}'], [$preViewUrl, $footerText, $preHeader], $content);
+
+        if (strpos($content, '##crm.') || strpos($content, '{{crm.')) {
+            /**
+             * Determine the Smartcode text content before it is parsed in FluentCRM.
+             *
+             * This filter allows you to modify the Smartcode text content before it is parsed.
+             *
+             * @param string $content The Smartcode text content to be parsed.
+             * @param object $subscriber The subscriber object associated with the email.
+             * @since 2.8.40
+             *
+             */
+            $content = apply_filters('fluent_crm/parse_extended_crm_text', $content, $subscriber);
+        }
+
+        $content = str_replace(['https://fonts.googleapis.com/css2', 'https://fonts.googleapis.com/css'], 'https://fonts.bunny.net/css', $content);
+
         $data = [
             'business'      => $businessSettings,
             'email_heading' => $emailSubject,
             'email'         => $email,
-            'email_body'    => $content,
+            'email_body'    => [
+                'rendered' => $content
+            ],
             'cssAssets'     => [
                 FLUENTCRM_PLUGIN_URL . 'assets/public/public_pref.css?version=' . FLUENTCRM_PLUGIN_VERSION
-            ],
-            'footer_text'   => $footerText
+            ]
         ];
 
+        /**
+         * Determine the data used to view an email in the browser in FluentCRM.
+         *
+         * This filter allows modification of the data that is used when viewing an email in the browser.
+         *
+         * @param array $data The data to be used for viewing the email in the browser.
+         * @param object $email The email object containing the email details.
+         * @since 2.7.40
+         *
+         */
         $data = apply_filters('fluent_crm/email_view_on_browser_data', $data, $email);
 
         fluentCrm('view')->render('external.view_on_browser', $data);
         exit();
+    }
+
+    public function showNewesLetterView($nsHash)
+    {
+        nocache_headers();
+        $meta = Meta::where('object_type', 'FluentCrm\App\Models\Campaign')
+            ->where('key', '_campaign_share_id')
+            ->where('value', $nsHash)
+            ->first();
+
+
+        $businessSettings = fluentcrmGetGlobalSettings('business_settings', []);
+
+        $campaign = null;
+
+        if ($meta) {
+            $campaign = Campaign::withoutGlobalScope('type')->find($meta->object_id);
+        }
+
+        if (!$campaign) {
+            fluentCrm('view')->render('external.view_on_browser', [
+                'business'      => $businessSettings,
+                'email_heading' => '',
+                'email'         => null,
+                'email_body'    => '<h2 style=\'text-align: center; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif\'>Sorry, web preview could not be loaded</h2>',
+                'cssAssets'     => [
+                    FLUENTCRM_PLUGIN_URL . 'assets/public/public_pref.css?version=' . FLUENTCRM_PLUGIN_VERSION
+                ],
+                'footer_text'   => ''
+            ]);
+            exit();
+        }
+
+        $emailBody = fluentcrm_get_campaign_meta($campaign->id, '_cached_email_body', true);
+
+        if (!$emailBody) {
+            // Let's generate the email body
+            $rawTemplates = [
+                'raw_html',
+                'visual_builder'
+            ];
+
+            if (in_array($campaign->design_template, $rawTemplates)) {
+                $emailBody = $campaign->email_body;
+            } else {
+                $emailBody = (new BlockParser(fluentcrm_get_current_contact()))->parse($campaign->email_body);
+            }
+        }
+
+        $emailSubject = $campaign->subject;
+
+
+        $subscriber = fluentcrm_get_current_contact();
+
+        /**
+         * Determine the campaign email subject text in FluentCRM.
+         *
+         * This filter allows you to modify the email subject text for a campaign.
+         *
+         * @param string $emailSubject The original email subject text.
+         * @param object $subscriber The subscriber object.
+         *
+         * @return string The filtered email subject text.
+         * @since 2.8.44
+         *
+         */
+        $emailSubject = apply_filters('fluent_crm/parse_campaign_email_text', $emailSubject, $subscriber);
+        /**
+         * Determine the campaign email text in FluentCRM.
+         *
+         * This filter allows modification of the campaign email text before it is sent to the subscriber.
+         *
+         * @param string $emailBody The email body content.
+         * @param object $subscriber The subscriber object.
+         * @since 2.8.44
+         *
+         */
+        $emailBody = apply_filters('fluent_crm/parse_campaign_email_text', $emailBody, $subscriber);
+
+        $templateConfig = wp_parse_args($campaign->settings['template_config'], Helper::getTemplateConfig($campaign->design_template, false));
+
+        $templateData = [
+            'preHeader'   => '',
+            'email_body'  => $emailBody,
+            'footer_text' => '',
+            'config'      => $templateConfig
+        ];
+
+
+        if ($campaign->design_template == 'visual_builder' || $campaign->design_template == 'raw_html') {
+            $content = $emailBody;
+            if ($campaign->design_template == 'visual_builder') {
+                /**
+                 * Determine the email design template in the visual builder in FluentCRM.
+                 *
+                 * This filter allows customization of the email design template in the visual builder.
+                 *
+                 * @param string $content The current content of the email design template.
+                 * @param array $templateData Data related to the email template.
+                 * @param object $campaign The campaign object.
+                 * @param object $subscriber The subscriber object.
+                 *
+                 * @return string The filtered email design template content.
+                 * @since 2.8.44
+                 *
+                 */
+                $content = apply_filters('fluent_crm/email-design-template-visual_builder',
+                    $content,
+                    $templateData,
+                    $campaign,
+                    $subscriber
+                );
+            }
+        } else {
+            /**
+             * Determine the email design template content for various template types in FluentCRM.
+             *
+             * This filter allows modification of the email design template content before it is sent.
+             *
+             * @param string $content The email content after applying the design template.
+             * @param string $emailBody The original email body content.
+             * @param array $templateData An array of data used in the email template.
+             * @param object $campaign The campaign object containing campaign details.
+             * @param object $subscriber The subscriber object containing subscriber details.
+             * @since 2.8.44
+             *
+             */
+            $content = apply_filters('fluent_crm/email-design-template-' . $campaign->design_template,
+                $emailBody,
+                $templateData,
+                $campaign,
+                $subscriber
+            );
+        }
+
+        $content = str_replace(['https://fonts.googleapis.com/css2', 'https://fonts.googleapis.com/css'], 'https://fonts.bunny.net/css', $content);
+
+        $data = [
+            'business'      => $businessSettings,
+            'email_heading' => $emailSubject,
+            'email'         => null,
+            'email_body'    => [
+                'rendered' => $content
+            ],
+            'cssAssets'     => [
+                FLUENTCRM_PLUGIN_URL . 'assets/public/public_pref.css?version=' . FLUENTCRM_PLUGIN_VERSION
+            ]
+        ];
+
+        /**
+         * Determine the full email newsletter data in FluentCRM.
+         *
+         * This filter allows modification of the email newsletter data before it is processed.
+         *
+         * @param array $data The email newsletter data.
+         * @since 2.8.44
+         *
+         */
+        $data = apply_filters('fluent_crm/email_newsletter_data', $data);
+
+        fluentCrm('view')->render('external.view_on_browser', $data);
+        exit();
+    }
+
+    public function handleGeneralRequest()
+    {
+        $data = $_REQUEST;
+        $handler = sanitize_text_field(Arr::get($_REQUEST, 'handler'));
+
+        if ($handler) {
+            do_action('fluent_crm/handle_frontend_for_' . $handler, $data);
+        }
+
     }
 }

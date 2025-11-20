@@ -26,7 +26,7 @@ class ProFunnelItems
                 'category'    => 'WooCommerce',
                 'label'       => 'New Order (Processing)',
                 'icon'        => 'fc-icon-woo_new_order',
-                'description' => 'This Funnel will start once new order will be added as processing',
+                'description' => 'This funnel will start once a new order will be added as processing',
                 'disabled'    => true
             ];
 
@@ -34,7 +34,7 @@ class ProFunnelItems
                 'category'    => 'WooCommerce',
                 'label'       => 'Order Completed',
                 'icon'        => 'fc-icon-woo_order_complete',
-                'description' => 'This Funnel will start once new order has been marked as completed',
+                'description' => 'This funnel will start when an order is completed',
                 'disabled'    => true
             ];
 
@@ -42,7 +42,7 @@ class ProFunnelItems
                 'category'    => 'WooCommerce',
                 'label'       => 'Order Refunded',
                 'icon'        => 'fc-icon-woo_refund',
-                'description' => 'This Funnel will start once new order has been marked as completed',
+                'description' => 'This funnel will start when an order is refunded',
                 'disabled'    => true
             ];
 
@@ -50,7 +50,7 @@ class ProFunnelItems
                 'category'    => 'WooCommerce',
                 'label'       => 'Order Status Changed',
                 'icon'        => 'fc-icon-woo',
-                'description' => 'This Funnel will start when a Order status will change from one state to another',
+                'description' => 'This funnel will start when an order status changes',
                 'disabled'    => true
             ];
         }
@@ -60,23 +60,31 @@ class ProFunnelItems
                 'category'    => 'WooCommerce',
                 'label'       => 'Subscription activated',
                 'icon'        => 'fc-icon-woo_order_complete',
-                'description' => 'This Automation will start when a woo subscription starts or status changed to active',
+                'description' => 'This funnel will start when a WooCommerce subscription begins or its status changes to active.',
                 'disabled'    => true
             ];
 
             $triggers['woocommerce_subscription_renewal_payment_complete'] = [
                 'category'    => 'WooCommerce',
-                'label'       => 'Renewal payment received',
+                'label'       => 'Renewal Payment Received',
                 'icon'        => 'fc-icon-woo_order_complete',
-                'description' => 'This Automation will start when a recurring payment received  for a subscription',
+                'description' => 'This funnel will start when a recurring payment received for a subscription',
                 'disabled'    => true
             ];
 
             $triggers['woocommerce_subscription_renewal_payment_failed'] = [
                 'category'    => 'WooCommerce',
-                'label'       => 'Renewal payment failed',
+                'label'       => 'Renewal Payment Failed',
                 'icon'        => 'fc-icon-woo_refund',
-                'description' => 'This Automation will start when a payment fails for a subscription',
+                'description' => 'This funnel will start when a subscription payment fails',
+                'disabled'    => true
+            ];
+
+            $triggers['woocommerce_subscription_status_cancelled'] = [
+                'category'    => 'WooCommerce',
+                'label'       => 'WooCommerce Subscription Cancelled',
+                'icon'        => 'fc-icon-woo_refund',
+                'description' => 'This funnel will start when a WooCommerce subscription is cancelled.',
                 'disabled'    => true
             ];
         }
@@ -84,9 +92,9 @@ class ProFunnelItems
         if (defined('WLM3_PLUGIN_VERSION')) {
             $triggers['wishlistmember_add_user_levels'] = [
                 'category'    => 'Wishlist Member',
-                'label'       => 'A member added to a membership level',
+                'label'       => 'Membership Enrolled',
                 'icon'        => 'fc-icon-wishlist',
-                'description' => 'This funnel will start when a member is added to a level',
+                'description' => 'This funnel runs when a member is added to a membership level',
                 'disabled'    => true
             ];
         }
@@ -94,25 +102,25 @@ class ProFunnelItems
         if (defined('TUTOR_VERSION')) {
             $triggers['tutor_after_enrolled'] = [
                 'category'    => 'TutorLMS',
-                'label'       => 'Enrollment in a course',
+                'label'       => 'Course Enrolled',
                 'icon'        => 'fc-icon-tutor_lms_enrollment_course',
-                'description' => 'This funnel will start when a student is enrolled in a course',
+                'description' => 'This funnel runs when a student is enrolled in a course',
                 'disabled'    => true
             ];
 
             $triggers['tutor_course_complete_after'] = [
                 'category'    => 'TutorLMS',
-                'label'       => 'Student completes a Course',
+                'label'       => 'Course Completed',
                 'icon'        => 'fc-icon-tutor_lms_complete_course',
-                'description' => 'This Funnel will start a student completes a Course',
+                'description' => 'This funnel runs when a student completes a course',
                 'disabled'    => true
             ];
 
             $triggers['tutor_lesson_completed_after'] = [
                 'category'    => 'TutorLMS',
-                'label'       => 'Student Complete a Lesson',
+                'label'       => 'Lesson Completed',
                 'icon'        => 'fc-icon-tutor_lms_complete_course',
-                'description' => 'This Funnel will start a student completes a lesson',
+                'description' => 'This funnel runs when a student completes a lesson',
                 'disabled'    => true
             ];
         }
@@ -120,25 +128,25 @@ class ProFunnelItems
         if (class_exists('\Restrict_Content_Pro')) {
             $triggers['rcp_membership_post_activate'] = [
                 'category'    => 'Restrict Content Pro',
-                'label'       => 'A member added to a membership level',
+                'label'       => 'Membership Enrolled',
                 'icon'        => 'fc-icon-rcp_membership_level',
-                'description' => 'This funnel will start when a member is added to a level for the first time',
+                'description' => 'This funnel runs when a member is added to a membership level',
                 'disabled'    => true
             ];
 
             $triggers['rcp_transition_membership_status_expired'] = [
                 'category'    => 'Restrict Content Pro',
-                'label'       => 'Membership expired',
+                'label'       => 'Membership Expired',
                 'icon'        => 'fc-icon-rcp_membership_cancle',
-                'description' => 'This funnel will start when a membership has been expired',
+                'description' => 'This funnel runs when a membership expires',
                 'disabled'    => true
             ];
 
             $triggers['rcp_membership_post_cancel'] = [
                 'category'    => 'Restrict Content Pro',
-                'label'       => 'Membership cancelled',
+                'label'       => 'Membership Cancelled',
                 'icon'        => 'fc-icon-rcp_membership_cancle',
-                'description' => 'This funnel will start when a membership has been cancelled',
+                'description' => 'This funnel runs when a membership is cancelled',
                 'disabled'    => true
             ];
         }
@@ -146,17 +154,17 @@ class ProFunnelItems
         if (defined('PMPRO_VERSION')) {
             $triggers['pmpro_after_change_membership_level'] = [
                 'category'    => 'Paid Membership Pro',
-                'label'       => 'Membership Level assignment of a User',
+                'label'       => 'Membership Enrolled',
                 'icon'        => 'fc-icon-paid_membership_pro_user_level',
-                'description' => 'This funnel will start when a user is assigned to specified membership levels',
+                'description' => 'This funnel runs when a member is added to a membership level',
                 'disabled'    => true
             ];
 
             $triggers['pmpro_membership_post_membership_expiry'] = [
                 'category'    => 'Paid Membership Pro',
-                'label'       => 'Membership Level Expiration',
+                'label'       => 'Membership Level Expired',
                 'icon'        => 'fc-icon-membership_level_ex_pmp',
-                'description' => 'This funnel will start when a membership has been expired for a user',
+                'description' => 'This funnel runs when a membership expires',
                 'disabled'    => true
             ];
         }
@@ -164,17 +172,17 @@ class ProFunnelItems
         if (defined('MEPR_PLUGIN_NAME')) {
             $triggers['mepr-account-is-active'] = [
                 'category'    => 'MemberPress',
-                'label'       => 'A member added to a membership level',
+                'label'       => 'Membership Enrolled',
                 'icon'        => 'fc-icon-memberpress_membership',
-                'description' => 'This funnel will start when a membership level get activated for a member',
+                'description' => 'This funnel runs when a member is added to a membership level',
                 'disabled'    => true
             ];
 
             $triggers['mepr-event-transaction-expired'] = [
                 'category'    => 'MemberPress',
-                'label'       => 'A Subscription expired',
+                'label'       => 'Subscription expired',
                 'icon'        => 'el-icon-circle-close',
-                'description' => 'This funnel will start when a subscription has been expired',
+                'description' => 'This funnel runs when a subscription expires',
                 'disabled'    => true
             ];
         }
@@ -182,33 +190,33 @@ class ProFunnelItems
         if (defined('LLMS_PLUGIN_FILE')) {
             $triggers['llms_user_enrolled_in_course'] = [
                 'category'    => 'LifterLMS',
-                'label'       => 'Enrollment in a course',
+                'label'       => 'Course Enrolled',
                 'icon'        => 'fc-icon-lifter_lms_course_enrollment',
-                'description' => 'This funnel will start when a contact has been enrolled in a course',
+                'description' => 'This funnel runs when a contact is enrolled in a course',
                 'disabled'    => true
             ];
 
             $triggers['lifterlms_course_completed'] = [
                 'category'    => 'LifterLMS',
-                'label'       => 'Student completes a Course',
+                'label'       => 'Course Completed',
                 'icon'        => 'fc-icon-lifter_lms_complete_course',
-                'description' => 'This Funnel will start a student completes a Course',
+                'description' => 'This funnel runs when a student completes a course',
                 'disabled'    => true
             ];
 
             $triggers['llms_user_added_to_membership_level'] = [
                 'category'    => 'LifterLMS',
-                'label'       => 'Enrollment in a Membership',
+                'label'       => 'Joined Membership',
                 'icon'        => 'fc-icon-lifter_lms_membership',
-                'description' => 'This Funnel will start when a student has been enrolled in a membership level',
+                'description' => 'This funnel runs when a student has been enrolled in a membership level',
                 'disabled'    => true
             ];
 
             $triggers['lifterlms_lesson_completed'] = [
                 'category'    => 'LifterLMS',
-                'label'       => 'Student completes a Lesson',
+                'label'       => 'Lesson Completed',
                 'icon'        => 'fc-icon-lifter_lms_complete_lession-t2',
-                'description' => 'This Funnel will start when a student completes a lesson',
+                'description' => 'This funnel runs when a student completes a lesson',
                 'disabled'    => true
             ];
         }
@@ -216,49 +224,49 @@ class ProFunnelItems
         if (defined('LEARNDASH_VERSION')) {
             $triggers['learndash_update_course_access'] = [
                 'category'    => 'LearnDash',
-                'label'       => 'Enrolls in a Course',
+                'label'       => 'Course Enrolled',
                 'icon'        => 'fc-icon-learndash_enroll_course',
-                'description' => 'This funnel will start when a student is enrolled in a course',
+                'description' => 'This funnel runs when a student is enrolled in a course',
                 'disabled'    => true
             ];
 
             $triggers['learndash_lesson_completed'] = [
                 'category'    => 'LearnDash',
-                'label'       => 'Completes a Lesson',
+                'label'       => 'Lesson Completed',
                 'icon'        => 'fc-icon-learndash_complete_lesson',
-                'description' => 'This Funnel will start a student completes a lesson',
+                'description' => 'This funnel runs a student completes a lesson',
                 'disabled'    => true
             ];
 
             $triggers['learndash_topic_completed'] = [
                 'category'    => 'LearnDash',
-                'label'       => 'Completes a Topic',
+                'label'       => 'Topic Completed',
                 'icon'        => 'fc-icon-learndash_complete_topic',
-                'description' => 'This funnel will start when a user is completes a lesson topic',
+                'description' => 'This funnel runs when a student completes a lesson topic',
                 'disabled'    => true
             ];
 
             $triggers['learndash_course_completed'] = [
                 'category'    => 'LearnDash',
-                'label'       => 'Completes a Course',
+                'label'       => 'Course Completed',
                 'icon'        => 'fc-icon-learndash_complete_course',
-                'description' => 'This Funnel will start when a student completes a course',
+                'description' => 'This funnel runs when a student completes a course',
                 'disabled'    => true
             ];
 
             $triggers['ld_added_group_access'] = [
                 'category'    => 'LearnDash',
-                'label'       => 'Enrolls in a Group',
+                'label'       => 'Group Enrolled',
                 'icon'        => 'fc-icon-learndash_course_group',
-                'description' => 'This funnel will start when a user is enrolled in a group',
+                'description' => 'This funnel runs when a user is enrolled in a group',
                 'disabled'    => true
             ];
 
             $triggers['simulated_learndash_update_course_removed'] = [
                 'category'    => 'LearnDash',
-                'label'       => 'Leave from a Course',
+                'label'       => 'Course Left',
                 'icon'        => 'fc-icon-learndash_enroll_course',
-                'description' => 'This funnel will start when a student is leave from a course',
+                'description' => 'This funnel runs when a student leaves a course',
                 'disabled'    => true
             ];
         }
@@ -268,7 +276,7 @@ class ProFunnelItems
                 'category'    => 'Easy Digital Downloads',
                 'label'       => 'Edd - New Order Success',
                 'icon'        => 'fc-icon-edd_new_order_success',
-                'description' => 'This Funnel will start once new order will be added as successful payment',
+                'description' => 'This funnel will start once new order payment is successful',
                 'disabled'    => true
             ];
 
@@ -276,7 +284,7 @@ class ProFunnelItems
                 $triggers['edd_sl_post_set_status'] = [
                     'category'    => 'Easy Digital Downloads',
                     'label'       => 'License Expired',
-                    'description' => 'This Funnel will start a license status get marked as expired',
+                    'description' => 'This funnel will start when a license gets expired',
                     'disabled'    => true
                 ];
             }
@@ -285,7 +293,7 @@ class ProFunnelItems
                 $triggers['edd_recurring_add_subscription_payment'] = [
                     'category'    => 'Easy Digital Downloads',
                     'label'       => 'Renewal Payment Received',
-                    'description' => 'This Funnel will start once a Renewal Payment received for an active subscription',
+                    'description' => 'This funnel will start when a renewal payment is received for an active subscription',
                     'icon'        => 'fc-icon-edd_new_order_success',
                     'disabled'    => true
                 ];
@@ -293,7 +301,7 @@ class ProFunnelItems
                 $triggers['edd_subscription_status_change'] = [
                     'category'    => 'Easy Digital Downloads',
                     'label'       => 'Recurring Subscription Expired',
-                    'description' => 'This Funnel will start once a Recurring Subscription status changed to expired',
+                    'description' => 'This funnel will start when a recurring subscription gets expired',
                     'icon'        => 'el-icon-circle-close',
                     'disabled'    => true
                 ];
@@ -303,9 +311,9 @@ class ProFunnelItems
         if (class_exists('\Affiliate_WP')) {
             $triggers['affwp_set_affiliate_status'] = [
                 'category'    => 'AffiliateWP',
-                'label'       => 'AffiliateWP - New Affiliate Approved/Active Register',
+                'label'       => 'New Affiliate Joined',
                 'icon'        => 'fc-icon-trigger',
-                'description' => 'This Funnel will be initiated when affiliate will be approved or register as direct approved',
+                'description' => 'This funnel will be initiated when a new affiliate gets approved/registered directly',
                 'disabled'    => true
             ];
         }
@@ -315,7 +323,7 @@ class ProFunnelItems
                 'category'    => 'SureCart',
                 'label'       => 'SureCart - New Order Success',
                 'icon'        => 'el-icon-shopping-cart-full',
-                'description' => 'This Funnel will start once new order will be added as successful payment',
+                'description' => 'This funnel will start when new order payment is successful',
                 'disabled'    => true
             ];
 
@@ -323,7 +331,7 @@ class ProFunnelItems
                 'category'    => 'SureCart',
                 'label'       => 'SureCart - Order Revoked',
                 'icon'        => 'el-icon-sold-out',
-                'description' => 'This Funnel will start once order will be revoked',
+                'description' => 'This funnel will start when order will be revoked',
                 'disabled'    => true
             ];
         }
@@ -564,6 +572,16 @@ class ProFunnelItems
             ];
         }
 
+        if (defined('SURECART_PLUGIN_FILE')) {
+            $blocks['fluent_surecart_purchase_created_wrap'] = [
+                'is_pro'      => true,
+                'type'        => 'benchmark',
+                'title'       => 'Order Received in SureCart',
+                'description' => 'This will run once new order has been placed as processing',
+                'icon'        => 'el-icon-shopping-cart-full',
+            ];
+        }
+
         return $blocks;
 
     }
@@ -571,13 +589,22 @@ class ProFunnelItems
     private function getCrmTriggers()
     {
         return [
-            'fluent_crm/contact_created'      => [
+            'fluentcrm_contact_added_to_lists'     => [
                 'category'    => 'CRM',
-                'label'       => 'Contact Created',
-                'icon'        => '', // 'fc-icon-tag_applied',
-                'description' => 'This will run when a new contact will be added',
+                'label'       => 'List Applied',
+                'icon'        => 'fc-icon-list_applied_2',
+                'description' => 'This will run when selected lists have been applied to a contact',
                 'disabled'    => true
             ],
+
+            'fluentcrm_contact_removed_from_lists' => [
+                'category'    => 'CRM',
+                'label'       => 'List Removed',
+                'icon'        => 'fc-icon-list_removed',
+                'description' => 'This will run when selected lists have been removed from a contact',
+                'disabled'    => true
+            ],
+
             'fluentcrm_contact_added_to_tags'      => [
                 'category'    => 'CRM',
                 'label'       => 'Tag Applied',
@@ -594,19 +621,35 @@ class ProFunnelItems
                 'disabled'    => true
             ],
 
-            'fluentcrm_contact_removed_from_lists' => [
+            'fluent_crm/contact_birthday'      => [
                 'category'    => 'CRM',
-                'label'       => 'List Removed',
-                'icon'        => 'fc-icon-list_removed',
-                'description' => 'This will run when selected lists have been removed from a contact',
+                'label'       => 'Contact\'s Birthday',
+                'icon'        => '', // 'fc-icon-tag_applied',
+                'description' => 'Funnel will be initiated on the day of contact\'s birthday',
                 'disabled'    => true
             ],
 
-            'fluentcrm_contact_added_to_lists'     => [
+            'fluent_crm/contact_created'      => [
                 'category'    => 'CRM',
-                'label'       => 'List Applied',
-                'icon'        => 'fc-icon-list_applied_2',
-                'description' => 'This will run when selected lists have been applied to a contact',
+                'label'       => 'Contact Created',
+                'icon'        => '', // 'fc-icon-tag_applied',
+                'description' => 'This will run when a new contact will be added',
+                'disabled'    => true
+            ],
+
+            'fluent_crm/company_applied'      => [
+                'category'    => 'CRM',
+                'label'       => 'Company Applied',
+                'icon'        => '', // 'fc-icon-tag_applied',
+                'description' => 'This will run when selected companies have been applied to a contact',
+                'disabled'    => true
+            ],
+
+            'fluent_crm/company_removed'      => [
+                'category'    => 'CRM',
+                'label'       => 'Company Removed',
+                'icon'        => '', // 'fc-icon-tag_applied',
+                'description' => 'This will run when selected companies have been removed from a contact',
                 'disabled'    => true
             ],
 

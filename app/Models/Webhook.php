@@ -26,6 +26,8 @@ class Webhook extends Meta
 
     public static function boot()
     {
+        parent::boot();
+
         static::addGlobalScope('type', function ($builder) {
             $builder->where('object_type', '=', 'webhook');
         });
