@@ -122,7 +122,6 @@ class Contacts
      */
     public function createOrUpdate($data, $forceUpdate = false, $deleteOtherValues = false, $sync = false)
     {
-
         if (empty($data['email']) || !is_email($data['email'])) {
             return false;
         }
@@ -184,11 +183,27 @@ class Contacts
 
     public function getContactBySecureHash($hash)
     {
-        if(!$hash) {
+        if (!$hash) {
             return null;
         }
 
         $secureMeta = SubscriberMeta::where('value', $hash)->where('key', '_secure_hash')
+            ->first();
+
+        if ($secureMeta) {
+            return $this->instance->where('id', $secureMeta->subscriber_id)->first();
+        }
+
+        return null;
+    }
+
+    public function getContactByManagedSecureHash($hash)
+    {
+        if (!$hash) {
+            return null;
+        }
+
+        $secureMeta = SubscriberMeta::where('value', $hash)->where('key', '_secure_managed_hash')
             ->first();
 
         if ($secureMeta) {
@@ -218,12 +233,37 @@ class Contacts
         return $this->instance;
     }
 
+    public function getCustomFields($types = [], $byOptions = false)
+    {
+        $customFields = fluentcrm_get_custom_contact_fields();
+
+        if ($types) {
+            $customFields = array_filter($customFields, function ($field) use ($types) {
+                return in_array($field['type'], $types);
+            });
+        }
+
+        if ($byOptions) {
+            $formatted = [];
+            foreach ($customFields as $field) {
+                $formatted[] = [
+                    'id'    => $field['slug'],
+                    'title' => $field['label']
+                ];
+            }
+            return $formatted;
+        }
+
+        return $customFields;
+    }
+
     public function __call($method, $params)
     {
         if (in_array($method, $this->allowedInstanceMethods)) {
             return call_user_func_array([$this->instance, $method], $params);
         }
 
-        throw new \Exception("Method {$method} does not exist.");
+        /* translators: %s: method name */
+        throw new \Exception(sprintf('Method %s does not exist.', esc_html($method)));
     }
 }

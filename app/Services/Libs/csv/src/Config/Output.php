@@ -208,6 +208,7 @@ trait Output
      *
      * @return array
      */
+    #[\ReturnTypeWillChange]
     public function jsonSerialize()
     {
         return iterator_to_array($this->convertToUtf8($this->getConversionIterator()), false);

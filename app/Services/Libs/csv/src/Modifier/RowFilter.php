@@ -172,6 +172,7 @@ trait RowFilter
     {
         foreach ($this->validators as $name => $validator) {
             if (true !== call_user_func($validator, $row)) {
+                // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
                 throw new InvalidRowException($name, $row, 'row validation failed');
             }
         }

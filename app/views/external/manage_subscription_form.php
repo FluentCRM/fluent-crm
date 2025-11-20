@@ -26,7 +26,7 @@
                 <h4 class="mainling_list_group_title"><?php esc_html_e('Mailing List Groups', 'fluent-crm') ?></h4>
                 <?php foreach ($list_options as $list_option): ?>
                     <label class="fc_list_items">
-                        <input <?php echo ($list_option['selected']) ? 'checked' : ''; ?> type="checkbox" name="lists[]" value="<?php echo esc_attr($list_option['id']); ?>"/> <?php echo esc_attr($list_option['label']); ?>
+                        <input <?php echo ($list_option['selected']) ? 'checked' : ''; ?> type="checkbox" name="lists[]" value="<?php echo esc_attr($list_option['id']); ?>"/> <?php echo esc_html($list_option['label']); ?>
                     </label>
                 <?php endforeach; ?>
             </div>

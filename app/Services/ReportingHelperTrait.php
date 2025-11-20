@@ -52,7 +52,10 @@ trait ReportingHelperTrait
         if ($frequency == static::$weekly) {
             $select[] = fluentCrmDb()->raw('WEEK(created_at) week');
         } else if ($frequency == static::$monthly) {
-            $select[] = fluentCrmDb()->raw('MONTH(created_at) month');
+            // Keep existing month for backward compatibility
+            $select[] = fluentCrmDb()->raw('MONTH(' . $dateField . ') AS month');
+            // Correct quoting and add year-month key to disambiguate months across years
+            $select[] = fluentCrmDb()->raw("DATE_FORMAT($dateField, '%Y-%m') AS ym");
         }
 
         return $select;
@@ -65,7 +68,7 @@ trait ReportingHelperTrait
         if ($frequency == static::$weekly) {
             $orderBy = $groupBy = 'week';
         } else if ($frequency == static::$monthly) {
-            $orderBy = $groupBy = 'month';
+            $orderBy = $groupBy = 'ym';
         }
 
         return [$groupBy, $orderBy];

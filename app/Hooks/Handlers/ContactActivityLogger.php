@@ -3,6 +3,8 @@
 namespace FluentCrm\App\Hooks\Handlers;
 
 use FluentCrm\App\Models\Subscriber;
+use FluentCrm\App\Services\Helper;
+use FluentCrm\Framework\Support\Arr;
 
 /**
  *  ContactActivityLogger Class
@@ -21,8 +23,8 @@ class ContactActivityLogger
         add_action('wp_login', array($this, 'trackLogin'), 10, 2);
 
         // Global Tracker
-        add_action('fluent_crm/track_activity_by_subscriber', array($this, 'trackActivityByUser'));
         add_action('fluent_crm/track_activity_by_subscriber', array($this, 'trackActivityBySubscriber'));
+
     }
 
     public function trackLogin($username, $user)
@@ -46,17 +48,9 @@ class ContactActivityLogger
             return;
         }
 
-        $subscriber->last_activity = current_time('mysql');
-        if (!$subscriber->ip && fluentCrmWillTrackIp()) {
-            $ip = FluentCrm('request')->getIp(fluentCrmWillAnonymizeIp());
-            if ($ip != '127.0.0.1') {
-                $subscriber->ip = $ip;
-            }
-        }
+        $this->trackActivityBySubscriber($subscriber);
 
-        $subscriber->save();
-
-        if($type == 'login') {
+        if ($type == 'login') {
             fluentcrm_update_subscriber_meta($subscriber->id, '_last_login', current_time('mysql'));
         }
 
@@ -67,23 +61,31 @@ class ContactActivityLogger
     public function trackActivityBySubscriber($subscriber)
     {
         if (is_numeric($subscriber)) {
-            $subscriber = fluentCrmGetFromCache('subscriber_' . $subscriber, function () use ($subscriber) {
-                return Subscriber::where('id', $subscriber)->first();
-            });
+            $subscriber = Subscriber::where('id', $subscriber)->first();
         }
 
         if (!$subscriber) {
             return;
         }
 
-        $subscriber->last_activity = current_time('mysql');
+        if ($subscriber->last_activity && strtotime($subscriber->last_activity) > (current_time('timestamp') - 3600)) {
+            return;
+        }
+
+        $data = [
+            'last_activity' => current_time('mysql')
+        ];
+
         if (!$subscriber->ip && fluentCrmWillTrackIp()) {
             $ip = FluentCrm('request')->getIp(fluentCrmWillAnonymizeIp());
             if ($ip != '127.0.0.1') {
-                $subscriber->ip = $ip;
+                $data['ip'] = $ip;
             }
         }
-        return $subscriber->save();
-    }
 
+        return fluentCrmDb()->table('fc_subscribers')
+            ->where('id', $subscriber->id)
+            ->update($data);
+
+    }
 }

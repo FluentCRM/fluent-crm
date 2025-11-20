@@ -9,7 +9,6 @@ namespace FluentCrm\App\Hooks\Handlers;
  *
  * @version 1.0.0
  */
-
 class CountryNames
 {
     private $names;
@@ -17,7 +16,7 @@ class CountryNames
     /**
      * Construct country names from an array.
      */
-    public function __construct()
+    public function setNames()
     {
         $this->names = [
             [
@@ -981,7 +980,7 @@ class CountryNames
                 'title' => __('Vatican', 'fluent-crm')
             ],
             [
-                'code'      => 'VE',
+                'code'  => 'VE',
                 'title' => __('Venezuela', 'fluent-crm')
             ],
             [
@@ -1030,6 +1029,10 @@ class CountryNames
      */
     public function get()
     {
+        if (!$this->names) {
+            $this->setNames();
+        }
+
         return $this->names;
     }
 }

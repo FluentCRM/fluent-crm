@@ -37,9 +37,12 @@ class AutoSubscribeHandler
 
             $user = get_user_by('ID', $userId);
             $contact = Subscriber::where('email', $user->user_email)->first();
-            if ($contact) {
-                $contact->user_id = $user->ID;
-                $contact->save();
+            if ($contact && $contact->user_id != $user->ID) {
+                fluentCrmDb()->table('fc_subscribers')
+                    ->where('id', $contact->id)
+                    ->update([
+                        'user_id' => $user->ID
+                    ]);
             }
 
             return false;
@@ -74,8 +77,13 @@ class AutoSubscribeHandler
 
         add_action("updated_user_meta", function ($meta_id, $userId, $meta_key, $_meta_value) use ($contact) {
             if ($userId == $contact->user_id && ($meta_key == 'first_name' || $meta_key == 'last_name') && $_meta_value) {
-                $contact->{$meta_key} = $_meta_value;
-                $contact->save();
+                if($contact->{$meta_key} != $_meta_value) {
+                    fluentCrmDb()->table('fc_subscribers')
+                        ->where('id', $contact->id)
+                        ->update([
+                            $meta_key => $_meta_value
+                        ]);
+                }
             }
         }, 10, 4);
 
@@ -86,6 +94,16 @@ class AutoSubscribeHandler
 
         $settings = (new AutoSubscribe())->getCommentSettings();
 
+        /**
+         * Determine the settings for the comment form subscribe feature in FluentCRM.
+         *
+         * This filter allows modification of the settings used for the comment form subscribe feature in FluentCRM.
+         *
+         * @since 2.7.0
+         * 
+         * @param array $settings The current settings for the comment form subscribe feature.
+         * @return array The modified settings for the comment form subscribe feature.
+         */
         $settings = apply_filters('fluent_crm/comment_form_subscribe_settings', $settings);
 
         if (Arr::get($settings, 'status') != 'yes') {
@@ -175,11 +193,16 @@ class AutoSubscribeHandler
         return true;
     }
 
-    public function syncUserUpdate($userId, $oldData)
+    public function syncUserUpdate($userId, $oldData, $newData = [])
     {
 
         if (is_multisite() && is_network_admin()) {
             return false;
+        }
+
+        if (!empty($newData['user_pass'])) {
+            $user = get_user_by('ID', $userId);
+            (new Cleanup())->handleUserPasswordChanged($user);
         }
 
         if (!Helper::isUserSyncEnabled()) {
@@ -264,6 +287,48 @@ class AutoSubscribeHandler
         }
 
         return Helper::deleteContacts([$subscriber->id]);
+    }
+
+    public function syncWooAddressUpdate($userId, $addressType)
+    {
+        if ($addressType != 'billing') {
+            return;
+        }
+
+        $customer = new \WC_Customer($userId);
+
+        if (!$customer || !$customer->get_id()) {
+            return;
+        }
+
+        $user = get_user_by('ID', $userId);
+        $contact = Subscriber::where('email', $user->user_email)->first();
+
+        $addressData = $customer->get_billing();
+
+        $updateData = [
+            'user_id'        => $userId,
+            'address_line_1' => $addressData['address_1'],
+            'address_line_2' => $addressData['address_2'],
+            'city'           => $addressData['city'],
+            'state'          => $addressData['state'],
+            'country'        => $addressData['country'],
+            'postal_code'    => $addressData['postcode']
+        ];
+
+        if ($contact) {
+            $contact->fill($updateData);
+            $dirty = $contact->getDirty();
+            if ($dirty) {
+                fluentCrmDb()->table('fc_subscribers')
+                    ->where('id', $contact->id)
+                    ->update($dirty);
+                $contact = Subscriber::find($contact->id);
+                do_action('fluent_crm/contact_updated', $contact, $dirty);
+            }
+        } else {
+            FluentCrmApi('contacts')->createOrUpdate($updateData);
+        }
     }
 
 }

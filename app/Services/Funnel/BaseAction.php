@@ -6,6 +6,7 @@ abstract class BaseAction
 {
     protected $actionName;
 
+    protected $funnel;
     protected $priority = 10;
 
     public function __construct()

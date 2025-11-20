@@ -19,7 +19,13 @@ class CompaniesMigrator
 
         $indexPrefix = $wpdb->prefix .'fc_index_';
 
+        if(!function_exists('dbDelta')) {
+            require_once(ABSPATH.'wp-admin/includes/upgrade.php');
+        }
+
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $sql = "CREATE TABLE $table (
                 `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
                 `hash` VARCHAR(90) NULL,
@@ -52,12 +58,33 @@ class CompaniesMigrator
                  INDEX `{$indexPrefix}_com_type_idx` (`type`),
                  INDEX `{$indexPrefix}_com_name_idx` (`name`)
             ) $charsetCollate;";
+            dbDelta($sql);
+        } else {
+            // check if meta is available in the column
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            $columns = $wpdb->get_results("SHOW COLUMNS FROM $table", ARRAY_A);
+            $allColumns = array_column($columns, 'Field');
 
-            if(!function_exists('dbDelta')) {
-                require_once(ABSPATH.'wp-admin/includes/upgrade.php');
+            if (!in_array('meta', $allColumns)) {
+                // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+                $wpdb->query("ALTER TABLE $table ADD COLUMN `meta` LONGTEXT NULL AFTER `linkedin_url`");
             }
 
-            dbDelta($sql);
+            if (!in_array('date_of_start', $allColumns)) {
+                // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+                $wpdb->query("ALTER TABLE $table ADD COLUMN `date_of_start` DATE NULL AFTER `linkedin_url`");
+            }
+
+            if (!in_array('facebook_url', $allColumns)) {
+                // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+                $wpdb->query("ALTER TABLE $table ADD COLUMN `facebook_url` VARCHAR(192) NULL AFTER `linkedin_url`");
+            }
+
+            if(!in_array('twitter_url', $allColumns)) {
+                // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+                $wpdb->query("ALTER TABLE $table ADD COLUMN `twitter_url` VARCHAR(192) NULL AFTER `linkedin_url`");
+            }
+
         }
     }
 }

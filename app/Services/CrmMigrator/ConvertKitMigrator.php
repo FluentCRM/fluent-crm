@@ -206,7 +206,7 @@ class ConvertKitMigrator extends BaseMigrator
             $data = [
                 'email'      => $subscriber['email_address'],
                 'first_name' => $subscriber['first_name'],
-                'created_at' => date('Y-m-d H:i:s', strtotime($subscriber['created_at'])),
+                'created_at' => gmdate('Y-m-d H:i:s', strtotime($subscriber['created_at'])),
                 'source'     => 'ConvertKit',
                 'status'     => 'subscribed'
             ];
@@ -223,14 +223,10 @@ class ConvertKitMigrator extends BaseMigrator
 
             $data['tags'] = [$taggingArray[$currentTagId]];
 
-
             $contact = FluentCrmApi('contacts')->createOrUpdate($data);
 
             if ($contact && $contact->status != 'subscribed') {
-                $oldStatus = $contact->status;
-                $contact->status = 'subscribed';
-                $contact->save();
-                do_action('fluentcrm_subscriber_status_to_subscribed', $contact, $oldStatus);
+                $contact->updateStatus('subscribed');
             }
         }
 

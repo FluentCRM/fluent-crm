@@ -9,6 +9,12 @@
  * as the controller name then it will become FluentCrm\App\Hooks\Handlers\MyClass.
  */
 
+// Init scheduled tasks
+use FluentCart\Api\Resource\OrderResource;
+use FluentCart\App\Models\Order;
+
+\FluentCrm\App\Hooks\Handlers\Scheduler::register();
+
 $app->addAction('fluentcrm_contacts_filter_subscriber', function ($query, $filters) {
     return (new \FluentCrm\App\Models\Subscriber)->buildGeneralPropertiesFilterQuery($query, $filters);
 }, 10, 2);
@@ -25,11 +31,6 @@ $app->addAction('fluentcrm_contacts_filter_activities', function ($query, $filte
     return (new \FluentCrm\App\Models\Subscriber)->buildActivitiesFilterQuery($query, $filters);
 }, 10, 2);
 
-$app->addAction('fluentcrm_scheduled_minute_tasks', 'Scheduler@process');
-$app->addAction('fluentcrm_scheduled_hourly_tasks', 'Scheduler@processHourly');
-$app->addAction('fluentcrm_scheduled_five_minute_tasks', 'Scheduler@processFiveMinutes');
-$app->addAction('fluentcrm_process_contact_jobs', 'Scheduler@processForSubscriber', 999, 1);
-$app->addAction('fluentcrm_scheduled_weekly_tasks', 'Scheduler@processWeekly');
 
 // Add admin init
 
@@ -45,6 +46,11 @@ $app->addAction('wp_ajax_nopriv_fluentcrm_request_unsubscribe_ajax', 'ExternalPa
 
 $app->addAction('wp_ajax_fluentcrm_manage_preferences_ajax', 'ExternalPages@handleManageSubPref');
 $app->addAction('wp_ajax_nopriv_fluentcrm_manage_preferences_ajax', 'ExternalPages@handleManageSubPref');
+
+
+$app->addAction('wp_ajax_fluentcrm_request_manage_subscription_ajax', 'ExternalPages@handleManageSubRequestAjax');
+$app->addAction('wp_ajax_nopriv_fluentcrm_request_manage_subscription_ajax', 'ExternalPages@handleManageSubRequestAjax');
+
 
 $app->addAction('wp_ajax_fluentcrm_callback_for_background', 'ExternalPages@handleBackgroundProcessCallback');
 $app->addAction('wp_ajax_nopriv_fluentcrm_callback_for_background', 'ExternalPages@handleBackgroundProcessCallback');
@@ -78,36 +84,31 @@ $app->addAction('fluentcrm_after_subscribers_deleted', 'Cleanup@deleteSubscriber
 $app->addAction('fluent_crm/campaign_deleted', 'Cleanup@deleteCampaignAssets', 10, 1);
 $app->addAction('fluent_crm/list_deleted', 'Cleanup@deleteListAssets', 10, 1);
 $app->addAction('fluent_crm/tag_deleted', 'Cleanup@deleteTagAssets', 10, 1);
+$app->addAction('fluent_crm/campaign_archived', 'Cleanup@archiveCampaignAssets', 10, 1);
+$app->addAction('fluent_crm/sync_subscriber_delete_setting', 'Cleanup@SyncSubscriberDeleteSettings', 10, 2);
 
 $app->addAction('fluentcrm_subscriber_status_to_unsubscribed', 'Cleanup@handleUnsubscribe');
 $app->addAction('fluentcrm_subscriber_status_to_bounced', 'Cleanup@handleUnsubscribe');
 $app->addAction('fluentcrm_subscriber_status_to_complained', 'Cleanup@handleUnsubscribe');
+$app->addAction('fluentcrm_subscriber_status_to_spammed', 'Cleanup@handleUnsubscribe');
 
 $app->addAction('fluent_crm/contact_email_changed', 'Cleanup@handleContactEmailChanged');
 $app->addAction('delete_user', 'Cleanup@handleUserDelete', 10, 3);
 $app->addAction('fluent_crm/company_deleted', 'Cleanup@handleCompanyDelete', 10, 1);
+$app->addAction('after_password_reset', 'Cleanup@handleUserPasswordChanged', 10, 1);
+
+add_action('fluent_crm/debug_log', function ($logData) {
+    if (!is_array($logData) || empty($logData['title'])) {
+        return;
+    }
+
+    \FluentCrm\App\Services\Helper::debugLog($logData['title'], \FluentCrm\Framework\Support\Arr::get($logData, 'description', ''), \FluentCrm\Framework\Support\Arr::get($logData, 'type', 'info'));
+});
 
 /*
  * Admin Bar
  */
 $app->addAction('admin_bar_menu', 'AdminBar@init');
-
-// This is required to instantly send emails
-add_action('wp_ajax_nopriv_fluentcrm-post-campaigns-send-now', function () use ($app) {
-    $nextCron = wp_next_scheduled('fluentcrm_scheduled_minute_tasks') - time();
-    if ($nextCron > 3 || $nextCron < -60) { // If next cron is after more than 3 seconds we want to run this
-        $mailer = new \FluentCrm\App\Services\Libs\Mailer\Handler();
-        $mailer->handle(
-            $app->request->get('campaign_id')
-        );
-
-        wp_send_json_success([
-            'message'   => 'success',
-            'dip'       => $nextCron,
-            'timestamp' => time()
-        ]);
-    }
-});
 
 add_action('wp_ajax_nopriv_fluentcrm-post-campaigns-emails-processing', function () use ($app) {
     \FluentCrm\App\Hooks\Handlers\Scheduler::processFiveMinutes();
@@ -138,6 +139,7 @@ add_action('wp_loaded', function () use ($app) {
  */
 add_action('init', function () {
     (new \FluentCrm\App\Hooks\Handlers\ContactActivityLogger())->register();
+    (new \FluentCrm\App\Hooks\Handlers\ActivityLogHandler())->register();
 });
 
 /*
@@ -158,15 +160,18 @@ if (!empty($_GET['page']) && 'fluentcrm-setup' == $_GET['page']) {
 $app->addAction('user_register', 'AutoSubscribeHandler@userRegistrationHandler', 99, 1);
 $app->addAction('comment_post', 'AutoSubscribeHandler@handleCommentPost', 99, 3);
 
-$app->addAction('profile_update', 'AutoSubscribeHandler@syncUserUpdate', 10, 2);
+$app->addAction('profile_update', 'AutoSubscribeHandler@syncUserUpdate', 10, 3);
 $app->addAction('delete_user', 'AutoSubscribeHandler@maybeDeleteContact', 10, 3);
+
+$app->addAction('woocommerce_customer_save_address', 'AutoSubscribeHandler@syncWooAddressUpdate', 10, 2);
 
 add_shortcode('fluentcrm_pref', function ($atts, $content) {
     return (new \FluentCrm\App\Hooks\Handlers\PrefFormHandler())->handleShortCode($atts, $content);
 });
 
 add_shortcode('fluentcrm_content', function ($atts, $content) {
-    return (new \FluentCrm\App\Hooks\Handlers\PrefFormHandler())->handleDynamicContentShortCode($atts, $content);
+    $result = (new \FluentCrm\App\Hooks\Handlers\PrefFormHandler())->handleDynamicContentShortCode($atts, $content);
+    return wp_kses_post($result);
 });
 
 // require the CLI
@@ -176,21 +181,23 @@ if (defined('WP_CLI') && WP_CLI) {
 
 add_action('admin_notices', function () {
     if (defined('FLUENTCAMPAIGN_FRAMEWORK_VERSION') && FLUENTCAMPAIGN_FRAMEWORK_VERSION < 3) {
-        echo '<div class="fc_notice notice notice-error fc_notice_error"><h3>Update FluentCRM Pro Plugin</h3><p>Your are using out-dated version of FluentCRM Pro. <a href="' . admin_url('plugins.php?s=fluentcampaign=pro&plugin_status=all&fluentcrm_pro_check_update=' . time()) . '">' . __('Please update FluentCRM Pro to latest version', 'fluent-crm') . '</a>.</p></div>';
+        echo '<div class="fc_notice notice notice-error fc_notice_error"><h3>Update FluentCRM Pro Plugin</h3><p>Your are using out-dated version of FluentCRM Pro. <a href="' . esc_url(admin_url('plugins.php?s=fluentcampaign=pro&plugin_status=all&fluentcrm_pro_check_update=' . time())) . '">' . esc_html__('Please update FluentCRM Pro to latest version', 'fluent-crm') . '</a>.</p></div>';
     }
 });
-
 
 /*
  * For REST API Nonce Renew
  */
 add_action('wp_ajax_fluentcrm_renew_rest_nonce', function () {
-    if(!\FluentCrm\App\Services\PermissionManager::currentUserPermissions()) {
+    if (!\FluentCrm\App\Services\PermissionManager::currentUserPermissions()) {
         wp_send_json([
             'error' => 'You do not have permission to do this'
         ], 403);
     }
     wp_send_json([
-        'nonce' => wp_create_nonce('wp_rest')
+        'nonce' => wp_create_nonce('wp_rest'),
+        'time'  => time()
     ], 200);
 });
+
+

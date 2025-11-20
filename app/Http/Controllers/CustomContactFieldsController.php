@@ -35,4 +35,16 @@ class CustomContactFieldsController extends Controller
             'message' => __('Fields saved successfully!', 'fluent-crm')
         ]);
     }
+
+    public function updateGroupName(CustomContactField $model)
+    {
+        $oldName = sanitize_text_field($this->request->get('old_name'));
+        $newName = sanitize_text_field($this->request->get('new_name'));
+        $updatedCustomFields = $model->updateGroupName($oldName, $newName);
+
+        return $this->sendSuccess([
+            'fields'   => $updatedCustomFields,
+            'message' => __('Group name updated successfully!', 'fluent-crm')
+        ]);
+    }
 }

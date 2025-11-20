@@ -35,6 +35,7 @@ class User extends Model
             }
             return '';
         }
+
         return fluentcrmGravatar($this->attributes['user_email'], $this->attributes['display_name']);
     }
 }

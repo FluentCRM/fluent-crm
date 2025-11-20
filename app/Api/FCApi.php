@@ -14,16 +14,9 @@ final class FCApi
     public function __call($method, $params)
     {
         try {
-            $result = call_user_func_array([$this->instance, $method], $params);
-
-            if (is_object($result)) {
-                return $result;
-            }
-
-            throw new \Exception("Error Processing Request");
-
+            return call_user_func_array([$this->instance, $method], $params);
         } catch (\Exception $e) {
-            return $result;
+            return null;
         }
     }
 }

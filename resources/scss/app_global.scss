@@ -1,0 +1,824 @@
+.fluentcrm_force_hide {
+    display: none !important;
+}
+
+.fluentcrm_main_menu_items {
+    display: block;
+    position: relative;
+    * {
+        box-sizing: border-box;
+    }
+
+    margin-bottom: 20px;
+    background: white;
+    margin-left: -20px;
+    padding-left: 20px;
+
+    .fluentcrm_menu_logo_holder {
+        display: inline-block;
+        margin-right: 10px;
+        vertical-align: middle;
+        padding: 10px 0;
+        a {
+            display: block;
+            overflow: hidden;
+            line-height: 0;
+            img {
+                padding: 2px 0px;
+                height: 36px;
+                outline: none;
+            }
+            &:focus {
+                outline: none;
+                box-shadow: none;
+            }
+            span {
+                position: absolute;
+                top: 20px;
+                color: black;
+                padding-left: 5px;
+                font-size: 10px;
+            }
+        }
+    }
+
+    ul.fluentcrm_menu {
+        display: inline-block;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        vertical-align: top;
+        float: right;
+        padding-right: 20px;
+
+        li {
+            display: inline-block;
+            padding: 0;
+            margin: 0;
+
+            &.fluentcrm_active {
+                border-bottom: 2px solid #9d95d8;
+                background: #f7fafc;
+            }
+
+            a:focus {
+                box-shadow: none;
+                outline: 0 solid transparent;
+            }
+
+            .fluentcrm_menu_primary {
+                padding: 20px 15px;
+                display: block;
+                font-size: 14px;
+                line-height: 100%;
+                text-decoration: none;
+                color: #909399;
+
+                span {
+                    font-size: 14px;
+                    line-height: 17px;
+                    margin-bottom: -6px;
+                }
+
+                &:hover {
+                    color: black;
+                }
+            }
+
+            .fluentcrm_submenu_items {
+                display: none;
+            }
+        }
+
+        li.fluentcrm_has_sub_items {
+            position: relative;
+
+            .fluentcrm_submenu_items a {
+                width: 100%;
+                display: block;
+                text-decoration: none;
+                padding: 10px 15px;
+            }
+
+            &:hover {
+                > .fluentcrm_submenu_items {
+                    display: block;
+                    z-index: 9999999;
+                    overflow: hidden;
+                    top: 90%;
+                    right: 0;
+                    position: absolute;
+                    min-width: 10rem;
+                    padding: .5rem 0;
+                    margin: .125rem 0 0;
+                    font-size: 1rem;
+                    color: #909399;
+                    text-align: left;
+                    list-style: none;
+                    background-color: #fff;
+                    background-clip: padding-box;
+                    border: 1px solid rgba(0, 0, 0, .15);
+                    border-radius: .25rem;
+                    box-shadow: 0 3px 22px 0 rgb(176 184 190 / 80%);
+
+                    &.fc_2_col_menu {
+                        right: -235px;
+                        width: 600px;
+                        display: grid;
+                        font-size: inherit;
+                        gap: 10px;
+                        grid-auto-flow: row;
+                        grid-gap: 10px;
+                        padding: 10px;
+                        white-space: normal;
+                        grid-template-columns: repeat(2, minmax(30px, 1fr));
+                        a:hover {
+                            background: #f6f8fa;
+                        }
+                        .fc_menu_title {
+                            font-weight: 600;
+                            font-size: 110%;
+                            color: black;
+                        }
+                        .fc_menu_description {
+                            margin: 5px 0 0;
+                            padding: 0;
+                        }
+
+                        @media all and (max-width: 768px) {
+                            grid-template-columns: repeat(1, minmax(30px, 1fr));
+                            width: auto;
+                            right: 0;
+
+                            a {
+                                .fc_menu_card {
+                                    .fc_menu_description {
+                                        display: none;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    a {
+                        color: #909399;
+
+                        &:hover {
+                            background-color: #f8f9fa;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    .fluentcrm_handheld {
+        display: none;
+    }
+
+    @media all and (max-width: 768px) {
+        margin-right: 10px;
+        ul.fluentcrm_menu {
+            display: none;
+        }
+        ul.fluentcrm_menu.fluentcrm_menu_open {
+            display: block;
+            border-top: 3px solid #f1f1f1;
+            position: fixed;
+            right: 0;
+            z-index: 99999;
+            background: white;
+            li {
+                margin: 0 30px 0 0;
+            }
+
+            li.fluentcrm_menu_item {
+                display: block;
+                width: 100%;
+            }
+
+            .fluentcrm_menu_primary span {
+                float: right;
+            }
+
+            span.fc_submenu_handler {
+                position: absolute;
+                right: -20px;
+            }
+
+            .fluentcrm_submenu_items {
+                position: relative !important;
+                padding-left: 30px !important;
+            }
+        }
+        .fluentcrm_handheld {
+            display: inline-block;
+            float: right;
+            margin: 15px 15px 0px 0px;
+
+            span {
+                font-size: 30px;
+                width: 100%;
+            }
+        }
+    }
+}
+@media all and (max-width: 768px) {
+    .fluentcrm_settings_wrapper {
+        .el-menu {
+            .el-menu-item {
+                padding: 0 5px !important;
+            }
+        }
+        li.el-menu-item span {
+            display: inline-block;
+            white-space: break-spaces;
+            line-height: 130%;
+            font-size: 10px;
+        }
+    }
+}
+
+
+@media all and (max-width: 425px) {
+    .fc_segment_menu {
+        display: none;
+    }
+    .fluentcrm_header {
+        display: block !important;
+        .fluentcrm_header_title {
+            display: block;
+            width: 100% !important;
+        }
+        .fluentcrm-actions {
+            text-align: left !important;
+            width: 100% !important;
+            .input-with-select {
+                min-width: 120px;
+            }
+        }
+    }
+    .fluentcrm-forms {
+        .fluentcrm_header {
+            display: block !important;
+            .fluentcrm_header_title {
+                display: block;
+                width: 100% !important;
+            }
+            .fluentcrm-actions {
+                text-align: left !important;
+                width: 100% !important;
+            }
+        }
+    }
+
+    .fluentcrm_settings_wrapper {
+        .el-menu {
+            .el-menu-item {
+                padding: 0 5px !important;
+                span {
+                    display: none;
+                }
+            }
+        }
+        .fluentcrm_header {
+            padding: 10px;
+        }
+        .fluentcrm_pad_around {
+            padding: 10px;
+        }
+        .el-col.el-col-5 {
+            width: 10%;
+        }
+        .el-col.fc_settings_wrapper {
+            width: 90%;
+            span.el-checkbox__label {
+                white-space: break-spaces;
+                vertical-align: text-top;
+            }
+        }
+    }
+    .auto-fold #wpcontent {
+        padding-left: 5px !important;
+    }
+    .fluentcrm-app {
+        margin-right: 5px !important;
+    }
+    ul.fluentcrm_profile_nav {
+        display: flex;
+        overflow: scroll;
+    }
+}
+
+.fluentcrm_settings_wrapper {
+    @media all and (min-width: 767px) {
+        .fc_side_menu_wrap {
+            max-width: 192px;
+        }
+        .fc_setting_wrap {
+            min-width: calc(100% - 192px);
+        }
+    }
+}
+
+.fc_item_half_no_float {
+    width: 100%;
+
+    .el-input-number {
+        width: 100%;
+    }
+
+}
+
+@media all and (max-width: 426px) {
+    .fluentcrm-app {
+        margin-right: 10px;
+    }
+}
+
+@media all and (min-width: 1440px) {
+    .fc_item_half {
+        width: 50%;
+        float: left;
+        padding-right: 20px;
+    }
+
+    .fc_item_half_no_float {
+        width: 50%;
+        padding-right: 20px;
+    }
+}
+
+.fc_image_radios {
+    .el-radio__input {
+        display: none;
+    }
+
+    .fc_image_box {
+        width: 140px;
+        height: 140px;
+        background-repeat: no-repeat;
+        background-size: contain;
+        position: relative;
+
+        &.fc_image_active {
+            border: 2px solid #409eff;
+            border-radius: 10px;
+        }
+
+        span {
+            position: absolute;
+            bottom: 2px;
+            width: 100%;
+            text-align: center;
+            font-size: 10px;
+        }
+    }
+
+    .el-radio__label {
+        padding-left: 0;
+    }
+
+}
+
+.fc_image_radio_tooltips {
+    .el-radio__input {
+        display: none;
+    }
+    .fc_image_box {
+        width: 140px;
+        height: 140px;
+        background-repeat: no-repeat;
+        background-size: contain;
+        position: relative;
+        &.fc_image_active {
+            border: 2px solid #409eff;
+            border-radius: 5px;
+        }
+    }
+    .el-radio__label {
+        padding-left: 0;
+    }
+    .el-radio {
+        margin-right: 10px;
+    }
+}
+
+.fc_filter_boxes {
+
+    > div {
+        display: inline-block;
+        margin-bottom: 5px;
+        margin-top: 5px;
+    }
+}
+
+img.fc_contact_photo {
+    width: 24px;
+    height: 24px;
+    display: block;
+    border-radius: 50%;
+}
+
+.fc_block_white {
+    padding: 20px 30px;
+    background: white;
+    margin-bottom: 30px;
+    border-radius: 5px;
+    box-shadow: 0 0 1px 1px #e4e4e4;
+}
+
+span.ff_small {
+    font-size: 12px;
+    color: gray;
+    vertical-align: middle;
+}
+
+/*
+* Date Picker Fix
+ */
+.el-time-spinner__list {
+    .el-time-spinner__item {
+        margin-bottom: 0px !important;
+    }
+}
+
+.fc_profile_pop {
+    .fluentcrm_profile-photo {
+        padding-right: 20px;
+        img {
+            border-radius: 50%;
+            width: 128px;
+            max-width: 128px;
+            max-height: 128px;
+            object-fit: cover;
+        }
+    }
+}
+
+.fc_new_line_items > label {
+    width: 100%;
+    display: block;
+}
+
+.fc_2_col_items > label {
+    display: inline-block;
+    margin: 0;
+    width: 50%;
+    margin-bottom: 10px;
+}
+
+.fc_group_field_half {
+    > .el-form-item {
+        width: 49%;
+        display: inline-block;
+        padding-right: 20px;
+    }
+}
+#adminmenuwrap {
+    z-index: 9991;
+}
+.el-dialog__wrapper {
+    * {
+        box-sizing: border-box;
+    }
+}
+.el-date-table {
+    td {
+        &.start-date,
+        &.end-date {
+            span {
+                background-color: #7756e6;
+            }
+        }
+        &.today {
+            span {
+                color: #7756e6;
+            }
+        }
+    }
+}
+.fc_dropdown {
+    padding: 10px;
+    box-sizing: border-box;
+    border-radius: 6px;
+    border: 1px solid #e5e4e6;
+    * {
+        box-sizing: border-box;
+    }
+    li {
+        border-radius: 6px;
+        padding: 8px 15px;
+        height: auto;
+        transition: .4s;
+        line-height: 22px;
+        font-weight: 500;
+        + li {
+            margin-top: 2px;
+        }
+        &.selected,
+        &:not(.is-disabled):hover {
+            color: #7756e6;
+            background-color: #F5F7FA;
+            font-weight: 500;
+        }
+    }
+}
+.fluentcrm_admin_dashboard {
+    > .el-row {
+        width: 100%;
+    }
+    .fc_card_widgets {
+        margin-bottom: 35px;
+    }
+    .ns_subscribers_chart {
+        background: #fff;
+        border-radius: 8px;
+        overflow: hidden;
+        .fluentcrm_header {
+            background: none;
+            padding: 15px 20px;
+            .fluentcrm_header_title {
+                @media (max-width: 480px) {
+                    margin-bottom: 10px;
+                }
+                .el-dropdown {
+                    cursor: pointer;
+                    color: #2f2925;
+                    font-weight: 600;
+                }
+            }
+            .fluentcrm-templates-action-buttons {
+                gap: 6px;
+                .el-date-editor {
+                    height: auto;
+                    padding: 1px 10px;
+                    border-radius: 6px;
+                    font-weight: 500;
+                    &.is-active {
+                        border-color: #7756e6;
+                    }
+                }
+                > .el-button {
+                    border-radius: 6px;
+                    height: auto;
+                    padding: 10px 20px;
+                    margin-left: 0;
+                    background: #7756e6;
+                    border-color: #7756e6;
+                }
+            }
+        }
+
+        .fc_chart_box {
+            padding: 25px 20px 0 5px;
+            margin-bottom: 0;
+        }
+    }
+}
+.fc_card_widgets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 25px;
+
+    .fc_card_widget {
+        cursor: pointer;
+
+        background: #fff;
+        border: 1.3px solid #e5e4e6;
+        border-radius: 8px;
+        padding: 25px 30px;
+        width: calc(33.3333% - 17px);
+        transition: .4s;
+        @media (max-width: 720px) {
+            width: calc(50% - 13px);
+        }
+        @media all and (max-width: 426px) {
+            width: 100%;
+        }
+        .fluentcrm_body {
+            font-size: 36px;
+            font-weight: 600;
+            line-height: 1.2;
+            margin: 0 0 5px;
+        }
+        .stat_title {
+            font-size: 15px;
+            line-height: 1.5;
+            color: #2f2926;
+            opacity: 0.8;
+        }
+
+        &:hover {
+            border-color: #8154ce;
+            box-shadow: 0 8px 10px rgba(0,0,0,0.05);
+        }
+    }
+}
+
+
+span.fc_li_value {
+    display: inline-block;
+    float: right;
+}
+.fc_lined_items {
+    list-style: none;
+    margin: 0;
+    padding: 0 10px;
+    li {
+        list-style: none;
+        padding: 8px 10px;
+        margin: 0;
+        font-size: 14px;
+        line-height: 25px;
+        border-bottom: 1px solid #e3e8ed;
+        opacity: 0.8;
+        &:last-child {
+            border-bottom: none;
+        }
+        i {
+            font-size: 25px;
+            display: block;
+            float: left;
+            margin-right: 7px;
+        }
+        &.fc_item_completed i {
+            color: #7757e6;
+        }
+        &.fc_item_completed {
+            text-decoration: line-through;
+        }
+    }
+}
+.fc_quick_links {
+    .fluentcrm_body {
+        border-radius: 0 0 6px 6px;
+    }
+    .fluentcrm_header {
+        color: #0a083a;
+        font-size: 15px;
+        font-weight: 600;
+        padding: 15px 20px;
+        line-height: 1.4;
+        border-radius: 6px 6px 0 0;
+        border-color: rgb(10 8 58 / 7%);
+    }
+}
+.fc_request_review_widget {
+    .fluentcrm_body {
+        .fc_request_review_header {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            i {
+                margin-left: auto;
+                cursor: pointer;
+            }
+        }
+        padding: 20px;
+        border-radius: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        position: relative;
+        z-index: 1;
+		align-items: flex-start;
+        svg {
+            display: block;
+            width: 100px;
+            height: auto;
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            z-index: -1;
+        }
+        h4 {
+            margin: 0;
+            font-size: 1rem;
+        }
+        p {
+            margin: 0;
+            line-height: 1.2rem;
+            font-size: .8rem;
+            color: #697385;
+        }
+    }
+}
+
+i.fc_el_circle {
+    height: 22px;
+    width: 22px;
+    border: 1px solid black;
+    border-radius: 50%;
+}
+
+.fc_onboarding {
+    .fluentcrm-actions {
+        .el-button {
+            font-size: 16px;
+        }
+    }
+    .fc_lined_items li {
+        cursor: pointer;
+        transition: all 200ms;
+        &:hover {
+            color: #7757e6;
+            border-bottom: 1px solid #7757e6;
+            transition: all 200ms;
+            i {
+                color: #7757e6 !important;
+            }
+        }
+    }
+    .fc_top_products {
+        li {
+            cursor: auto;
+            &:hover {
+                color: #2f2925;
+                border-color: #e3e8ed;
+            }
+        }
+    }
+}
+
+ul.fc_settings_sub_menu {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    li {
+        display: inline-block;
+        padding: 15px;
+        margin-bottom: -4px !important;
+        overflow: hidden;
+        cursor: pointer;
+        &.fc_active {
+            background: white;
+            border-bottom: 2px solid #7756e6;
+            color: #7756e6;
+        }
+    }
+}
+.fc_integration_settings {
+    .fluentcrm_header {
+        padding: 0;
+    }
+}
+
+.fc_integrations_list {
+    ul {
+        list-style: disc;
+        margin-left: 40px;
+    }
+}
+
+.fc_column_toggler_checks {
+    span.is-disabled {
+        display: none;
+    }
+    .is-disabled span.el-checkbox__label {
+        color: black;
+        padding-left: 20px;
+        margin-top: 10px;
+    }
+}
+
+.fc_option_creatable {
+    .el-select > .el-input > input {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+        border-right: 0;
+        border-color: #909398 !important;
+        border-right: 1px solid #909398;
+    }
+    .fc_with_select {
+        //background: #c2c6ce;
+    }
+    button.fc_with_select {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+}
+
+
+.el-form-item.fc_half_field {
+    &.fc_half_even {
+        padding-right: 10px;
+        padding-left: 0;
+    }
+    &.fc_half_odd {
+        padding-right: 1px;
+        padding-left: 10px;
+    }
+}
+
+@media all and (max-width: 1024px) {
+    .fluentcrm_main_menu_items ul.fluentcrm_menu li .fluentcrm_menu_primary {
+        padding: 20px 15px;
+        font-size: 13px;
+    }
+
+    .el-menu-vertical-demo {
+        min-height: auto;
+        margin-bottom: 10px;
+    }
+}

@@ -125,7 +125,7 @@ class Bootstrap extends IntegrationManagerController
                 'placeholder' => __('Select FluentCRM List', 'fluent-crm'),
                 'tips'        => __('Select the FluentCRM List you would like to add your contacts to.', 'fluent-crm'),
                 'component'   => 'select',
-                'required'    => true,
+                'required'    => false,
                 'options'     => $this->getLists(),
             ],
             [
@@ -444,10 +444,7 @@ class Bootstrap extends IntegrationManagerController
             }
 
             if ($entry->status == 'confirmed' && $subscriber->status != 'subscribed') {
-                $oldStatus = $subscriber->status;
-                $subscriber->status = 'subscribed';
-                $subscriber->save();
-                do_action('fluentcrm_subscriber_status_to_subscribed', $subscriber, $oldStatus);
+                $subscriber = $subscriber->updateStatus('subscribed');
             }
 
             if ($subscriber->status == 'pending') {
@@ -489,10 +486,7 @@ class Bootstrap extends IntegrationManagerController
             }
 
             if ($entry->status == 'confirmed' && $subscriber->status != 'subscribed') {
-                $oldStatus = $subscriber->status;
-                $subscriber->status = 'subscribed';
-                $subscriber->save();
-                do_action('fluentcrm_subscriber_status_to_subscribed', $subscriber, $oldStatus);
+                $subscriber = $subscriber->updateStatus('subscribed');
             }
 
             if ($hasDouBleOptIn && ($subscriber->status == 'pending' || $subscriber->status == 'unsubscribed')) {
@@ -590,14 +584,14 @@ class Bootstrap extends IntegrationManagerController
     private function registerPaymentEvents()
     {
         add_action('fluentform/subscription_payment_active', function ($subscription, $submission) {
-            $this->handlePaymentEvent($submission, 'fluentform_subscription_payment_active');
+            $this->handlePaymentEvent($submission, 'fluentform/subscription_payment_active');
         }, 10, 2);
         add_action('fluentform/subscription_payment_canceled', function ($subscription, $submission) {
-            $this->handlePaymentEvent($submission, 'fluentform_subscription_payment_canceled');
+            $this->handlePaymentEvent($submission, 'fluentform/subscription_payment_canceled');
         }, 10, 2);
 
         add_action('fluentform/payment_refunded', function ($refund, $transaction, $submission) {
-            $this->handlePaymentEvent($submission, 'fluentform_payment_refunded');
+            $this->handlePaymentEvent($submission, 'fluentform/payment_refunded');
         }, 10, 3);
     }
 

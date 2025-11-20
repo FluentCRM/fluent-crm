@@ -40,6 +40,7 @@ class MailChimp
 
         if ($api_endpoint === null) {
             if (strpos($this->api_key, '-') === false) {
+                // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
                 throw new \Exception("Invalid MailChimp API key `{$api_key}` supplied.");
             }
             list(, $data_center) = explode('-', $this->api_key);
@@ -197,6 +198,13 @@ class MailChimp
             $httpHeader[] = "Accept-Language: " . $args["language"];
         }
 
+        // phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_init
+        // phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_setopt
+        // phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_exec
+        // phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_close
+        // phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_getinfo
+        // phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_error
+        // PluginCheck:ignoreFile
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $httpHeader);
@@ -236,12 +244,19 @@ class MailChimp
                 break;
         }
 
+
         $responseContent     = curl_exec($ch);
         $response['headers'] = curl_getinfo($ch);
         $response            = $this->setResponseState($response, $responseContent, $ch);
         $formattedResponse   = $this->formatResponse($response);
 
         curl_close($ch);
+        // phpcs:enable WordPress.WP.AlternativeFunctions.curl_curl_init
+        // phpcs:enable WordPress.WP.AlternativeFunctions.curl_curl_setopt
+        // phpcs:enable WordPress.WP.AlternativeFunctions.curl_curl_exec
+        // phpcs:enable WordPress.WP.AlternativeFunctions.curl_curl_close
+        // phpcs:enable WordPress.WP.AlternativeFunctions.curl_curl_getinfo
+        // phpcs:enable WordPress.WP.AlternativeFunctions.curl_curl_error
 
         $this->determineSuccess($response, $formattedResponse, $timeout);
 
@@ -349,6 +364,7 @@ class MailChimp
     {
         $encoded = json_encode($data);
         $this->last_request['body'] = $encoded;
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt
         curl_setopt($ch, CURLOPT_POSTFIELDS, $encoded);
     }
 
@@ -377,6 +393,7 @@ class MailChimp
     private function setResponseState($response, $responseContent, $ch)
     {
         if ($responseContent === false) {
+            // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_error
             $this->last_error = curl_error($ch);
         } else {
 

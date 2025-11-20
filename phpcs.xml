@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<ruleset name="FluentCRM">
+    <!-- Exclude vendor and scoped-vendor directories from scanning -->
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/scoped-vendor/*</exclude-pattern>
+    <exclude-pattern>*/node_modules/*</exclude-pattern>
+    <exclude-pattern>*/.git/*</exclude-pattern>
+    <exclude-pattern>*/builds/*</exclude-pattern>
+
+    <!-- Scan the app directory -->
+    <file>./app</file>
+    <file>./includes</file>
+    
+    <!-- Use WordPress standards -->
+    <rule ref="WordPress" />
+</ruleset>

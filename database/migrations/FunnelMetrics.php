@@ -20,7 +20,9 @@ class FunnelMetrics
 
         $indexPrefix = $wpdb->prefix . 'fc_fmx_';
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $sql = "CREATE TABLE $table (
                 `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
                 `funnel_id` BIGINT UNSIGNED NULL,
@@ -40,6 +42,7 @@ class FunnelMetrics
             dbDelta($sql);
         } else {
 
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $indexes = $wpdb->get_results("SHOW INDEX FROM $table");
             $indexedColumns = [];
             foreach ($indexes as $index) {
@@ -47,9 +50,10 @@ class FunnelMetrics
             }
 
             if(!in_array('sequence_id', $indexedColumns)) {
+                // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
                 $indexSql = "ALTER TABLE {$table} ADD INDEX `sequence_id` (`sequence_id`),
                         ADD INDEX `status` (`status`);";
-
+                // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
                 $wpdb->query($indexSql);
             }
         }

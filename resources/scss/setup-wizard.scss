@@ -1,0 +1,300 @@
+@import "vendor";
+
+
+html {
+    * {
+        box-sizing: border-box;
+        padding: 0;
+        margin: 0;
+    }
+}
+
+.setup_container {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    overflow: scroll;
+    background: #f6f7f7;
+}
+
+body.fluentcrm-setup {
+    height: 100vh;
+    overflow: scroll;
+
+    .el-step__icon {
+        background: #f6f7f7;
+    }
+}
+
+.fluentcrm-setup {
+    width: 100%;
+    display: block;
+    min-height: 100vh;
+    background: #f6f7f7;
+    color: #50575e;
+    font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen-Sans, Ubuntu, Cantarell, Helvetica Neue, sans-serif;
+
+    .setup_wrapper {
+        max-width: 700px;
+        margin: 60px auto 24px;
+
+        .navigation {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+            clear: both;
+            color: #666;
+            font-size: 24px;
+            padding: 0;
+            padding-bottom: 7px;
+            font-weight: 400;
+
+            h1 {
+                font-size: 28px;
+            }
+        }
+
+        .setup_body {
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.13);
+            padding: 24px;
+            background: #fff;
+            overflow: hidden;
+            zoom: 1;
+
+            h3 {
+                margin: 0 0 24px;
+                border: 0;
+                padding: 0;
+                color: #666;
+                clear: none;
+                font-size: 24px;;
+                font-weight: 400;
+            }
+
+            p {
+                margin: 0 0 24px;
+                font-size: 1em;
+                line-height: 1.75em;
+                color: #666;
+            }
+
+            .section_heading {
+                padding-bottom: 10px;
+
+                h3 {
+                    margin: 0;
+                    padding: 0;
+                    color: black;
+                }
+
+                p {
+                    line-height: 140%;
+                }
+            }
+
+            .congrates {
+                .section_heading {
+                    border-bottom: 1px solid gray;
+                    text-align: center;
+                    padding-bottom: 0px;
+                    margin-bottom: 20px;
+
+                    h3 {
+                        margin-bottom: 10px;
+                    }
+
+                    p {
+                        line-height: 150%;
+                        margin-bottom: 0;
+                        padding-bottom: 0;
+                    }
+                }
+
+                .next_box {
+                    padding: 20px 40px;
+
+                    h4 {
+                        margin: 0 0 10px;
+                        font-size: 20px;
+                    }
+
+                    ul {
+                        margin: 0;
+                        list-style: disc;
+                        padding-left: 30px;
+
+                        li {
+                            line-height: 30px;
+                            font-size: 18px;
+                        }
+                    }
+                }
+            }
+
+            .suggest_box {
+                margin-bottom: 10px;
+                padding: 10px 20px;
+                border: 1px solid #66c33a;
+                border-radius: 5px;
+
+                &.email_optin label {
+                    font-weight: 500;
+                    display: block;
+                    margin-bottom: 10px;
+                }
+
+                &.share_essential {
+                    p {
+                        font-size: 13px;
+                        margin-bottom: 5px;
+
+                        span {
+                            text-decoration: underline;
+                            cursor: pointer;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    .pull-right {
+        float: right;
+    }
+
+    a.el-link {
+        color: #606266;
+        text-decoration: none;
+    }
+}
+
+.el-form-item__label {
+    line-height: 100%;
+    font-weight: 500;
+}
+
+.setup_footer {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid #c0c4cc;
+}
+
+table.fc_horizontal_table {
+    width: 100%;
+    background: white;
+    margin-bottom: 20px;
+    border-collapse: collapse;
+    border: 1px solid rgba(34, 36, 38, 0.15);
+    box-shadow: 0px 1px 2px 0 rgba(34, 36, 38, 0.15);
+    border-radius: 0.28571429rem;
+
+    tr {
+        td {
+            padding: 15px 10px 15px 15px;
+            border-top: 1px solid #dededf;
+            text-align: left;
+        }
+
+        th {
+            padding: 10px 10px 10px 15px;
+            border-top: 1px solid #dededf;
+            text-align: left;
+        }
+    }
+}
+
+.server_issues {
+    text-align: center;
+    margin: 30px 0px;
+    padding: 20px;
+    border: 2px solid red;
+    border-radius: 10px;
+    background: white;
+
+    h3 {
+        margin: 0px 0px 10px;
+    }
+
+    p {
+        margin: 0px 0px 10px;
+        line-height: 150%;
+    }
+}
+
+.el-notification__content {
+    text-align: left !important;
+}
+
+@media (min-width: 1100px) {
+    .fc_essential_modal {
+        .el-dialog {
+            top: 30%;
+            min-width: 600px !important;
+            border-radius: 0;
+            .dialog-footer {
+                padding-right: 20px;
+                padding-bottom: 20px;
+            }
+            .el-dialog__header {
+                padding-left: 20px;
+                border: none;
+                border-top-left-radius: 0;
+                border-top-right-radius: 0;
+            }
+        }
+    }
+}
+
+.el-dialog__wrapper {
+    @media all and (min-width: 1100px) {
+        .el-dialog {
+            min-width: 700px !important;
+        }
+    }
+    @media all and (max-width: 900px) {
+        .el-dialog {
+            min-width: 95% !important;
+        }
+    }
+}
+
+
+.el {
+    &-dialog.fc_essential_modal {
+        border-radius: 5px;
+        margin-top: 40px !important;
+
+        .el-dialog__header {
+            display: block;
+            overflow: hidden;
+            background: #f5f5f5 !important;
+            border: 1px solid #ddd !important;
+            padding: 10px;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+        }
+
+        .dialog-footer {
+            padding: 10px 10px 10px;
+            text-align: right;
+            box-sizing: border-box;
+            background: #f5f5f5 !important;
+            border-bottom-left-radius: 5px;
+            border-bottom-right-radius: 5px;
+            width: auto;
+            display: block;
+            margin: 0 -20px -20px;
+        }
+
+        &__body {
+            padding: 15px 20px 15px 20px;
+        }
+    }
+}

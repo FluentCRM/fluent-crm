@@ -205,7 +205,7 @@ class MailerLiteMigrator extends BaseMigrator
             $data = [
                 'email'      => $subscriber['email'],
                 'first_name' => $subscriber['name'],
-                'created_at' => date('Y-m-d H:i:s', strtotime($subscriber['date_created'])),
+                'created_at' => gmdate('Y-m-d H:i:s', strtotime($subscriber['date_created'])),
                 'source'     => 'MailerLite',
                 'status'     => 'subscribed',
                 'ip'         => $subscriber['signup_ip']
@@ -234,10 +234,7 @@ class MailerLiteMigrator extends BaseMigrator
             $contact = FluentCrmApi('contacts')->createOrUpdate($data);
 
             if ($contact && $contact->status != 'subscribed') {
-                $oldStatus = $contact->status;
-                $contact->status = 'subscribed';
-                $contact->save();
-                do_action('fluentcrm_subscriber_status_to_subscribed', $contact, $oldStatus);
+                $contact->updateStatus('subscribed');
             }
         }
 

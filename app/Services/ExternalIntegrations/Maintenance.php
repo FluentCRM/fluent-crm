@@ -45,6 +45,15 @@ class Maintenance
 
     private function isAllowed()
     {
+        /**
+         * Filter to allow sharing essential data in FluentCRM.
+         *
+         * This filter allows you to control whether essential data sharing is enabled in FluentCRM.
+         *
+         * @since 2.7.0
+         * 
+         * @param bool Whether to allow sharing essential data. Default is false.
+         */
         return apply_filters('fluent_crm/allow_share_essential', fluentcrm_get_option('_fluentcrm_share_essential', 'no') == 'yes');
     }
 

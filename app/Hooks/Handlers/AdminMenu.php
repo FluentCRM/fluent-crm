@@ -3,6 +3,7 @@
 namespace FluentCrm\App\Hooks\Handlers;
 
 use FluentCrm\App\Models\Lists;
+use FluentCrm\App\Models\Meta;
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\Tag;
 use FluentCrm\App\Services\Helper;
@@ -22,6 +23,8 @@ class AdminMenu
 {
     public $version = FLUENTCRM_PLUGIN_VERSION;
 
+    protected static $mainScriptLoaded = false;
+
     public function init()
     {
 
@@ -30,6 +33,10 @@ class AdminMenu
         if (isset($_GET['page']) && $_GET['page'] == 'fluentcrm-admin' && is_admin()) {
             $this->mayBeRedirect();
             $this->maybeInitExperimentalNavigation();
+
+            // Maybe we have to update the database tables
+            UpgradationHandler::maybeUpdateDbTables();
+
             add_action('admin_enqueue_scripts', array($this, 'loadAssets'), 1);
         }
 
@@ -50,9 +57,13 @@ class AdminMenu
             $isAdmin = true;
         }
 
+        $title = __('FluentCRM', 'fluent-crm');
+        if (defined('FLUENTCAMPAIGN')) {
+            $title = __('FluentCRM Pro', 'fluent-crm');
+        }
         add_menu_page(
-            __('FluentCRM', 'fluent-crm'),
-            __('FluentCRM', 'fluent-crm'),
+            $title,
+            $title,
             $dashboardPermission,
             'fluentcrm-admin',
             array($this, 'render'),
@@ -258,7 +269,28 @@ class AdminMenu
     {
         add_filter('admin_footer_text', function ($content) {
             $url = 'https://fluentcrm.com';
-            return sprintf(wp_kses(__('Thank you for using <a href="%s">FluentCRM</a>.', 'fluent-crm'), array('a' => array('href' => array()))), esc_url($url)) . '<span title="based on your WP timezone settings" style="margin-left: 10px;" data-timestamp="' . current_time('timestamp') . '" id="fc_server_timestamp"></span>';
+            $extraHtml = '';
+            if (!defined('DISABLE_WP_CRON')) {
+                $doc_url = 'https://fluentcrm.com/docs/fluentcrm-cron-job-basics-and-checklist/';
+                $extraHtml = ' ' . sprintf(
+                    wp_kses(
+                        /* translators: %1$s: Opening <a> tag linking to FluentCRM cron job docs. %2$s: Closing </a> tag. */
+                        __('Server-Side Cron Job is not enabled %1$sView Documentation%2$s.', 'fluent-crm'),
+                        array(
+                            'a' => array(
+                                'href'   => array(),
+                                'target' => array(),
+                                'rel'    => array(),
+                                'style'  => array(),
+                            )
+                        )
+                    ),
+                    '<a style="font-weight: 500;" target="_blank" rel="noopener" href="' . esc_url($doc_url) . '">',
+                    '</a>'
+                );
+            }
+            /* translators: %s: the FluentCRM website URL (used in the href of the link) */
+            return sprintf(wp_kses(__('Thank you for using <a href="%s">FluentCRM</a>.', 'fluent-crm'), array('a' => array('href' => array()))), esc_url($url)) . '<span title="based on your WP timezone settings" style="margin-left: 10px;" data-timestamp="' . current_time('timestamp') . '" id="fc_server_timestamp"></span>. ' . $extraHtml;
         });
 
         add_filter('update_footer', function ($text) {
@@ -269,7 +301,7 @@ class AdminMenu
         });
     }
 
-    public function getMenuItems($urlBase = false)
+    public function getMenuItems($urlBase = null)
     {
         if (!$urlBase) {
             $urlBase = fluentcrm_menu_url_base();
@@ -395,6 +427,15 @@ class AdminMenu
             ];
         }
 
+        /**
+         * Filters the core menu items for FluentCRM.
+         *
+         * This filter allows modification of the core menu items in the FluentCRM admin menu.
+         *
+         * @param array $menuItems The current menu items.
+         * @param array $permissions The permissions associated with the menu items.
+         * @return array The filtered menu items.
+         */
         $menuItems = apply_filters('fluent_crm/core_menu_items', $menuItems, $permissions);
 
         if (in_array('fcrm_manage_settings', $permissions)) {
@@ -422,8 +463,12 @@ class AdminMenu
         }
 
         /**
-         * Filter FluentCRM menu items
-         * @param array $menuItems
+         * Filter the menu items for FluentCRM.
+         *
+         * This filter allows modification of the menu items in the FluentCRM admin menu.
+         *
+         * @param array $menuItems An array of menu items for FluentCRM.
+         * @return array The filtered array of menu items.
          */
         return apply_filters('fluent_crm/menu_items', $menuItems);
 
@@ -444,7 +489,6 @@ class AdminMenu
         if (!isset($_GET['page']) || $_GET['page'] != 'fluentcrm-admin') {
             return;
         }
-
         /*
          * LearnPress loads all their JS weired way on every Admin Pages
          */
@@ -454,88 +498,58 @@ class AdminMenu
             });
         }
 
-        add_action('wp_print_scripts', function () {
-
-            $isSkip = apply_filters('fluent_crm/skip_no_conflict', false);
-
-            if ($isSkip) {
-                return;
-            }
-
-            global $wp_scripts;
-            if (!$wp_scripts) {
-                return;
-            }
-
-            $approvedSlugs = apply_filters('fluent_crm_asset_listed_slugs', [
-                '\/gutenberg\/'
-            ]);
-
-            $approvedSlugs[] = 'fluent-crm';
-
-            $approvedSlugs = array_unique($approvedSlugs);
-
-            $approvedSlugs = implode('|', $approvedSlugs);
-
-            $pluginUrl = plugins_url();
-
-            $pluginUrl = str_replace(['http:', 'https:'], '', $pluginUrl);
-
-            foreach ($wp_scripts->queue as $script) {
-                if (empty($wp_scripts->registered[$script]) || empty($wp_scripts->registered[$script]->src)) {
-                    continue;
-                }
-
-                $src = $wp_scripts->registered[$script]->src;
-                $isMatched = (strpos($src, $pluginUrl) !== false) && !preg_match('/' . $approvedSlugs . '/', $src);
-                if (!$isMatched) {
-                    continue;
-                }
-                wp_dequeue_script($wp_scripts->registered[$script]->handle);
-            }
-
-        });
-
         $this->loadCssJs();
     }
 
     public function loadCssJs()
     {
-        wp_enqueue_script('fluentcrm_global_admin.js', fluentCrmMix('admin/js/global_admin.js'), array('jquery', 'lodash'), $this->version);
+        $this->unloadOtherScripts();
 
-        $app = FluentCrm();
-
-        $this->emailBuilderBlockInit();
-
+        wp_enqueue_script('fluentcrm_global_admin', fluentCrmMix('admin/js/global_admin.js'), array('jquery'), $this->version);
         wp_enqueue_script('fluentcrm_admin_app_boot', fluentCrmMix('admin/js/boot.js'), array('moment'), $this->version);
+
+        // Ensure block editor styles are loaded
+        wp_enqueue_style('wp-block-editor');
+        
+        $this->emailBuilderBlockInit();
 
         /**
          * Action Hook when global admin scripts are loaded
          */
         do_action('fluent_crm/global_appjs_loaded');
 
+        $footerHook = 'admin_footer';
+        if (!is_admin()) {
+            $footerHook = 'wp_footer';
+        }
+
         if (Helper::isExperimentalEnabled('quick_contact_navigation')) {
             wp_enqueue_script('fluentcrm-contact_navigations', fluentCrmMix('admin/js/contact-navigations.js'), [], FLUENTCRM_PLUGIN_VERSION, true);
-            add_action('admin_footer', function () {
+            add_action($footerHook, function () {
                 echo '<div ref="fluent_contact_nav" id="fluent_contact_nav"><fluent-contact-nav v-if="appReady" @prev="goPrev()" @next="goNext()" :subscriber="subscriber"></fluent-contact-nav></div>';
             }, 99999);
         }
 
-        add_action('admin_footer', function () {
+        add_action($footerHook, function () {
             ?>
             <script>
-                if (_ && _.noConflict) {
-                    _.noConflict();
-                    console.log('noConflict lodash');
-                }
+                document.addEventListener('DOMContentLoaded', function () {
+                    if (_ && _.noConflict) {
+                        if (window._.each.length == 2) {
+                            window.lodash = _.noConflict();
+                            console.log('_.noConflict() Loaded');
+                        }
+                    }
+                });
             </script>
             <?php
         }, 99999);
 
         $this->loadCss();
 
-        wp_enqueue_script('fluentcrm-chartjs', fluentCrmMix('libs/chartjs/Chart.min.js'));
-        wp_enqueue_script('fluentcrm-vue-chartjs', fluentCrmMix('libs/chartjs/vue-chartjs.min.js'));
+        wp_enqueue_script('fluentcrm-chartjs', fluentCrmMix('libs/chartjs/Chart.min.js'), [], $this->version, true);
+        wp_enqueue_script('fluentcrm-vue-chartjs', fluentCrmMix('libs/chartjs/vue-chartjs.min.js'), [], $this->version, true);
+        wp_enqueue_script('dompurify', fluentCrmMix('libs/purify/purify.min.js'), [], $this->version, true);
 
         $inlineCss = Helper::generateThemePrefCss();
         wp_add_inline_style('fluentcrm_app_global', $inlineCss);
@@ -580,15 +594,49 @@ class AdminMenu
 
         $activatedFeatures = Helper::getActivatedFeatures();
 
+        $postTypes = get_post_types(['public' => true], 'objects');
+        unset($postTypes['attachment']);
+
+        $formattedPostTypes = [];
+
+        foreach ($postTypes as $postTypeName => $postType) {
+            $formattedPostTypes[] = [
+                'id'    => $postTypeName,
+                'title' => $postType->label
+            ];
+        }
+
+
         $data = array(
             'images_url'                          => fluentCrmMix('images'),
             'ajaxurl'                             => admin_url('admin-ajax.php'),
             'slug'                                => FLUENTCRM,
             'rest'                                => $this->getRestInfo($app),
+            /**
+             * Filters the list of countries in FluentCRM.
+             *
+             * This filter allows you to modify the list of countries used in the application.
+             *
+             * @param array An array of countries.
+             */
             'countries'                           => apply_filters('fluent_crm/countries', []),
             'contact_types'                       => fluentcrm_contact_types(),
             'purchase_providers'                  => Helper::getPurchaseHistoryProviders(),
+            /**
+             * Filters the form submission providers in FluentCRM.
+             *
+             * This filter allows you to modify the list of form submission providers.
+             *
+             * @param array An array of form submission providers.
+             */
             'form_submission_providers'           => apply_filters('fluent_crm/form_submission_providers', []),
+            /**
+             * Filters the list of support ticket providers in FluentCRM.
+             *
+             * This filter allows you to modify the array of support ticket providers.
+             *
+             * @param array An array of support ticket providers.
+             */
             'support_tickets_providers'           => apply_filters('fluentcrm-support_tickets_providers', []),
             'activity_types'                      => fluentcrm_activity_types(),
             'profile_sections'                    => Helper::getProfileSections(),
@@ -600,9 +648,24 @@ class AdminMenu
             'contact_custom_fields'               => fluentcrm_get_custom_contact_fields(),
             'server_time'                         => current_time('mysql'),
             'crm_pro_url'                         => 'https://fluentcrm.com/?utm_source=plugin&utm_medium=admin&utm_campaign=promo',
+            /**
+             * Determine if request verification is required in FluentCRM.
+             *
+             * This filter allows you to specify whether request verification is required.
+             * By default, it is set to false.
+             *
+             * @param bool Whether request verification is required. Default false.
+             */
             'require_verify_request'              => apply_filters('fluentcrm_is_require_verify', false),
             'trans'                               => TransStrings::getStrings(),
             'has_fluentsmtp'                      => defined('FLUENTMAIL'),
+            /**
+             * Determine if FluentMail suggestion should be disabled in FluentCRM.
+             *
+             * This filter allows customization of the FluentMail suggestion feature in FluentCRM.
+             *
+             * @return bool True if FluentMail suggestion is disabled, false otherwise.
+             */
             'disable_fluentmail_suggest'          => apply_filters('fluent_crm/fluentmail_suggest', defined('FLUENTMAIL')),
             'verified_senders'                    => $this->getVerifiedSenders(),
             'has_smart_link'                      => $this->hasSmartLink(),
@@ -618,6 +681,25 @@ class AdminMenu
             'icons'                               => [
                 'trigger_icon' => 'fc-icon-trigger',
             ],
+            /**
+             * Define the funnel category icons in FluentCRM.
+             *
+             * This filter allows you to change the icons used for different funnel categories in FluentCRM.
+             *
+             * @param array An associative array where the keys are funnel categories and the values are the corresponding icon classes.
+             *    Default categories and icons:
+             *    - 'wordpresstriggers'    => 'fc-icon-wordpress'
+             *    - 'woocommerce'          => 'fc-icon-woo'
+             *    - 'lifterlms'            => 'fc-icon-lifter_lms'
+             *    - 'easydigitaldownloads' => 'fc-icon-edd'
+             *    - 'learndash'            => 'fc-icon-learndash'
+             *    - 'memberpress'          => 'fc-icon-memberpress'
+             *    - 'paidmembershippro'    => 'fc-icon-paid_membership_pro'
+             *    - 'restrictcontentpro'   => 'fc-icon-restric_content'
+             *    - 'tutorlms'             => 'fc-icon-tutorlms'
+             *    - 'wishlistmember'       => 'fc-icon-wishlist'
+             *    - 'surecart'             => 'el-icon-shopping-cart-2'
+             */
             'funnel_cat_icons'                    => apply_filters('fluent_crm/funnel_icons', [
                 'wordpresstriggers'    => 'fc-icon-wordpress',
                 'woocommerce'          => 'fc-icon-woo',
@@ -629,32 +711,79 @@ class AdminMenu
                 'restrictcontentpro'   => 'fc-icon-restric_content',
                 'tutorlms'             => 'fc-icon-tutorlms',
                 'wishlistmember'       => 'fc-icon-wishlist',
-                'surecart'             => 'el-icon-shopping-cart-2'
+                'surecart'             => 'el-icon-shopping-cart-2',
+                'fluentforms'          => 'fc-icon-fluentforms'
             ]),
             'advanced_filter_options'             => Helper::getAdvancedFilterOptions(),
+            /**
+             * Modify the advanced filter suggestions in FluentCRM.
+             *
+             * This filter allows you to modify the suggestions provided for the advanced filter.
+             * @return array Modified array of suggestions for the advanced filter.
+             */
             'advanced_filter_suggestions'         => apply_filters('fluentcrm_advanced_filter_suggestions', []),
+            /**
+             * Define the commerce provider in FluentCRM.
+             *
+             * This filter allows you to change the commerce provider used in FluentCRM.
+             *
+             * @param string The current commerce provider. Default is an empty string.
+             */
             'commerce_provider'                   => apply_filters('fluentcrm_commerce_provider', ''),
+            /**
+             * Define the currency sign used in FluentCRM.
+             *
+             * This filter allows you to change the currency sign used in the FluentCRM plugin.
+             *
+             * @param string The current currency sign. Default is an empty string.
+             */
             'commerce_currency_sign'              => apply_filters('fluentcrm_currency_sign', ''),
             'disable_time_diff'                   => Helper::isExperimentalEnabled('classic_date_time'),
+            'wp_date_time_format'                 => $this->getDefaultDateTimeFormatForMoment(),
             'disable_ai'                          => Helper::isExperimentalEnabled('disable_visual_ai'),
             'app_version'                         => FLUENTCRM_PLUGIN_VERSION,
             'available_tags'                      => $formattedTags,
             'available_lists'                     => $formattedLists,
+            'available_funnel_label_colors'       => Helper::funnelLabelColors(),
             'available_contact_statuses'          => fluentcrm_subscriber_statuses(true),
             'available_contact_editable_statuses' => fluentcrm_subscriber_editable_statuses(true),
             'available_contact_types'             => fluentcrm_contact_types(true),
             'available_custom_fields'             => fluentcrm_get_option('contact_custom_fields', []),
             'contact_sample_csv'                  => fluentCrmMix('sample.csv'),
-            'global_email_footer'                 => Helper::getEmailFooterContent()
+            'global_email_footer'                 => Helper::getEmailFooterContent(),
+            'experimentals'                       => Helper::getExperimentalSettings(),
+            'publicPostTypes'                     => $formattedPostTypes,
+            'has_woo'                             => defined('WC_PLUGIN_FILE'),
+            'debugs'                              => [
+                '_fc_last_automation_processor' => get_option('_fc_last_funnel_processor_ran'),
+                '_fcrm_last_scheduler'          => fluentCrmGetOptionCache('_fcrm_last_scheduler')
+            ],
+            /**
+             * Determine the custom contact bulk actions in FluentCRM.
+             *
+             * This filter allows you to add or modify the bulk actions available for contacts in the FluentCRM admin interface.
+             *
+             * @param array An array of custom bulk actions for contacts.
+             */
+            'custom_contact_bulk_actions'         => apply_filters('fluent_crm/custom_contact_bulk_actions', [])
         );
 
         if (Arr::get($activatedFeatures, 'company_module')) {
             $data['company_categories'] = Helper::companyCategories();
             $data['company_types'] = Helper::companyTypes();
             $data['company_profile_sections'] = Helper::getCompanyProfileSections();
+            $data['company_custom_fields'] = fluentcrm_get_custom_company_fields();
         }
 
-        return $data;
+        /**
+         * Filter the admin variables for FluentCRM.
+         *
+         * This filter allows modification of the admin variables used in FluentCRM.
+         *
+         * @param array $data The array of admin variables.
+         * @return array The filtered array of admin variables.
+         */
+        return apply_filters('fluent_crm/admin_vars', $data);
     }
 
     public function loadCss()
@@ -670,7 +799,6 @@ class AdminMenu
 
         wp_enqueue_style('fluentcrm_admin_app', fluentCrmMix($adminAppCss), array(), $this->version);
         wp_enqueue_style('fluentcrm_app_global', fluentCrmMix($appGlobalCss), array(), $this->version);
-
     }
 
     protected function getRestInfo($app)
@@ -691,6 +819,9 @@ class AdminMenu
 
     public function emailBuilderBlockInit()
     {
+
+        wp_enqueue_script('underscore_js', includes_url('js/underscore.min.js'), [], '1.13.6', false);
+
         if (function_exists('wp_enqueue_media')) {
             // Editor default styles.
             add_filter('user_can_richedit', '__return_true');
@@ -716,6 +847,7 @@ class AdminMenu
             'wp-components',
             'wp-compose',
             'wp-data',
+            'wp-deprecated',
             'wp-dom',
             'wp-dom-ready',
             'wp-element',
@@ -726,14 +858,13 @@ class AdminMenu
             'wp-keyboard-shortcuts',
             'wp-keycodes',
             'wp-media-utils',
-            'wp-plugins',
-            'wp-polyfill',
+            'wp-preferences',
             'wp-primitives',
             'wp-rich-text',
             'wp-url'
         );
 
-        $version = '14ba519655f7064';
+        $version = FLUENTCRM_PLUGIN_VERSION;
 
         global $wp_version;
         if (version_compare($wp_version, '5.9') >= 0) {
@@ -743,28 +874,24 @@ class AdminMenu
             $dependencies[] = 'wp-editor';
         }
 
-        wp_enqueue_script($script_handle, fluentCrmMix($assetFolder . '/index.js'), $dependencies, $version);
+        wp_enqueue_script($script_handle, apply_filters('fluent_crm/block_editor_index_js_url', fluentCrmMix($assetFolder . '/index.js')), $dependencies, $version, true);
 
         if (defined('WC_PLUGIN_FILE')) {
             wp_enqueue_script(
                 'fc_block_woo_product',
-                fluentCrmMix($assetFolder . '/woo-product-index.js'),
+                apply_filters('fluent_crm/block_editor_woo_js_url', fluentCrmMix($assetFolder . '/woo-product-index.js')),
                 array(),
-                $version
+                $version,
+                true
             );
-//            wp_enqueue_script(
-//                'fc_block_product',
-//                fluentCrmMix($assetFolder . '/product-index.js'),
-//                array(),
-//                $version
-//            );
         }
 
         wp_enqueue_script(
             'fc_block_latest_post',
-            fluentCrmMix($assetFolder . '/latest-post-index.js'),
+            apply_filters('fluent_crm/block_editor_latest_post_js_url', fluentCrmMix($assetFolder . '/latest-post-index.js')),
             array(),
-            $version
+            $version,
+            true
         );
 
         // Inline the Editor Settings.
@@ -787,7 +914,7 @@ class AdminMenu
         // Styles.
         wp_enqueue_style(
             'fc_block_editor_styles', // Handle.
-            fluentCrmMix($css), // Block editor CSS.
+            apply_filters('fluent_crm/block_editor_css_url', fluentCrmMix($css)), // Block editor CSS.
             array('wp-edit-blocks'), // Dependency to include the CSS after it.
             $version
         );
@@ -795,13 +922,34 @@ class AdminMenu
 
     private function emailBuilderSettings()
     {
-        $coreSettings = get_block_editor_settings([], 'post');
+
+        if (class_exists('\WP_Block_Editor_Context')) {
+            $registery = new \WP_Block_Editor_Context([
+                'name' => 'fluent_crm_email'
+            ]);
+        } else {
+            $registery = 'post';
+        }
+
+        $coreSettings = get_block_editor_settings([], $registery);
+
         $wordpressCoreTypography = $coreSettings['__experimentalFeatures']['typography'];
         $coreExperimentalSpacing = $coreSettings['__experimentalFeatures']['spacing'];
 
         /**
-         * Filter for the email builder email sizes.
-         * @param array $sizes
+         * Filter the image size names for the FluentCRM Email Composer.
+         *
+         * This filter allows you to modify the list of image sizes that are available
+         * in the media library when selecting an image size.
+         *
+         * @param array {
+         *     An associative array of image size labels keyed by their size name.
+         *
+         * @type string $thumbnail Label for the thumbnail size.
+         * @type string $medium Label for the medium size.
+         * @type string $large Label for the large size.
+         * @type string $full Label for the full size.
+         * }
          */
         $image_size_names = apply_filters('image_size_names_choose', array(
                 'thumbnail' => __('Thumbnail', 'fluent-crm'),
@@ -855,8 +1003,18 @@ class AdminMenu
             $allowedBlocks[] = 'fluent-crm/products';
         }
 
+        /**
+         * Determine the allowed block types for FluentCRM.
+         *
+         * This filter allows you to modify the list of allowed block types in FluentCRM.
+         *
+         * @param array $allowedBlocks An array of allowed block types.
+         * @return array Modified array of allowed block types.
+         */
         $allowedBlocks = apply_filters('fluent_crm/allowed_block_types', $allowedBlocks);
         $themePref = Helper::getThemePrefScheme();
+
+        $color_palette = Helper::getThemeColorPalette();
 
         $settings = array(
             'gradients'                         => [],
@@ -879,19 +1037,20 @@ class AdminMenu
                     'background'       => true,
                     'customDuotone'    => false,
                     'defaultGradients' => false,
-                    'defaultPalette'   => false,
+                    'defaultPalette'   => true,
                     'duotone'          => [],
                     'gradients'        => [],
                     'link'             => false,
                     'palette'          => [
-                        'theme' => $themePref['colors']
+                        'theme' => $color_palette,
+                        'default' => $themePref['colors']
                     ],
                     'text'             => true
                 ],
                 'spacing'         => $coreExperimentalSpacing,
                 'typography'      => $wordpressCoreTypography,
                 'blocks'          => [
-                    'core/button' => [
+                    'core/button'    => [
                         'border'     => [
                             'radius' => true,
                             "style"  => true,
@@ -899,6 +1058,31 @@ class AdminMenu
                         ],
                         'typography' => [
                             'fontSizes' => []
+                        ]
+                    ],
+                    'core/paragraph' => [
+                        'spacing' => [
+                            'margin'  => false,
+                            'padding' => false
+                        ]
+                    ],
+                    'core/heading'   => [
+                        'spacing' => [
+                            'margin'  => false,
+                            'padding' => false
+                        ]
+                    ],
+                    'core/list-item'   => [
+                        'spacing' => [
+                            'margin'  => false
+                        ],
+                        'typography' => [
+                            'lineHeight' => true
+                        ]
+                    ],
+                    'core/image'   => [
+                        'spacing' => [
+                            'margin'  => false
                         ]
                     ]
                 ]
@@ -912,13 +1096,6 @@ class AdminMenu
             'enableCustomUnits'                 => false,
             'keepCaretInsideBlock'              => false,
         );
-
-        $color_palette = current((array)get_theme_support('editor-color-palette'));
-        if (false !== $color_palette) {
-            $settings['colors'] = $color_palette;
-        } else {
-            $settings['colors'] = [];
-        }
 
         $settings['fontSizes'] = Arr::get($themePref, 'font_sizes', []);
 
@@ -939,9 +1116,14 @@ class AdminMenu
                 $verifiedSenders = array_keys($smtpSettings['mappings']);
             }
         }
+
         /**
-         * Filter the verified email senders
-         * @param array $verifiedSenders
+         * Determine the list of verified email senders in FluentCRM.
+         *
+         * This filter allows modification of the array of verified email senders.
+         *
+         * @param array $verifiedSenders An array of verified email senders.
+         * @return array Filtered array of verified email senders.
          */
         return apply_filters('fluent_crm/verfied_email_senders', $verifiedSenders);
     }
@@ -956,6 +1138,7 @@ class AdminMenu
         $table_name = $wpdb->prefix . 'fc_smart_links';
         $query = $wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($table_name));
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
         if ($wpdb->get_var($query) == $table_name) {
             return true;
         }
@@ -1016,7 +1199,7 @@ class AdminMenu
                     bottom: 0;
                     background-color: #1e1e1e;
                     color: white;
-                    z-index: 999999;
+                    z-index: 1;
                 }
 
                 .fc-navigation-header a, .fc_backto_wp a {
@@ -1107,11 +1290,19 @@ class AdminMenu
 
                 .fc_hide_full_menu #adminmenu {
                     margin: 0;
-                    width: 200px;
+                    width: 160px;
+                }
+
+                .fc_hide_full_menu.sticky-menu #adminmenuwrap {
+                    position: relative;
+                }
+
+                .fc_hide_full_menu #wpbody {
+                    padding-left: 160px;
                 }
 
                 .fc_hide_full_menu #adminmenumain #adminmenuwrap {
-                    width: 200px;
+                    width: 160px;
                 }
 
                 .fc_hide_full_menu #adminmenumain .wp-submenu.wp-submenu-wrap {
@@ -1203,7 +1394,26 @@ class AdminMenu
                 unset($contactsMenu['companies']);
             }
 
-            $sideBarMenus = [
+            /**
+             * Define the full sidebar menu items for the FluentCRM admin menu.
+             *
+             * @param array {
+             *     An array of sidebar menu items.
+             *
+             * @type array $menu_item {
+             *         An array of individual menu item properties.
+             *
+             * @type string $key The unique key for the menu item.
+             * @type string $page_title The title of the page.
+             * @type string $menu_title The title of the menu item.
+             * @type string $capability The capability required to view the menu item.
+             * @type string $uri The URL for the menu item.
+             * @type bool $is_parent Whether the menu item has child items.
+             * @type array $children An array of child menu items.
+             * @param array $permissions An array of permissions for the current user.
+             */
+
+            $fullSideBarCoreMenus = [
                 [
                     'key'        => 'dashboard',
                     'page_title' => __('Dashboard', 'fluent-crm'),
@@ -1265,6 +1475,11 @@ class AdminMenu
                     'capability' => $dashboardPermission,
                     'uri'        => $urlBase . 'funnels'
                 ],
+            ];
+
+            $menuItems = apply_filters('fluent_crm/sidebar_core_menu_items', $fullSideBarCoreMenus, $permissions);
+
+            $otherSidebarMenus = [
                 [
                     'key'        => 'reports',
                     'page_title' => __('Reports', 'fluent-crm'),
@@ -1295,8 +1510,14 @@ class AdminMenu
                 ]
             ];
 
+            // now merge the core and other menus
+            $fullSideBarMenus = array_merge($menuItems, $otherSidebarMenus);
+
+            $fullSideBarMenus = apply_filters('fluent_crm/full_sidebar_menu_items', $fullSideBarMenus, $permissions);
+
             $app['view']->render('admin.experimental_menu', [
-                'menu_items' => apply_filters('fluent_crm/full_sidebar_menu_items', $sideBarMenus)
+                'menu_items' => $fullSideBarMenus,
+                'logo'       => Arr::get(fluentcrmGetGlobalSettings('business_settings', []), 'logo')
             ]);
 
         });
@@ -1348,5 +1569,159 @@ class AdminMenu
             </script>
             <?php
         }, 100);
+    }
+
+    private function getDefaultDateTimeFormatForMoment()
+    {
+
+        $phpFormat = get_option('date_format') . ' ' . get_option('time_format');
+
+        $replacements = [
+            'A' => 'A',      // for the sake of escaping below
+            'a' => 'a',      // for the sake of escaping below
+            'B' => '',       // Swatch internet time (.beats), no equivalent
+            'c' => 'YYYY-MM-DD[T]HH:mm:ssZ', // ISO 8601
+            'D' => 'ddd',
+            'd' => 'DD',
+            'e' => 'zz',     // deprecated since version 1.6.0 of moment.js
+            'F' => 'MMMM',
+            'G' => 'H',
+            'g' => 'h',
+            'H' => 'HH',
+            'h' => 'hh',
+            'I' => '',       // Daylight Saving Time? => moment().isDST();
+            'i' => 'mm',
+            'j' => 'D',
+            'L' => '',       // Leap year? => moment().isLeapYear();
+            'l' => 'dddd',
+            'M' => 'MMM',
+            'm' => 'MM',
+            'N' => 'E',
+            'n' => 'M',
+            'O' => 'ZZ',
+            'o' => 'YYYY',
+            'P' => 'Z',
+            'r' => 'ddd, DD MMM YYYY HH:mm:ss ZZ', // RFC 2822
+            'S' => 'o',
+            's' => 'ss',
+            'T' => 'z',      // deprecated since version 1.6.0 of moment.js
+            't' => '',       // days in the month => moment().daysInMonth();
+            'U' => 'X',
+            'u' => 'SSSSSS', // microseconds
+            'v' => 'SSS',    // milliseconds (from PHP 7.0.0)
+            'W' => 'W',      // for the sake of escaping below
+            'w' => 'e',
+            'Y' => 'YYYY',
+            'y' => 'YY',
+            'Z' => '',       // time zone offset in minutes => moment().zone();
+            'z' => 'DDD',
+        ];
+
+        // Converts escaped characters.
+        foreach ($replacements as $from => $to) {
+            $replacements['\\' . $from] = '[' . $from . ']';
+        }
+
+        $format = strtr($phpFormat, $replacements);
+
+        /**
+         * Determine the date and time format used in FluentCRM.
+         *
+         * This filter allows you to modify the date and time format used in FluentCRM.
+         *
+         * @param string $format The current date and time format.
+         * @return string The modified date and time format.
+         */
+        return apply_filters('fluent_crm/moment_date_time_format', $format);
+    }
+
+    private function unloadOtherScripts()
+    {
+        /**
+         * Determine whether to skip the no-conflict mode in FluentCRM.
+         *
+         * This filter allows you to skip the no-conflict mode by returning true.
+         * By default, it returns false, meaning the no-conflict mode is not skipped.
+         *
+         * @return bool Whether to skip the no-conflict mode. Default is false.
+         */
+        $isSkip = apply_filters('fluent_crm/skip_no_conflict', false);
+        if ($isSkip) {
+            return;
+        }
+
+        /**
+         * Define the list of approved slugs for FluentCRM assets.
+         *
+         * This filter allows modification of the list of slugs that are approved for FluentCRM assets.
+         *
+         * @param array $approvedSlugs An array of approved slugs for FluentCRM assets.
+         */
+        $approvedSlugs = apply_filters('fluent_crm_asset_listed_slugs', [
+            '\/gutenberg\/'
+        ]);
+        $approvedSlugs[] = 'fluent-crm';
+        $approvedSlugs = array_unique($approvedSlugs);
+        $approvedSlugs = implode('|', $approvedSlugs);
+
+        $pluginUrl = str_replace(['http:', 'https:'], '', plugins_url());
+
+        add_filter('script_loader_src', function ($src, $handle) use ($approvedSlugs, $pluginUrl) {
+            if (!$src) {
+                return $src;
+            }
+
+            if ($handle == 'underscore') {
+                return false;
+            }
+
+            $willSkip = (strpos($src, $pluginUrl) !== false) && !preg_match('/' . $approvedSlugs . '/', $src);
+            if ($willSkip) {
+                return false;
+            }
+            return $src;
+        }, 1, 2);
+
+        add_action('wp_print_scripts', function () {
+            global $wp_scripts;
+            if (!$wp_scripts) {
+                return;
+            }
+
+            /**
+             * Define the list of approved slugs for FluentCRM assets.
+             *
+             * This filter allows modification of the list of slugs that are approved for FluentCRM assets.
+             *
+             * @param array $approvedSlugs An array of approved slugs for FluentCRM assets.
+             */
+            $approvedSlugs = apply_filters('fluent_crm_asset_listed_slugs', [
+                '\/gutenberg\/'
+            ]);
+
+            $approvedSlugs[] = 'fluent-crm';
+
+            $approvedSlugs = array_unique($approvedSlugs);
+
+            $approvedSlugs = implode('|', $approvedSlugs);
+
+            $pluginUrl = plugins_url();
+
+            $pluginUrl = str_replace(['http:', 'https:'], '', $pluginUrl);
+
+            foreach ($wp_scripts->queue as $script) {
+                if (empty($wp_scripts->registered[$script]) || empty($wp_scripts->registered[$script]->src)) {
+                    continue;
+                }
+
+                $src = $wp_scripts->registered[$script]->src;
+                $isMatched = (strpos($src, $pluginUrl) !== false) && !preg_match('/' . $approvedSlugs . '/', $src);
+                if (!$isMatched) {
+                    continue;
+                }
+
+                wp_dequeue_script($wp_scripts->registered[$script]->handle);
+            }
+        }, 1);
     }
 }

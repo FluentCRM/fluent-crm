@@ -59,7 +59,7 @@ class MailChimpMigrator extends BaseMigrator
     public function getListTagMappings($postedData)
     {
         $api = $this->getApi($postedData['credential']);
-        $lists = $api->get('lists');
+        $lists = $api->get('lists', ['count' => 9999]);
         $formattedLists = [];
 
         foreach ($lists['lists'] as $list) {
@@ -80,7 +80,7 @@ class MailChimpMigrator extends BaseMigrator
         $settings = Arr::get($postedData, 'map_settings', []);
 
         if (!empty($settings['list_id'])) {
-            $tags = $api->get('lists/' . $settings['list_id'] . '/tag-search');
+            $tags = $api->get('lists/' . $settings['list_id'] . '/tag-search?count=9999');
             $formattedTags = [];
 
             foreach ($tags['tags'] as $tag) {
@@ -212,9 +212,9 @@ class MailChimpMigrator extends BaseMigrator
         $fieldMaps = Arr::get($postedData, 'contact_fields', []);
 
         foreach ($subscribers as $subscriber) {
-            $created_at = date('Y-m-d H:i:s');
+            $created_at = gmdate('Y-m-d H:i:s');
             if (!empty($subscriber['timestamp_signup'])) {
-                $created_at = date('Y-m-d H:i:s', strtotime($subscriber['timestamp_signup']));
+                $created_at = gmdate('Y-m-d H:i:s', strtotime($subscriber['timestamp_signup']));
             }
 
             $data = [
@@ -264,11 +264,7 @@ class MailChimpMigrator extends BaseMigrator
             $contact = FluentCrmApi('contacts')->createOrUpdate($data);
 
             if (isset($params['status']) && $params['status'] == 'subscribed' && $contact && $contact->status != 'subscribed') {
-                $oldStatus = $contact->status;
-                $contact->status = 'subscribed';
-                $contact->save();
-
-                do_action('fluentcrm_subscriber_status_to_subscribed', $contact, $oldStatus);
+                $contact->updateStatus('subscribed');
             }
 
         }

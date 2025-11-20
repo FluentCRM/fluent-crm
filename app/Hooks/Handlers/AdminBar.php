@@ -23,6 +23,11 @@ class AdminBar
     {
         $contactPermission = PermissionManager::currentUserCan('fcrm_read_contacts');
 
+        /**
+         * Determine whether the FluentCRM global search is enabled or not.
+         *
+         * @return bool False Default is false or disabled. 
+         */
         if ( !is_admin() || !$contactPermission || apply_filters('fluent_crm/disable_global_search', false) ) {
             return;
         }

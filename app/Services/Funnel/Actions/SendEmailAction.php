@@ -81,9 +81,9 @@ class SendEmailAction extends BaseAction
                     ]
                 ],
                 'campaign'           => [
-                    'label' => '',
+                    'label'         => '',
                     'wrapper_class' => 'fc_email_writer',
-                    'type'  => 'email_campaign_composer'
+                    'type'          => 'email_campaign_composer'
                 ],
                 'is_scheduled'       => [
                     'type'          => 'yes_no_check',
@@ -204,13 +204,15 @@ class SendEmailAction extends BaseAction
     {
         $settings = $sequence->settings;
         $refCampaign = Arr::get($settings, 'reference_campaign');
-        if (!$refCampaign) {
+
+        // We are making sure, this action will run only once per funnel subscriber
+        if (!$refCampaign || did_action('fluent_crm/did_run_' . $funnelSubscriberId)) {
             FunnelHelper::changeFunnelSubSequenceStatus($funnelSubscriberId, $sequence->id, 'skipped');
             return;
         }
 
+        do_action('fluent_crm/did_run_' . $funnelSubscriberId);
         $campaign = FunnelCampaign::find($refCampaign);
-
         if (!$campaign) {
             return;
         }
@@ -239,7 +241,6 @@ class SendEmailAction extends BaseAction
         ];
 
         if (Arr::get($settings, 'send_email_to_type') == 'contact') {
-
             $campaign->processAndSubscribe($subscriber, [
                 'funnel_subscriber_id' => $funnelSubscriberId
             ], $args);
@@ -247,6 +248,18 @@ class SendEmailAction extends BaseAction
             do_action('fluentcrm_process_contact_jobs', $subscriber);
         } else if ($customAddresses = Arr::get($settings, 'send_email_custom')) {
             $customAddresses = array_map('trim', explode(',', $customAddresses));
+            /**
+             * Filters and parses custom email addresses for a campaign email text.
+             *
+             * This code applies the 'fluent_crm/parse_campaign_email_text' filter to process
+             * the custom email addresses for a given subscriber.
+             *
+             * @param array $customAddresses The custom email addresses to be parsed.
+             * @param object $subscriber The subscriber object containing subscriber details.
+             *
+             * @return array The filtered and parsed custom email addresses.
+             */
+            $customAddresses = apply_filters('fluent_crm/parse_campaign_email_text', $customAddresses, $subscriber);
             $campaign->sendToCustomAddresses($customAddresses, $args, $subscriber);
         }
     }

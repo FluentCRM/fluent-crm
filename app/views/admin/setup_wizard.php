@@ -8,6 +8,7 @@
     <?php do_action('admin_head'); ?>
 </head>
     <body class="fluentcrm-setup wp-core-ui">
+
         <div id="fluentcrm_setup_wizard"></div>
         <?php
             wp_enqueue_media(); // add media
@@ -15,5 +16,13 @@
             do_action('admin_footer');
             wp_print_scripts('fluentcrm-setup');
         ?>
+
+        <script>
+            jQuery(document).ready(function ($) {
+                if (_ && _.noConflict) {
+                    _.noConflict();
+                }
+            });
+        </script>
     </body>
 </html>

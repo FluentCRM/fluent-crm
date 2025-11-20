@@ -27,7 +27,7 @@ class FluentFormSubmissionTrigger extends BaseTrigger
     public function getTrigger()
     {
         return [
-            'category'    => __('CRM', 'fluent-crm'),
+            'category'    => __('Fluent Forms', 'fluent-crm'),
             'label'       => __('New Form Submission (Fluent Forms)', 'fluent-crm'),
             'description' => __('This Funnel will be initiated when a new form submission has been submitted', 'fluent-crm'),
             'icon'        => 'fc-icon-fluentforms',
@@ -97,9 +97,18 @@ class FluentFormSubmissionTrigger extends BaseTrigger
                     'fields'             => $secondaryFields
                 ],
                 'subscription_status'      => [
-                    'type'        => 'option_selectors',
-                    'option_key'  => 'editable_statuses',
+                    'type'        => 'select',
                     'is_multiple' => false,
+                    'options' => [
+                        [
+                            'id' => 'subscribed',
+                            'title' => 'Subscribed'
+                        ],
+                        [
+                            'id' => 'pending',
+                            'title' => 'Pending'
+                        ]
+                    ],
                     'label'       => __('Subscription Status', 'fluent-crm'),
                     'placeholder' => __('Select Status', 'fluent-crm')
                 ],
@@ -133,6 +142,11 @@ class FluentFormSubmissionTrigger extends BaseTrigger
 
         $form = fluentCrmDb()->table('fluentform_forms')
             ->find($formId);
+
+        if(!$form) {
+            return [];
+        }
+
         $formFields = FormFieldsParser::getShortCodeInputs(
             $form, [
             'admin_label'

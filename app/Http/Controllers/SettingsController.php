@@ -3,8 +3,11 @@
 namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\Hooks\Handlers\ActivationHandler;
+use FluentCrm\App\Models\ActivityLog;
+use FluentCrm\App\Models\Campaign;
 use FluentCrm\App\Models\CampaignEmail;
 use FluentCrm\App\Models\CampaignUrlMetric;
+use FluentCrm\App\Models\SystemLog;
 use FluentCrm\App\Services\AutoSubscribe;
 use FluentCrm\App\Services\Helper;
 use FluentCrm\App\Services\RoleBasedTagging;
@@ -49,9 +52,9 @@ class SettingsController extends Controller
 
     public function save(Request $request)
     {
-        $settings = $request->get('settings');
+        $settings = (array)$request->get('settings', []);
 
-        $existingSettings = get_option(FLUENTCRM . '-global-settings');
+        $existingSettings = get_option('fluentcrm-global-settings');
 
         if (!$existingSettings) {
             $existingSettings = [];
@@ -71,7 +74,7 @@ class SettingsController extends Controller
         }
 
         update_option(
-            FLUENTCRM . '-global-settings', $existingSettings
+            'fluentcrm-global-settings', $existingSettings
         );
 
         return $this->sendSuccess([
@@ -81,19 +84,37 @@ class SettingsController extends Controller
 
     public function getDoubleOptinSettings(Request $request)
     {
-        $doubleOptinSettings = Helper::getDoubleOptinSettings();
-        if (empty($doubleOptinSettings['tag_based_redirect'])) {
-            $doubleOptinSettings['tag_based_redirect'] = 'no';
-            $doubleOptinSettings['tag_redirects'] = [
-                [
-                    'field_key'   => [],
-                    'field_value' => ''
-                ]
-            ];
+        //check if list id comes
+        $listId = $request->get('list_id', null);
+        $doubleOptinSettings = null;
+        //if list id sent then it is double optin setup of a list
+        if ($listId) {
+            $meta = fluentcrm_get_list_meta($listId, 'double_optin_settings');
+            $doubleOptinSettings = $meta ? $meta->value : null;
         }
+
+        //if no double optin setup of list found or this is global
+        if (!$doubleOptinSettings) {
+            $doubleOptinSettings = Helper::getDoubleOptinSettings();
+            if (empty($doubleOptinSettings['tag_based_redirect'])) {
+                $doubleOptinSettings['tag_based_redirect'] = 'no';
+                $doubleOptinSettings['tag_redirects'] = [
+                    [
+                        'field_key'   => [],
+                        'field_value' => ''
+                    ]
+                ];
+            }
+        }
+
         $data = [
             'settings' => $doubleOptinSettings
         ];
+
+        if ($listId) {
+            $globalDoubleOptin = fluentcrm_get_list_meta($listId, 'global_double_optin');
+            $data['global_double_optin'] = $globalDoubleOptin ? $globalDoubleOptin->value : 'yes';
+        }
 
         if (in_array('settings_fields', $request->get('with', []))) {
 
@@ -207,6 +228,8 @@ class SettingsController extends Controller
     public function saveDoubleOptinSettings(Request $request)
     {
         $settings = wp_unslash($request->get('settings'));
+        $listId = $request->get('list_id');
+        $globalDoubleOptin = sanitize_text_field($request->get('global_double_optin'));
 
         $this->validate($settings, [
             'email_subject'         => 'required',
@@ -230,7 +253,14 @@ class SettingsController extends Controller
             ]);
         }
 
-        fluentcrm_update_option('double_optin_settings', $settings);
+        if ($listId) {
+            fluentcrm_update_list_meta($listId, 'double_optin_settings', $settings);
+            if ($globalDoubleOptin) {
+                fluentcrm_update_list_meta($listId, 'global_double_optin', $globalDoubleOptin);
+            }
+        } else {
+            fluentcrm_update_option('double_optin_settings', $settings);
+        }
 
         return $this->sendSuccess([
                 'message' => __('Double Opt-in settings has been updated', 'fluent-crm')
@@ -284,6 +314,7 @@ class SettingsController extends Controller
 
         global $wpdb;
         foreach ($tables as $table) {
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
             $wpdb->query("DROP TABLE IF EXISTS " . $wpdb->prefix . $table);
         }
         // All tables are delete now let's run the migration
@@ -365,9 +396,40 @@ class SettingsController extends Controller
                 'input_title' => __('Elastic Email Bounce Handler Webhook URL', 'fluent-crm'),
                 'input_info'  => __('Please paste this URL into your Elastic Email\'s Webhook settings to enable Bounce Handling with FluentCRM', 'fluent-crm')
             ],
+            'postalserver' => [
+                'label'       => __('Postal Server', 'fluent-crm'),
+                'webhook_url' => get_rest_url(null, 'fluent-crm/v2/public/bounce_handler/postalserver/handle/' . $securityCode),
+                'doc_url'     => 'https://fluentcrm.com/docs/bounce-handling-with-postal-server/',
+                'input_title' => __('Postal Server Bounce Handler Webhook URL', 'fluent-crm'),
+                'input_info'  => __('Please paste this URL into your Postal Server\'s Webhook settings to enable Bounce Handling with FluentCRM. Please select only MessageBounced & MessageDeliveryFailed event', 'fluent-crm')
+            ],
+            'smtp2go'      => [
+                'label'       => 'SMTP2Go',
+                'webhook_url' => get_rest_url(null, 'fluent-crm/v2/public/bounce_handler/smtp2go/handle/' . $securityCode),
+                'doc_url'     => 'https://fluentcrm.com/docs/bounce-handling-with-smtp2go/',
+                'input_title' => 'SMTP2Go Bounce Handler Webhook URL',
+                'input_info'  => 'Please paste this URL into your SMTP2Go\'s Webhook settings to enable Bounce Handling with FluentCRM'
+            ],
+            'brevo'        => [
+                'label'       => __('Brevo (ex Sendinblue)', 'fluent-crm'),
+                'webhook_url' => get_rest_url(null, 'fluent-crm/v2/public/bounce_handler/brevo/handle/' . $securityCode),
+                'doc_url'     => 'https://fluentcrm.com/docs/bounce-handling-with-brevo/',
+                'input_title' => __('Brevo Bounce Handler Webhook URL', 'fluent-crm'),
+                'input_info'  => __('Please paste this URL into your Brevo\'s Webhook settings to enable Bounce Handling with FluentCRM', 'fluent-crm')
+            ],
         ];
 
         $data = [
+            /**
+             * Determine FluentCRM Bounce Handler settings.
+             *
+             * This filter allows modification of the bounce handler settings.
+             *
+             * @param array $bounceSettings The current bounce settings.
+             * @param string $securityCode The security code for the bounce handler.
+             * @since 2.5.95
+             *
+             */
             'bounce_settings' => apply_filters('fluent_crm/bounce_handlers', $bounceSettings, $securityCode)
         ];
 
@@ -439,6 +501,7 @@ class SettingsController extends Controller
         if (defined('WC_PLUGIN_FILE') && defined('FLUENTCAMPAIGN_DIR_FILE')) {
             $wooCheckoutSettings = $request->get('woo_checkout_settings');
             fluentcrm_update_option('woo_checkout_form_subscribe_settings', $wooCheckoutSettings);
+            fluentCrmSetCache('woo_checkout_form_subscribe_settings', $wooCheckoutSettings, 86400);
         }
 
         return [
@@ -448,37 +511,44 @@ class SettingsController extends Controller
 
     public function getCronStatus()
     {
+        $events = [];
 
-        $hookNames = [
-            'fluentcrm_scheduled_minute_tasks'      => __('Scheduled Email Sending', 'fluent-crm'),
-            'fluentcrm_scheduled_hourly_tasks'      => __('Scheduled Automation Tasks', 'fluent-crm'),
-            'fluentcrm_scheduled_five_minute_tasks' => __('Scheduled Email Processing', 'fluent-crm')
-        ];
+        $nextRun = Helper::getNextMinuteTaskTimeStamp();
 
-        $crons = _get_cron_array();
-        $events = array();
+        $events[] = (object)array(
+            'hook'       => 'fluentcrm_scheduled_every_minute_tasks',
+            'is_overdue' => (time() - $nextRun) > 30,
+            'human_name' => __('Scheduled Email Sending Tasks', 'fluent-crm'),
+            'next_run'   => human_time_diff($nextRun, time()),
+            'interval'   => 60
+        );
 
-        foreach ($crons as $time => $hooks) {
-            foreach ($hooks as $hook => $hook_events) {
-                if (!isset($hookNames[$hook])) {
-                    continue;
-                }
-                foreach ($hook_events as $sig => $data) {
-                    $events[] = (object)array(
-                        'hook'       => $hook,
-                        'human_name' => $hookNames[$hook],
-                        'next_run'   => human_time_diff($time, time()),
-                        'interval'   => $data['interval']
-                    );
-                }
-            }
-        }
+        $nextFiverMinutesRun = wp_next_scheduled('fluentcrm_scheduled_five_minute_tasks');
+        $events[] = (object)array(
+            'hook'       => 'fluentcrm_scheduled_hourly_tasks',
+            'is_overdue' => ($nextFiverMinutesRun - time()) < -60,
+            'human_name' => __('Scheduled Email Processing', 'fluent-crm'),
+            'next_run'   => human_time_diff($nextFiverMinutesRun, time()),
+            'interval'   => 300
+        );
+
+        $nextHourlyRun = wp_next_scheduled('fluentcrm_scheduled_hourly_tasks');
+        $events[] = (object)array(
+            'hook'       => 'fluentcrm_scheduled_hourly_tasks',
+            'is_overdue' => ($nextHourlyRun - time()) < -120,
+            'human_name' => __('Scheduled Automation Tasks', 'fluent-crm'),
+            'next_run'   => human_time_diff($nextHourlyRun, time()),
+            'interval'   => 3600
+        );
+
 
         return [
             'cron_events' => $events,
             'server'      => [
-                'memory_limit'  => ini_get('memory_limit'),
-                'usage_percent' => fluentCrmGetMemoryUsagePercentage()
+                'memory_limit'       => intval(fluentCrmGetMemoryLimit() / 1048576) . 'MB',
+                'usage_percent'      => fluentCrmGetMemoryUsagePercentage(),
+                'max_execution_time' => fluentCrmMaxRunTime() . ' seconds',
+                'has_server_cron'    => defined('DISABLE_WP_CRON') && DISABLE_WP_CRON
             ]
         ];
     }
@@ -487,9 +557,9 @@ class SettingsController extends Controller
     {
         $hookName = $request->get('hook');
         $hookNames = [
-            'fluentcrm_scheduled_minute_tasks'      => __('Scheduled Email Sending', 'fluent-crm'),
-            'fluentcrm_scheduled_hourly_tasks'      => __('Scheduled Automation Tasks', 'fluent-crm'),
-            'fluentcrm_scheduled_five_minute_tasks' => __('Scheduled Email Processing', 'fluent-crm')
+            'fluentcrm_scheduled_every_minute_tasks' => __('Scheduled Email Sending', 'fluent-crm'),
+            'fluentcrm_scheduled_hourly_tasks'       => __('Scheduled Automation Tasks', 'fluent-crm'),
+            'fluentcrm_scheduled_five_minute_tasks'  => __('Scheduled Email Processing', 'fluent-crm')
         ];
 
         if (!isset($hookNames[$hookName])) {
@@ -516,7 +586,7 @@ class SettingsController extends Controller
         $selectedLogs = $data['selected_logs'];
         $daysBefore = $data['days_before'];
 
-        $refDate = date('Y-m-d 00:00:01', time() - $daysBefore * 86400);
+        $refDate = gmdate('Y-m-d 00:00:01', time() - $daysBefore * 86400);
 
         $dataCounters = [];
         if (in_array('emails', $selectedLogs)) {
@@ -539,9 +609,25 @@ class SettingsController extends Controller
 
         if (in_array('email_open', $selectedLogs)) {
             $dataCounters[] = [
-                'title' => __('Email clicks', 'fluent-crm'),
+                'title' => __('Email Opens', 'fluent-crm'),
                 'count' => CampaignUrlMetric::where('type', 'open')
                     ->where('created_at', '<', $refDate)
+                    ->count()
+            ];
+        }
+
+        if (in_array('system_logs', $selectedLogs)) {
+            $dataCounters[] = [
+                'title' => __('System Logs', 'fluent-crm'),
+                'count' => SystemLog::where('created_at', '<', $refDate)
+                    ->count()
+            ];
+        }
+
+        if (in_array('activity_logs', $selectedLogs)) {
+            $dataCounters[] = [
+                'title' => __('Activity Logs', 'fluent-crm'),
+                'count' => ActivityLog::where('created_at', '<', $refDate)
                     ->count()
             ];
         }
@@ -562,12 +648,31 @@ class SettingsController extends Controller
         $selectedLogs = $data['selected_logs'];
         $daysBefore = $data['days_before'];
 
-        $refDate = date('Y-m-d 00:00:01', time() - $daysBefore * 86400);
+        $perChunk = 10000; // Deleting 10,000 per chunk
+        $hasMore = false;
+
+        $refDate = gmdate('Y-m-d 00:00:01', time() - $daysBefore * 86400);
         if (in_array('emails', $selectedLogs)) {
+
+            $campaignIds = CampaignEmail::where('created_at', '<', $refDate)
+                ->where('status', 'sent')
+                ->groupBy('campaign_id')
+                ->pluck('campaign_id');
+
+            foreach ($campaignIds->toArray() as $campaignId) {
+                fluentcrm_update_campaign_meta($campaignId, '_data_trunked', 'yes');
+            }
+
             CampaignEmail::where('created_at', '<', $refDate)
                 ->where('status', 'sent')
+                ->limit($perChunk)
                 ->delete();
+
+            $hasMore = CampaignEmail::where('created_at', '<', $refDate)
+                ->where('status', 'sent')
+                ->exists();
         }
+
         $urlMetricsTypes = [];
         if (in_array('email_clicks', $selectedLogs)) {
             $urlMetricsTypes[] = 'click';
@@ -579,11 +684,93 @@ class SettingsController extends Controller
         if ($urlMetricsTypes) {
             CampaignUrlMetric::whereIn('type', $urlMetricsTypes)
                 ->where('created_at', '<', $refDate)
+                ->limit($perChunk)
                 ->delete();
+
+            if (!$hasMore) {
+                $hasMore = CampaignUrlMetric::whereIn('type', $urlMetricsTypes)
+                    ->where('created_at', '<', $refDate)
+                    ->exists();
+            }
+
+        }
+
+        if (in_array('system_logs', $selectedLogs)) {
+            SystemLog::where('created_at', '<', $refDate)
+                ->limit($perChunk)
+                ->delete();
+
+            if (!$hasMore) {
+                $hasMore = SystemLog::where('created_at', '<', $refDate)
+                    ->exists();
+            }
+
+        }
+
+        if (in_array('activity_logs', $selectedLogs)) {
+            ActivityLog::where('created_at', '<', $refDate)
+                ->limit($perChunk)
+                ->delete();
+
+            if (!$hasMore) {
+                $hasMore = ActivityLog::where('created_at', '<', $refDate)
+                    ->exists();
+            }
+
         }
 
         return [
-            'message' => sprintf(__('Logs older than %d days have been deleted successfully', 'fluent-crm'), $daysBefore)
+            /* translators: %d is the number of days; used to indicate how old the deleted logs were. */
+            'message'  => sprintf(__('Logs older than %d days have been deleted successfully', 'fluent-crm'), $daysBefore),
+            'has_more' => $hasMore
+        ];
+    }
+
+    public function deleteRestKey(Request $request)
+    {
+        $data = $request->all();
+        $this->validate($data, [
+            'user_id' => 'required',
+            'uuid'    => 'required'
+        ]);
+
+        $data['user_id'] = intval($data['user_id']);
+        $data['uuid'] = sanitize_text_field($data['uuid']);
+
+        if (!get_user_meta($data['user_id'], '_fcrm_has_role', true)) {
+            return $this->sendError([
+                'message' => __('Sorry, the provided user does not have FluentCRM access', 'fluent-crm')
+            ]);
+        }
+
+        if (!current_user_can('manage_options')) {
+            return $this->sendError([
+                'message' => __('Sorry, You do not have permission to delete REST API', 'fluent-crm')
+            ]);
+        }
+
+        $deleted = \WP_Application_Passwords::delete_application_password($data['user_id'], $data['uuid']);
+
+        if ($deleted) {
+            $applicationUsers = fluentcrm_get_option('_rest_api_users', []);
+
+            foreach ($applicationUsers[$data['user_id']] as $index => $uuid) {
+                if ($uuid == $data['uuid']) {
+                    array_splice($applicationUsers[$data['user_id']], $index, 1);
+                }
+            }
+
+            fluentcrm_update_option('_rest_api_users', $applicationUsers);
+        }
+
+        if (!$deleted) {
+            return $this->sendError([
+                'message' => __('Something is wrong', 'fluent-crm')
+            ]);
+        }
+
+        return [
+            'message' => __('API Key has been successfully deleted', 'fluent-crm')
         ];
     }
 
@@ -629,8 +816,9 @@ class SettingsController extends Controller
                 foreach ($passwords as $password) {
                     if (in_array($password['uuid'], $applicationUUIDs)) {
                         $crmApps[] = [
+                            'uuid'    => $password['uuid'],
                             'name'    => $password['name'],
-                            'created' => date('Y-m-d H:i:s', $password['created'])
+                            'created' => gmdate('Y-m-d H:i:s', $password['created'])
                         ];
                     }
                 }
@@ -731,6 +919,16 @@ class SettingsController extends Controller
     {
         $withFields = in_array('fields', $request->get('with', []));
 
+        /**
+         * Determine the deep integration providers for FluentCRM.
+         *
+         * This filter allows modification of the deep integration providers used in FluentCRM such as Woocommerce, Easy Digital Downloads, etc.
+         *
+         * @param array An array of deep integration providers.
+         * @param bool $withFields Whether to include fields in the integration providers.
+         * @since 2.5.1
+         *
+         */
         $deepIntegrationProviders = apply_filters('fluentcrm_deep_integration_providers', [], $withFields);
 
         return [
@@ -745,8 +943,28 @@ class SettingsController extends Controller
         $data = $request->all();
 
         if ($action == 'sync') {
+            /**
+             * Determine whether to allow deep integration sync for a specific provider.
+             *
+             * This filter allows you to modify the result of the deep integration sync for a given provider.
+             *
+             * @param mixed  The result of the integration sync. Default false. Expected to be a boolean.
+             * @param array $data The data to be synced.
+             * @since 2.5.1
+             *
+             */
             $result = apply_filters('fluentcrm_deep_integration_sync_' . $provider, false, $data);
         } else {
+            /**
+             * Determine the result of saving deep integration settings for a specific provider.
+             *
+             * The dynamic portion of the hook name, `$provider`, refers to the specific integration provider.
+             *
+             * @param mixed  The result of the save operation. Default false. Expected to be a boolean.
+             * @param array $data The data being saved.
+             * @since 2.5.1
+             *
+             */
             $result = apply_filters('fluentcrm_deep_integration_save_' . $provider, false, $data);
         }
 
@@ -779,10 +997,14 @@ class SettingsController extends Controller
             $data[$key] = sanitize_text_field($datum);
         }
 
-        update_option('_fluentcrm_compliance_settings', $data, 'no');
+        $result = update_option('_fluentcrm_compliance_settings', $data, 'no');
+
+        if ($result) {
+            do_action('fluent_crm/sync_subscriber_delete_setting', 'compliance_settings', $data['delete_contact_on_user']);
+        }
 
         return [
-            'message'  => __('Settings has been successfully updated'),
+            'message'  => __('Settings has been successfully updated', 'fluent-crm'),
             'settings' => $data
         ];
     }
@@ -800,18 +1022,41 @@ class SettingsController extends Controller
         $data = Arr::only($request->all(), array_keys(Helper::getExperimentalSettings()));
 
         foreach ($data as $key => $datum) {
-            $data[$key] = sanitize_text_field($datum);
+            if ($key === 'campaign_ids' && is_array($datum)) {
+                $data[$key] = array_map('intval', $datum);
+            } else {
+                $data[$key] = sanitize_text_field($datum);
+            }
         }
 
         if (Arr::get($data, 'company_module') == 'yes') {
-            require_once(FLUENTCRM_PLUGIN_PATH.'database/migrations/CompaniesMigrator.php');
+            require_once(FLUENTCRM_PLUGIN_PATH . 'database/migrations/CompaniesMigrator.php');
             \FluentCrmMigrations\CompaniesMigrator::migrate();
         }
 
-        update_option('_fluentcrm_experimental_settings', $data, 'no');
+        if (Arr::get($data, 'event_tracking') == 'yes') {
+            require_once(FLUENTCRM_PLUGIN_PATH . 'database/migrations/SubscriberEventTracking.php');
+            \FluentCrmMigrations\SubscriberEventTracking::migrate();
+        }
+
+        if (Arr::get($data, 'activity_log') == 'yes') {
+            require_once(FLUENTCRM_PLUGIN_PATH . 'database/migrations/ActivityLogsMigrator.php');
+            \FluentCrmMigrations\ActivityLogsMigrator::migrate();
+        }
+
+        update_option('_fluentcrm_experimental_settings', $data, 'yes');
 
         return [
             'message' => __('Settings has been updated', 'fluent-crm')
+        ];
+    }
+
+    public function getCampaigns(Request $request)
+    {
+        $campaigns = Campaign::orderBy('id', 'DESC')->get();
+
+        return [
+            'campaigns' => $campaigns
         ];
     }
 

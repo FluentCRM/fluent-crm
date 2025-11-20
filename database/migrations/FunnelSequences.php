@@ -20,7 +20,9 @@ class FunnelSequences
 
         $indexPrefix = $wpdb->prefix . 'fc_fq_';
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $sql = "CREATE TABLE $table (
                 `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
                 `funnel_id` BIGINT UNSIGNED NULL,
@@ -52,9 +54,11 @@ class FunnelSequences
             $sequenceTable = $wpdb->prefix.'fc_funnel_sequences';
             $isMigrated = $wpdb->get_col($wpdb->prepare("SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND COLUMN_NAME='parent_id' AND TABLE_NAME=%s", $sequenceTable));
             if(!$isMigrated) {
+                // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
                 $wpdb->query("ALTER TABLE {$sequenceTable} ADD COLUMN `parent_id` bigint NOT NULL DEFAULT '0', ADD `condition_type` varchar(192) NULL AFTER `parent_id`");
             }
 
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $indexes = $wpdb->get_results("SHOW INDEX FROM $table");
             $indexedColumns = [];
             foreach ($indexes as $index) {
@@ -62,10 +66,11 @@ class FunnelSequences
             }
 
             if(!in_array('action_name', $indexedColumns)) {
+                // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
                 $indexSql = "ALTER TABLE {$table} ADD INDEX `c_delay` (`c_delay`),
                         ADD INDEX `sequence` (`sequence`),
                         ADD INDEX `action_name` (`action_name`);";
-
+                // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
                 $wpdb->query($indexSql);
             }
         }

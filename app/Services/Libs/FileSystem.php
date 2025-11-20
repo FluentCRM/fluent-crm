@@ -83,7 +83,7 @@ class FileSystem
         foreach ($files as $file) {
             $arr = explode('/', $file);
             $fileName = end($arr);
-            @unlink($this->getDir() . '/' . $fileName);
+            wp_delete_file($this->getDir() . '/' . $fileName);
         }
     }
 
@@ -120,7 +120,8 @@ class FileSystem
         $param['path'] = $param['basedir'] . $fluentCrmUploadDir;
 
         if (!is_dir($param['path'])) {
-             mkdir($param['path'], 0755);
+            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir
+            mkdir($param['path'], 0755);
              file_put_contents(
                  $param['basedir'].$fluentCrmUploadDir.'/.htaccess',
                  file_get_contents(__DIR__.'/Stubs/htaccess.stub')

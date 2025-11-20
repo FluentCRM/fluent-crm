@@ -30,6 +30,8 @@ class CompanyNote extends Model
 
     public static function boot()
     {
+        parent::boot();
+
         static::creating(function ($model) {
             if(empty($model->created_at)) {
                 $model->created_at = fluentCrmTimestamp();
@@ -46,7 +48,7 @@ class CompanyNote extends Model
         });
 
         static::addGlobalScope('status', function ($builder) {
-            $builder->where('status', '_company_note_');
+            $builder->where('status', '_company_note_'); // This disguised the Company Note from SubscriberNote
         });
     }
     /**

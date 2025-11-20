@@ -2,7 +2,9 @@
 
 namespace FluentCrm\App\Services\Libs\Parser;
 
+use FluentCart\App\Services\ShortCodeParser\SmartCodeParser;
 use FluentCrm\App\Models\Subscriber;
+use FluentCrm\App\Services\Helper;
 use FluentCrm\Framework\Support\Arr;
 
 class ShortcodeParser
@@ -89,7 +91,6 @@ class ShortcodeParser
 
         $matched = explode('.', $matches[2]);
 
-
         if (count($matched) <= 1) {
             return apply_filters('fluentcrm_smartcode_fallback', $matches[0], $subscriber);
         }
@@ -115,6 +116,10 @@ class ShortcodeParser
             $transformer = trim($valueKeys[2]);
         } else if ($valueCounts === 2) {
             $defaultValue = trim($valueKeys[1]);
+        }
+
+        if (!$subscriber) {
+            return $defaultValue;
         }
 
         $value = '';
@@ -208,17 +213,17 @@ class ShortcodeParser
                     'fluentcrm'   => 1,
                     'route'       => 'unsubscribe',
                     'ce_id'       => $subscriber->email_id,
-                    'secure_hash' => fluentCrmGetContactSecureHash($subscriber->id)
+                    'secure_hash' => fluentCrmGetContactManagedHash($subscriber->id)
                 ]), site_url('/'));
             case "manage_subscription_url":
                 return add_query_arg(array_filter([
                     'fluentcrm'   => 1,
                     'route'       => 'manage_subscription',
                     'ce_id'       => $subscriber->id,
-                    'secure_hash' => fluentCrmGetContactSecureHash($subscriber->id)
+                    'secure_hash' => fluentCrmGetContactManagedHash($subscriber->id)
                 ]), site_url('/'));
             case "unsubscribe_html":
-                if ($defaultValue) {
+                if (!$defaultValue) {
                     $defaultValue = __('Unsubscribe', 'fluent-crm');
                 }
 
@@ -226,12 +231,12 @@ class ShortcodeParser
                     'fluentcrm'   => 1,
                     'route'       => 'unsubscribe',
                     'ce_id'       => $subscriber->email_id,
-                    'secure_hash' => fluentCrmGetContactSecureHash($subscriber->id)
+                    'secure_hash' => fluentCrmGetContactManagedHash($subscriber->id)
                 ]), site_url('/'));
 
                 return '<a class="fc_unsub_url" href="' . $url . '">' . $defaultValue . '</a>';
             case "manage_subscription_html":
-                if ($defaultValue) {
+                if (!$defaultValue) {
                     $defaultValue = __('Email Preference', 'fluent-crm');
                 }
 
@@ -239,7 +244,7 @@ class ShortcodeParser
                     'fluentcrm'   => 1,
                     'route'       => 'manage_subscription',
                     'ce_id'       => $subscriber->id,
-                    'secure_hash' => fluentCrmGetContactSecureHash($subscriber->id)
+                    'secure_hash' => fluentCrmGetContactManagedHash($subscriber->id)
                 ]), site_url('/'));
 
                 return '<a class="fc_msub_url" href="' . $url . '">' . $defaultValue . '</a>';
@@ -247,13 +252,13 @@ class ShortcodeParser
                 if (!$defaultValue) {
                     $defaultValue = __('Confirm Subscription', 'fluent-crm');
                 }
-                $data = $subscriber->toArray();
                 $url = add_query_arg(array_filter([
                     'fluentcrm'   => 1,
                     'route'       => 'confirmation',
-                    's_id'        => $data['id'],
-                    'secure_hash' => fluentCrmGetContactSecureHash($subscriber->id)
+                    'hash'        => $subscriber->hash,
+                    'secure_hash' => $subscriber->getSecureHash()
                 ]), site_url('/'));
+
                 return '<a style="color: #ffffff; background-color: #454545; font-size: 16px; border-radius: 5px; text-decoration: none; font-weight: normal; font-style: normal; padding: 0.8rem 1rem; border-color: #0072ff;" href="' . $url . '">' . $defaultValue . '</a>';
             case "business_name":
                 $business = fluentcrmGetGlobalSettings('business_settings', []);
@@ -271,7 +276,7 @@ class ShortcodeParser
     protected function getSubscriberValue($subscriber, $valueKey, $defaultValue)
     {
         if (!$subscriber || !$subscriber instanceof Subscriber) {
-            return ''; // We don't have subscriber
+            return $defaultValue; // We don't have subscriber
         }
 
         $valueKeys = explode('.', $valueKey);
@@ -284,6 +289,7 @@ class ShortcodeParser
             }
 
             $value = Arr::get($data, $valueKey);
+
             return ($value) ? $value : $defaultValue;
         }
 
@@ -291,20 +297,105 @@ class ShortcodeParser
         $customProperty = $valueKeys[1];
 
         if ($customKey == 'custom') {
+            $existingCustomFields = fluentcrm_get_custom_contact_fields();
             $customValues = $subscriber->custom_fields();
+
             $value = Arr::get($customValues, $customProperty, $defaultValue);
             if (is_array($value)) {
                 return implode(', ', $value);
             }
 
             $multiLines = preg_split("/\r\n|\n|\r/", $value);
-            if ($multiLines && is_array($multiLines)) {
-                return implode('<br/> ', $multiLines);
-            }
 
-            if ($value) {
+            if (!$multiLines) {
                 return $value;
             }
+
+            $formattedValue = implode('<br/> ', $multiLines);
+
+            // Find the custom field
+            $fieldKeys = array_column($existingCustomFields, 'slug');
+            $customFieldIndex = array_search($customProperty, $fieldKeys);
+
+            if ($customFieldIndex === false) {
+                return $formattedValue;
+            }
+
+            $matchedObject = $existingCustomFields[$customFieldIndex];
+
+            // Format date or date_time fields
+            $timestamp = strtotime($formattedValue);
+
+            if ($timestamp && in_array($matchedObject['type'], ['date', 'date_time'])) {
+                $date_format = get_option('date_format');
+
+                if ($matchedObject['type'] === 'date_time') {
+                    $time_format = get_option('time_format');
+                    $date_format .= ' ' . $time_format; // Append time format
+                }
+
+                $formattedValue = date_i18n($date_format, $timestamp);
+            }
+//            $formattedValue =  htmlspecialchars($formattedValue, ENT_QUOTES, 'UTF-8');
+            return $formattedValue;
+        }
+
+        if ($customKey == 'company') {
+            if (!Helper::isCompanyEnabled()) {
+                return $defaultValue;
+            }
+
+            $company = $subscriber->company;
+            if (!$company) {
+                return $defaultValue;
+            }
+
+            if ($customProperty == 'address') {
+                $address = array_filter([
+                    $company->address_line_1,
+                    $company->address_line_2,
+                    $company->city,
+                    $company->state,
+                    $company->postal_code,
+                    $company->country
+                ]);
+
+                if (!$address) {
+                    return $defaultValue;
+                }
+
+                return implode(', ', $address);
+            }
+
+            $acceptedFields = [
+                'name',
+                'industry',
+                'email',
+                'timezone',
+                'address_line_1',
+                'address_line_2',
+                'postal_code',
+                'city',
+                'state',
+                'country',
+                'employees_number',
+                'description',
+                'phone',
+                'logo',
+                'website',
+                'linkedin_url',
+                'twitter_url',
+                'facebook_url',
+                'date_of_start',
+            ];
+
+            if (!in_array($customProperty, $acceptedFields)) {
+                return $defaultValue;
+            }
+
+            $companyValue = $company->{$customProperty};
+
+            return ($companyValue) ? $companyValue : $defaultValue;
         }
 
         if ($customKey == 'tags') {
@@ -328,6 +419,10 @@ class ShortcodeParser
         } else if ($customKey == 'meta') {
             if ($customProperty == '_secure_hash') {
                 return fluentCrmGetContactSecureHash($subscriber->id);
+            }
+
+            if ($customKey == '_secure_managed_hash') {
+                return fluentCrmGetContactManagedHash($subscriber->id);
             }
         }
 
@@ -408,46 +503,63 @@ class ShortcodeParser
             return $defaultValue;
         }
 
-        if($key == 'latest_post') {
+        if ($key == 'latest_post') {
             // get latest post title
             $posts = get_posts([
-                'post_type' => 'post',
-                'post_status' => 'publish',
-                'posts_per_page' => 1,
-                'orderby' => 'date',
-                'order' => 'DESC',
+                'post_type'           => 'post',
+                'post_status'         => 'publish',
+                'posts_per_page'      => 1,
+                'orderby'             => 'date',
+                'order'               => 'DESC',
                 'ignore_sticky_posts' => 1
             ]);
 
-            if(!count($posts)) {
+            if (!count($posts)) {
                 return $defaultValue;
             }
 
             $post = $posts[0];
 
-            if($otherKey == 'title') {
+            if ($otherKey == 'title') {
                 return $post->post_title;
             }
 
-            if($otherKey == 'content') {
+            if ($otherKey == 'content') {
                 return get_the_content(null, false, $post);
             }
 
-            if($otherKey == 'excerpt') {
+            if ($otherKey == 'excerpt') {
                 return get_the_excerpt($post);
             }
 
             return $post->post_title;
         }
 
-        if($key == 'date_format') {
+        if ($key == 'date_format') {
             array_shift($valueKeys);
-            $dateKey = implode('.', $valueKeys);
-            return date($dateKey, current_time('timestamp'));
+            $formatKey = implode('.', $valueKeys);
+
+            if (!$formatKey) {
+                $formatKey = get_option('date_format');
+            }
+
+            return date_i18n($formatKey, current_time('timestamp'));
         }
 
         if ($key == 'date') {
-            return date_i18n(get_option('date_format'), strtotime($otherKey));
+            array_shift($valueKeys);
+            array_shift($valueKeys);
+            $formatKey = implode('.', $valueKeys);
+
+            if (!$formatKey) {
+                $formatKey = get_option('date_format');
+            }
+
+            $timeStamp = strtotime($otherKey);
+
+            $timeStamp += (int)(get_option('gmt_offset') * HOUR_IN_SECONDS);
+
+            return date_i18n($formatKey, $timeStamp);
         }
 
         return $defaultValue;

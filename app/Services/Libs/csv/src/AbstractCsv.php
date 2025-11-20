@@ -121,6 +121,7 @@ abstract class AbstractCsv implements JsonSerializable, IteratorAggregate
      *
      * @return SplFileObject
      */
+    #[\ReturnTypeWillChange]
     public function getIterator()
     {
         $iterator = $this->path;
@@ -245,6 +246,7 @@ abstract class AbstractCsv implements JsonSerializable, IteratorAggregate
     public static function createFromString($str, $newline = "\n")
     {
         $file = new SplTempFileObject();
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
         $file->fwrite(static::validateString($str));
 
         $csv = static::createFromFileObject($file);
@@ -314,6 +316,7 @@ abstract class AbstractCsv implements JsonSerializable, IteratorAggregate
     protected function filterInteger($int, $minValue, $errorMessage)
     {
         if (false === ($int = filter_var($int, FILTER_VALIDATE_INT, ['options' => ['min_range' => $minValue]]))) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
             throw new InvalidArgumentException($errorMessage);
         }
 

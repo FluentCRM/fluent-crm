@@ -29,6 +29,21 @@ class PurchaseHistoryController extends Controller
         $subscriberId = $this->request->getSafe('id', 'intval');
         $subscriber = Subscriber::findOrFail($subscriberId);
 
+        /**
+         * Determine the purchase history data for a specific provider in FluentCRM.
+         *
+         * The dynamic portion of the hook name, `$provider`, refers to the purchase history provider.
+         *
+         * @since 1.0.0
+         *
+         * @param array {
+         *     The purchase history data.
+         *
+         *     @type array $orders List of orders.
+         *     @type int   $total  Total number of orders.
+         * }
+         * @param object $subscriber The subscriber object.
+         */
         $data = apply_filters('fluent_crm/purchase_history_'.$provider, [
             'orders' => [],
             'total' => 0

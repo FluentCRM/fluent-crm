@@ -83,11 +83,14 @@ class TagAppliedBenchmark extends BaseBenchMark
 
     public function handle($benchMark, $originalArgs)
     {
-        $listIds = $originalArgs[0];
+        $tagIds = $originalArgs[0];
         $subscriber = $originalArgs[1];
         $settings = $benchMark->settings;
 
-        if (!$this->isTagMatched($listIds, $subscriber, $settings)) {
+        $subscriberTags = $subscriber->tags->pluck('id')->toArray();
+        $benchmarkTags = Arr::get($settings, 'tags', []);
+
+        if (!$this->isTagMatched($subscriberTags, $benchmarkTags, $settings)) {
             return; // not matched based on condition
         }
 
@@ -95,19 +98,17 @@ class TagAppliedBenchmark extends BaseBenchMark
         $funnelProcessor->startFunnelFromSequencePoint($benchMark, $subscriber);
     }
 
-    private function isTagMatched($tagIds, $subscriber, $settings)
+    private function isTagMatched($subscriberTags, $benchmarkTags, $settings)
     {
-        $isMatched = array_intersect($settings['tags'], $tagIds);
-        if (!$isMatched) {
-            return false; // not in our scope
+        $matchType = Arr::get($settings, 'select_type');
+
+        if (empty($benchmarkTags)) {
+            return false;
         }
+        // find common elements between the two arrays
+        $intersection = array_intersect($benchmarkTags, $subscriberTags);
 
-        $marchType = Arr::get($settings, 'select_type');
-
-        $subscriberTags = $subscriber->tags->pluck('id')->toArray();
-        $intersection = array_intersect($tagIds, $subscriberTags);
-
-        if ($marchType === 'any') {
+        if ($matchType === 'any') {
             // At least one funnel list id is available.
             $isMatched = !empty($intersection);
         } else {
@@ -118,4 +119,19 @@ class TagAppliedBenchmark extends BaseBenchMark
         return $isMatched;
     }
 
+
+    public function assertCurrentGoalState($asserted, $benchmark, $funnelSubscriber)
+    {
+        if (!$funnelSubscriber || !$funnelSubscriber->subscriber) {
+            return $asserted;
+        }
+
+        $subscriberTags = $funnelSubscriber->subscriber->tags->pluck('id')->toArray();
+        $benchmarkTags = Arr::get($benchmark->settings, 'tags', []);
+
+        $benchmarkSettings= $benchmark->settings;
+
+        return $this->isTagMatched($subscriberTags, $benchmarkTags, $benchmarkSettings);
+        
+    }
 }

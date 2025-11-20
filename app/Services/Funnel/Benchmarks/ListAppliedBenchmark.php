@@ -54,7 +54,7 @@ class ListAppliedBenchmark extends BaseBenchMark
                     'is_multiple' => true,
                     'label'       => __('Select Lists', 'fluent-crm'),
                     'placeholder' => __('Select List', 'fluent-crm'),
-                    'creatable' => true
+                    'creatable'   => true
                 ],
                 'select_type' => [
                     'label'      => __('Run When', 'fluent-crm'),
@@ -87,7 +87,10 @@ class ListAppliedBenchmark extends BaseBenchMark
         $subscriber = $originalArgs[1];
         $settings = $benchMark->settings;
 
-        if (!$this->isListMatched($listIds, $subscriber, $settings)) {
+        $subscriberLists = $subscriber->lists->pluck('id')->toArray();
+        $benchmarkLists = Arr::get($settings, 'lists', []);
+
+        if (!$this->isListMatched($subscriberLists, $benchmarkLists, $settings)) {
             return; // not matched based on condition
         }
 
@@ -95,19 +98,17 @@ class ListAppliedBenchmark extends BaseBenchMark
         $funnelProcessor->startFunnelFromSequencePoint($benchMark, $subscriber);
     }
 
-    private function isListMatched($listIds, $subscriber, $settings)
+    private function isListMatched($subscriberLists, $benchmarkLists, $settings)
     {
-        $isMatched = array_intersect($settings['lists'], $listIds);
-        if (!$isMatched) {
-            return false; // not in our scope
+        $matchType = Arr::get($settings, 'select_type');
+
+        if (empty($benchmarkLists)) {
+            return false;
         }
+        // find common elements between the two arrays
+        $intersection = array_intersect($benchmarkLists, $subscriberLists);
 
-        $marchType = Arr::get($settings, 'select_type');
-
-        $subscriberLists = $subscriber->lists->pluck('id')->toArray();
-        $intersection = array_intersect($listIds, $subscriberLists);
-
-        if ($marchType === 'any') {
+        if ($matchType === 'any') {
             // At least one funnel list id is available.
             $isMatched = !empty($intersection);
         } else {
@@ -116,7 +117,21 @@ class ListAppliedBenchmark extends BaseBenchMark
         }
 
         return $isMatched;
+    }
 
+    public function assertCurrentGoalState($asserted, $benchmark, $funnelSubscriber)
+    {
+        if (!$funnelSubscriber || !$funnelSubscriber->subscriber) {
+            return $asserted;
+        }
+
+        $subscriberLists = $funnelSubscriber->subscriber->lists->pluck('id')->toArray();
+        $benchamrkLists = Arr::get($benchmark->settings, 'lists', []);
+
+
+        $benchmarkSettings= $benchmark->settings;
+
+        return $this->isListMatched($subscriberLists, $benchamrkLists, $benchmarkSettings);
     }
 
 }

@@ -6,6 +6,7 @@ use FluentCampaign\App\Services\Commerce\Commerce;
 use FluentCampaign\App\Services\Commerce\ContactRelationItemsModel;
 use FluentCampaign\App\Services\Commerce\ContactRelationModel;
 use FluentCampaign\App\Services\Integrations\Edd\EddCommerceHelper;
+use FluentCampaign\App\Services\Integrations\LearnDash\DeepIntegration;
 use FluentCrm\App\Hooks\Handlers\ActivationHandler;
 use FluentCrm\App\Models\Campaign;
 use FluentCrm\App\Models\CampaignEmail;
@@ -13,6 +14,8 @@ use FluentCrm\App\Models\Funnel;
 use FluentCrm\App\Models\Lists;
 use FluentCrm\App\Models\Subscriber;
 use FluentCrm\App\Models\Tag;
+use FluentCrm\App\Services\Helper;
+use FluentCrm\App\Services\Libs\Mailer\CliSendingHandler;
 
 class Commands
 {
@@ -46,6 +49,10 @@ class Commands
             [
                 'title' => __('Scheduled Emails', 'fluent-crm'),
                 'count' => CampaignEmail::where('status', 'scheduled')->count(),
+            ],
+            [
+                'title' => __('Max Rune Time', 'fluent-crm'),
+                'count' => fluentCrmMaxRunTime() . ' Seconds'
             ]
         ];
 
@@ -222,6 +229,7 @@ class Commands
         if ($skippedContacts) {
             \WP_CLI::line(sprintf('%d contacts has been skipped', count($skippedContacts)));
 
+            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
             fwrite(STDOUT, 'Show Skipped contacts? yes/no' . ' ');
             $value = strtolower(trim(fgets(STDIN)));
 
@@ -245,14 +253,14 @@ class Commands
         ContactRelationModel::provider($module)->delete();
         ContactRelationItemsModel::provider($module)->delete();
 
-        if(!ContactRelationModel::first()) {
+        if (!ContactRelationModel::first()) {
             global $wpdb;
             $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}fc_contact_relations");
             $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}fc_contact_relation_items");
         }
 
-        fluentcrm_update_option('_'.$module.'_customer_sync_count', 0);
-        fluentcrm_delete_option('_'.$module.'_store_average');
+        fluentcrm_update_option('_' . $module . '_customer_sync_count', 0);
+        fluentcrm_delete_option('_' . $module . '_store_average');
         \WP_CLI::line('EDD Data with FluentCRM has been removed');
     }
 
@@ -311,13 +319,34 @@ class Commands
 
         $isMigrated = Commerce::isMigrated(true);
 
+        $offset = 0;
+
         if (!$isMigrated) {
             \WP_CLI::line('Migrating Initial Database');
             Commerce::migrate();
             \WP_CLI::line('Initial Database Migration done. Going to next step...');
         } else {
             \WP_CLI::line('Initial Database exist. Going to next step...');
-            Commerce::resetModuleData('woo');
+
+            $completedCount = ContactRelationModel::where('provider', 'woo')->count();
+            if ($completedCount) {
+                // ask if they want to resume
+                \WP_CLI::line(sprintf('Looks like you have migrated %d customers already.', $completedCount));
+                // Adding space to question and showing it.
+                // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
+                fwrite(STDOUT, 'Do you want to resume? Type YES to resume or type NO start from scratch: ' . ' ');
+
+                $result = strtolower(trim(fgets(STDIN)));
+
+                if ($result == 'yes') {
+                    $offset = $completedCount;
+                    \WP_CLI::line('Nice! Resuming your data syncing');
+                } else {
+                    Commerce::resetModuleData('woo');
+                }
+            } else {
+                Commerce::resetModuleData('woo');
+            }
         }
 
         $customersTotal = fluentCrmDb()->table('wc_customer_lookup')->count();
@@ -361,8 +390,8 @@ class Commands
         \WP_CLI::line('Nice! Starting data syncing');
 
         $limit = 10;
-        $offset = 0;
         $processingStatus = true;
+
 
         if ($fire_event == 'no') {
             if (!defined('FLUENTCRM_DISABLE_TAG_LIST_EVENTS')) {
@@ -421,6 +450,7 @@ class Commands
         if ($skippedContacts) {
             \WP_CLI::line(sprintf('%d contacts has been skipped', count($skippedContacts)));
 
+            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
             fwrite(STDOUT, 'Show Skipped contacts? yes/no' . ': ');
             $value = strtolower(trim(fgets(STDIN)));
 
@@ -443,15 +473,204 @@ class Commands
         ContactRelationModel::provider($module)->delete();
         ContactRelationItemsModel::provider($module)->delete();
 
-        if(!ContactRelationModel::first()) {
+        if (!ContactRelationModel::first()) {
             global $wpdb;
             $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}fc_contact_relations");
             $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}fc_contact_relation_items");
         }
 
-        fluentcrm_update_option('_'.$module.'_customer_sync_count', 0);
-        fluentcrm_delete_option('_'.$module.'_store_average');
+        fluentcrm_update_option('_' . $module . '_customer_sync_count', 0);
+        fluentcrm_delete_option('_' . $module . '_store_average');
         \WP_CLI::line('WooCommerce Data with FluentCRM has been removed');
+    }
+
+    /*
+    * Usage: wp fluent_crm sync_learndash_students --tags=TAG_IDS --lists=LISTS_IDS
+    * tags and lists needs to be comma separated values
+    * If you just want to sync just run:
+    * wp fluent_crm sync_learndash_students
+    */
+    public function sync_learndash_students($args, $assoc_args)
+    {
+        if (!defined('LEARNDASH_VERSION')) {
+            \WP_CLI::error('LearnDash is not installed');
+        }
+
+        $tags = \WP_CLI\Utils\get_flag_value($assoc_args, 'tags', '');
+        $lists = \WP_CLI\Utils\get_flag_value($assoc_args, 'lists', '');
+        $contactStatus = \WP_CLI\Utils\get_flag_value($assoc_args, 'contact_status', 'subscribed');
+        $fire_event = \WP_CLI\Utils\get_flag_value($assoc_args, 'event', 'no');
+
+        if (!in_array($contactStatus, ['pending', 'subscribed'])) {
+            \WP_CLI::error('Possible contact_status value: pending|subscribed');
+        }
+
+        $formattedTags = [];
+        $formattedLists = [];
+
+        $formattedTagNames = [];
+        $formattedListNames = [];
+
+        if ($tags) {
+            $tags = array_unique(array_filter(array_filter(explode(',', $tags), 'trim'), 'absint'));
+            if ($tags) {
+                $allTags = Tag::whereIn('id', $tags)->get();
+                foreach ($allTags as $tag) {
+                    $formattedTagNames[] = $tag->title . ' (' . $tag->id . ')';
+                    $formattedTags[] = $tag->id;
+                }
+            }
+        }
+
+        if ($lists) {
+            $lists = array_unique(array_filter(array_filter(explode(',', $lists), 'trim'), 'absint'));
+            if ($lists) {
+                $allLists = Lists::whereIn('id', $lists)->get();
+                foreach ($allLists as $list) {
+                    $formattedListNames[] = $list->title . ' (' . $list->id . ')';
+                    $formattedLists[] = $list->id;
+                }
+            }
+        }
+
+        if (!defined('FLUENTCAMPAIGN')) {
+            \WP_CLI::error('FluentCRM Pro is required for this command');
+        }
+
+        $isMigrated = Commerce::isMigrated(true);
+
+        if (!$isMigrated) {
+            \WP_CLI::line('Migrating Initial Database');
+            Commerce::migrate();
+            \WP_CLI::line('Initial Database Migration done. Going to next step...');
+        } else {
+            \WP_CLI::line('Initial Database exist. Going to next step...');
+            Commerce::resetModuleData('learndash');
+        }
+
+        $settings = [
+            'tags'           => $formattedTags,
+            'lists'          => $formattedLists,
+            'contact_status' => $contactStatus
+        ];
+
+        fluentcrm_update_option('_learndash_sync_settings', $settings);
+
+
+        $studentsCount = fluentCrmDb()->table('usermeta')
+            ->select([
+                fluentCrmDb()->raw('DISTINCT(user_id) as student_user_id'),
+            ])
+            ->where(function ($query) {
+                $query->where('meta_key', 'LIKE', 'learndash_group_users_%')
+                    ->orWhere('meta_key', 'LIKE', 'course_%_access_from');
+            })
+            ->groupBy('user_id')
+            ->count();
+
+
+        \WP_CLI::line('The following Tags, Lists & Status will be applied to the students:');
+        \WP_CLI\Utils\format_items('yaml', [
+            [
+                'type'  => __('Total Students', 'fluent-crm'),
+                'Value' => $studentsCount
+            ],
+            [
+                'type'  => __('Tags', 'fluent-crm'),
+                'Value' => $formattedTagNames
+            ],
+            [
+                'type'  => __('Lists', 'fluent-crm'),
+                'Value' => $formattedListNames
+            ],
+            [
+                'type'  => __('Status', 'fluent-crm'),
+                'Value' => $contactStatus
+            ]
+        ], ['type', 'Value']);
+
+        $sendDoubleOptin = false;
+
+        if ($contactStatus == 'pending') {
+            $sendDoubleOptin = true;
+            \WP_CLI::line('---');
+            \WP_CLI::line('A Double optin email will be sent to contacts who does not have subscribed status');
+        }
+
+        \WP_CLI::confirm('Do you want to continue?');
+
+        \WP_CLI::line('Nice! Starting data syncing');
+
+        $processingStatus = true;
+
+        if ($fire_event == 'no') {
+            if (!defined('FLUENTCRM_DISABLE_TAG_LIST_EVENTS')) {
+                define('FLUENTCRM_DISABLE_TAG_LIST_EVENTS', true);
+            }
+        }
+
+        Commerce::resetModuleData('learndash');
+
+        $skippedContacts = [];
+        $progress = \WP_CLI\Utils\make_progress_bar('Synced Students', $studentsCount);
+
+        $deepIntegrationClass = new DeepIntegration();
+
+        $offset = 0;
+        while ($processingStatus) {
+            $students = fluentCrmDb()->table('usermeta')
+                ->select([
+                    fluentCrmDb()->raw('DISTINCT(user_id) as student_user_id'),
+                ])
+                ->where(function ($query) {
+                    $query->where('meta_key', 'LIKE', 'learndash_group_users_%')
+                        ->orWhere('meta_key', 'LIKE', 'course_%_access_from');
+                })
+                ->groupBy('user_id')
+                ->offset($offset)
+                ->limit(10)
+                ->orderBy('user_id', 'ASC')
+                ->get();
+
+            $offset += 10;
+
+            if (!$students) {
+                $processingStatus = false;
+            } else {
+                foreach ($students as $student) {
+                    $result = $deepIntegrationClass->syncStudent($student->student_user_id, $contactStatus, $formattedTags, $formattedLists, $sendDoubleOptin, true);
+                    $progress->tick();
+                    if (!$result) {
+                        $skippedContacts[] = [
+                            'user_id' => $student->student_user_id
+                        ];
+                    }
+                }
+            }
+        }
+
+        Commerce::enableModule('learndash');
+
+        $relationCount = ContactRelationModel::provider('learndash')->count();
+        \WP_CLI::line(sprintf('Awesome! %d students has been synced', $relationCount));
+
+        if ($skippedContacts) {
+            \WP_CLI::line(sprintf('%d contacts has been skipped', count($skippedContacts)));
+
+            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
+            fwrite(STDOUT, 'Show Skipped contacts? yes/no' . ': ');
+            $value = strtolower(trim(fgets(STDIN)));
+
+            if ($value == 'yes') {
+                \WP_CLI\Utils\format_items(
+                    'table',
+                    $skippedContacts,
+                    ['student_user_id']
+                );
+            }
+        }
+
+        \WP_CLI::line('Nice. All Done');
     }
 
     public function edd_stats($args, $assoc_args)
@@ -556,6 +775,7 @@ class Commands
 
         \WP_CLI::confirm('Do you really want to remove all the contacts and related data?');
 
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
         fwrite(STDOUT, 'Please Type "yes" if you really want to do this? yes/no' . ': ');
         $value = strtolower(trim(fgets(STDIN)));
 
@@ -589,6 +809,7 @@ class Commands
         global $wpdb;
         foreach ($tables as $table) {
             \WP_CLI::line('Droping Table: ' . $table);
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared WordPress.DB.PreparedSQL.NotPrepared
             $wpdb->query("DROP TABLE IF EXISTS " . $wpdb->prefix . $table);
         }
         $options = [
@@ -793,4 +1014,91 @@ class Commands
         \WP_CLI::line('Expires: ' . $response['expires']);
         return;
     }
+
+    /*
+     * Send Pending Emails parallelly via CLI
+     * use it with caution
+     * basic usage: wp fluent_crm cli_send
+     * advanced usage: wp fluent_crm cli_send --force=yes --option_key=fluentcrm_is_sending_cli_emails --run_time=50 --offset=200 --min_pending=300 --silent=yes
+     */
+    public function cli_send($args, $assoc_args)
+    {
+        $interactive = true;
+
+        $showLogs = \WP_CLI\Utils\get_flag_value($assoc_args, 'silent') != 'yes';
+
+        if (\WP_CLI\Utils\get_flag_value($assoc_args, 'force') == 'yes') {
+            $interactive = false;
+        }
+
+        $pendingEmails = Helper::getUpcomingEmailCount();
+
+        if ($pendingEmails < 500) {
+            if ($showLogs) {
+                \WP_CLI::error('Pending Emails must need be atleast 500. Currently you have ' . $pendingEmails);
+            }
+            return;
+        }
+
+        if ($interactive) {
+            \WP_CLI::confirm('Do you really want to start sending emails via cron? Please make sure you have high-volume email sending limit (per second). Also you should have atleast 8GM RAM on your server. Please confirm.');
+        }
+
+        if ($showLogs) {
+            \WP_CLI::line('Starting Email Sending Process. Please wait...');
+        }
+
+        $optionKey = \WP_CLI\Utils\get_flag_value($assoc_args, 'option_key', 'fluentcrm_is_sending_cli_emails');
+        $runTime = \WP_CLI\Utils\get_flag_value($assoc_args, 'run_time', 50);
+        $offset = \WP_CLI\Utils\get_flag_value($assoc_args, 'offset', 200);
+        $minPending = \WP_CLI\Utils\get_flag_value($assoc_args, 'min_pending', 300);
+
+        $handler = new CliSendingHandler($optionKey, $runTime, $offset, $minPending);
+
+        $result = $handler->handle();
+
+        if (is_wp_error($result)) {
+            \WP_CLI::error($result->get_error_message());
+            return;
+        }
+
+        \WP_CLI::line('Email Sending Process Completed - ' . $optionKey);
+    }
+
+
+    public function reindex_wp_user_ids()
+    {
+        $subscribers = Subscriber::all();
+
+        $progress = \WP_CLI\Utils\make_progress_bar('Synced Contacts', $subscribers->count());
+
+        foreach ($subscribers as $subscriber) {
+            $progress->tick();
+
+            $user = get_user_by('email', $subscriber->email);
+
+            if (!$subscriber->user_id && !$user) {
+                continue;
+            }
+
+            if ($user) {
+                if ($subscriber->user_id == $user->ID) {
+                    continue;
+                }
+            }
+
+            if ($user) {
+                $subscriber->user_id = $user->ID;
+                $subscriber->save();
+                \WP_CLI::line("Updated user_id for contact ID: {$subscriber->id}");
+            } else if ($subscriber->user_id) {
+                $subscriber->user_id = NULL;
+                $subscriber->save();
+                \WP_CLI::line("Removed user_id for contact ID: {$subscriber->id}");
+            }
+        }
+
+        \WP_CLI::line('User ids for contacts has been synced');
+    }
+
 }

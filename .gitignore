@@ -1,2 +1,14 @@
 .idea
+node_modules
+svn/*
+dist/
+builds/
+assets
+package-lock.json
+query.log
 .DS_Store
+svn.php
+composer.lock
+grumphp.yml
+pnpm-lock.yaml
+.editorconfig

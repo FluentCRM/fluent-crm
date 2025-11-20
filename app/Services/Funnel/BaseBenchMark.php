@@ -23,6 +23,9 @@ abstract class BaseBenchMark
 
         add_action('fluentcrm_funnel_benchmark_start_' . $this->triggerName, array($this, 'handle'), $this->priority, 2);
 
+
+        add_filter('fluent_crm/benchmark_already_asserted_'.$this->triggerName, [$this, 'assertCurrentGoalState'], 10, 3);
+
         add_filter('fluentcrm_funnel_arg_num_' . $this->triggerName, function ($num) {
             if ($num >= $this->actionArgNum) {
                 return $num;
@@ -30,6 +33,17 @@ abstract class BaseBenchMark
             return $this->actionArgNum;
         });
 
+        /**
+         * Filter the funnel sequence before saving.
+         *
+         * The dynamic portion of the hook name, `$this->triggerName`, refers to the name of the trigger.
+         *
+         * @since 2.6.0
+         * 
+         * @param array $sequence The sequence data to be filtered.
+         *
+         * @return array The filtered sequence data.
+         */
         apply_filters('fluentcrm_funnel_sequence_saving_' . $this->triggerName, function ($sequence) {
             $sequence['type'] = 'benchmark';
             return $sequence;
@@ -88,6 +102,11 @@ abstract class BaseBenchMark
             'type'        => 'yes_no_check',
             'check_label' => __('Contacts can enter directly to this sequence point. If you enable this then any contact meet with goal will enter in this goal point.', 'fluent-crm')
         ];
+    }
+
+    public function assertCurrentGoalState($asserted, $benchmark, $funnelSubscriber)
+    {
+        return $asserted;
     }
 
     abstract public function getBlock();

@@ -4,6 +4,7 @@ namespace FluentCrm\App\Http\Controllers;
 
 use FluentCrm\App\Models\Campaign;
 use FluentCrm\App\Models\CampaignUrlMetric;
+use FluentCrm\App\Services\Helper;
 use FluentCrm\Framework\Request\Request;
 
 /**
@@ -29,24 +30,49 @@ class CampaignAnalyticsController extends Controller
         $limit = intval($request->get('per_page', 10));
         $offset = (intval($request->get('page', 1)) - 1) * $limit;
 
-        // We have Woo Here
-        $orderMetas = fluentCrmDb()->table('postmeta')
-            ->select('post_id')
-            ->where('meta_key', '_fc_cid')
-            ->where('meta_value', $campaignId)
-            ->orderBy('meta_id', 'DESC')
-            ->limit($limit)
-            ->offset($offset)
-            ->get();
 
         if (defined('WC_PLUGIN_FILE')) {
+
+            if(Helper::isWooHposEnabled()) {
+                $orderMetas = fluentCrmDb()->table('wc_orders_meta')
+                    ->select('order_id')
+                    ->where('meta_key', '_fc_cid')
+                    ->where('meta_value', $campaignId)
+                    ->orderBy('id', 'DESC')
+                    ->limit($limit)
+                    ->offset($offset)
+                    ->get();
+
+                $totalOrders = fluentCrmDb()->table('wc_orders_meta')
+                    ->where('meta_key', '_fc_cid')
+                    ->where('meta_value', $campaignId)
+                    ->count();
+            } else {
+                $orderMetas = fluentCrmDb()->table('postmeta')
+                    ->select(fluentCrmDb()->raw('post_id as order_id'))
+                    ->where('meta_key', '_fc_cid')
+                    ->where('meta_value', $campaignId)
+                    ->orderBy('meta_id', 'DESC')
+                    ->limit($limit)
+                    ->offset($offset)
+                    ->get();
+
+                $totalOrders = fluentCrmDb()->table('postmeta')
+                    ->select('post_id')
+                    ->where('meta_key', '_fc_cid')
+                    ->where('meta_value', $campaignId)
+                    ->count();
+            }
+
+
             $orders = [];
             foreach ($orderMetas as $orderMeta) {
-                $order = wc_get_order($orderMeta->post_id);
+                $order = wc_get_order($orderMeta->order_id);
                 if (!$order || !$order->get_id()) {
                     continue;
                 }
 
+                /* translators: 1: billing first name, 2: billing last name */
                 $buyer = trim(sprintf(_x('%1$s %2$s', 'full name', 'fluent-crm'), $order->get_billing_first_name(), $order->get_billing_last_name()));
 
                 $order_timestamp = $order->get_date_created() ? $order->get_date_created()->getTimestamp() : '';
@@ -55,12 +81,20 @@ class CampaignAnalyticsController extends Controller
                     $show_date = '&ndash;';
                 } else if ($order_timestamp > strtotime('-1 day', time()) && $order_timestamp <= time()) {
                     $show_date = sprintf(
-                    /* translators: %s: human-readable time difference */
-                        _x('%s ago', '%s = human-readable time difference', 'woocommerce'),
+                        /* translators: %s: human-readable time difference */
+                        _x('%s ago', '%s = human-readable time difference', 'fluent-crm'),
                         human_time_diff($order->get_date_created()->getTimestamp(), time())
                     );
                 } else {
-                    $show_date = $order->get_date_created()->date_i18n(apply_filters('woocommerce_admin_order_date_format', __('M j, Y', 'woocommerce')));
+                    /**
+                     * Determine the date format for displaying the order creation date in the WooCommerce admin in FluentCRM.
+                     *
+                     * @since 2.2.0
+                     * 
+                     * @param string The date format to be used. Default is 'M j, Y'.
+                     * @param string The context for the date format. Default is 'woocommerce'.
+                     */
+                    $show_date = $order->get_date_created()->date_i18n(apply_filters('woocommerce_admin_order_date_format', __('M j, Y', 'fluent-crm')));
                 }
 
                 $orders[] = [
@@ -81,13 +115,20 @@ class CampaignAnalyticsController extends Controller
                     'date'   => __('Date', 'fluent-crm'),
                     'total'  => __('Total', 'fluent-crm')
                 ],
-                'total'  => fluentCrmDb()->table('postmeta')
-                    ->select('post_id')
-                    ->where('meta_key', '_fc_cid')
-                    ->where('meta_value', $campaignId)
-                    ->count()
+                'total'  => $totalOrders
             ];
         } else if (class_exists('\Easy_Digital_Downloads')) {
+
+            // We have Edd 2 Here
+            $orderMetas = fluentCrmDb()->table('postmeta')
+                ->select('post_id')
+                ->where('meta_key', '_fc_cid')
+                ->where('meta_value', $campaignId)
+                ->orderBy('meta_id', 'DESC')
+                ->limit($limit)
+                ->offset($offset)
+                ->get();
+
             foreach ($orderMetas as $orderMeta) {
                 $payment = new \EDD_Payment($orderMeta->post_id);
                 if (!$payment || !$payment->ID) {
@@ -104,7 +145,7 @@ class CampaignAnalyticsController extends Controller
                     $customerName = '<a href="' . esc_url(admin_url("edit.php?post_type=download&page=edd-customers&view=overview&id=$customer_id")) . '">' . $customer->name . '</a>';
                 } else {
                     $email = edd_get_payment_user_email($payment->ID);
-                    $customerName = '<a href="' . esc_url(admin_url("edit.php?post_type=download&page=edd-payment-history&s=$email")) . '">' . __('(customer missing)', 'easy-digital-downloads') . '</a>';
+                    $customerName = '<a href="' . esc_url(admin_url("edit.php?post_type=download&page=edd-payment-history&s=$email")) . '">' . __('(customer missing)', 'fluent-crm') . '</a>';
                 }
 
                 $formattedOrders[] = [
@@ -144,6 +185,71 @@ class CampaignAnalyticsController extends Controller
                 'total'  => __('Total', 'fluent-crm')
             ],
             'total'  => 0
+        ];
+    }
+
+    public function getRevenueReSyncReport(Request $request, $campaignId)
+    {
+        $campaignRevenue = fluentcrm_get_campaign_meta($campaignId, '_campaign_revenue');
+
+        $orderIds = [];
+        if (defined('WC_PLUGIN_FILE')) {
+            if(Helper::isWooHposEnabled()) {
+                $orderMetas = fluentCrmDb()->table('wc_orders_meta')
+                    ->select('order_id')
+                    ->where('meta_key', '_fc_cid')
+                    ->where('meta_value', $campaignId)
+                    ->orderBy('id', 'DESC')
+                    ->get();
+            } else {
+                $orderMetas = fluentCrmDb()->table('postmeta')
+                    ->select(fluentCrmDb()->raw('post_id as order_id'))
+                    ->where('meta_key', '_fc_cid')
+                    ->where('meta_value', $campaignId)
+                    ->orderBy('meta_id', 'DESC')
+                    ->get();
+            }
+
+            foreach ($orderMetas as $orderMeta) {
+                $order = wc_get_order($orderMeta->order_id);
+                if (!$order || !$order->get_id()) {
+                    continue;
+                }
+                $orderIds[] = $order->get_id();
+            }
+        }
+
+        if (!$campaignRevenue) {
+            return [
+                'message' => __('No revenue found for this campaign', 'fluent-crm')
+            ];
+        }
+
+        if (!$orderIds) {
+            return [
+                'message' => __('No order found to re-sync', 'fluent-crm')
+            ];
+        }
+
+        $currency = strtolower(get_woocommerce_currency());
+        $revenueData = [
+            'orderIds' => $orderIds
+        ];
+        $totalRevenue = 0;
+
+        foreach ($orderIds as $orderId) {
+            $order = wc_get_order( $orderId );
+            if ($order) {
+                $totalRevenue += intval($order->get_total() * 100);
+            }
+        }
+        $revenueData[$currency] = $totalRevenue;
+
+        fluentcrm_update_campaign_meta($campaignId, '_campaign_revenue', $revenueData);
+
+        return [
+            'message' => __('Revenue has been re-synced successfully', 'fluent-crm'),
+            'total' => number_format($totalRevenue / 100, 2)
         ];
     }
 

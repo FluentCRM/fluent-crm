@@ -26,19 +26,19 @@ class ActiveCampaignMigrator extends BaseMigrator
             ],
             'field_map_info'         => __('Email and main contact fields will be mapped automatically', 'fluent-crm'),
             'credential_fields'      => [
-                'api_key' => [
-                    'label'       => __('API Token', 'fluent-crm'),
-                    'placeholder' => __('ActiveCampaign API Token', 'fluent-crm'),
-                    'data_type'   => 'password',
-                    'type'        => 'input-text',
-                    'inline_help' => __('You can find your API key at ActiveCampaign Settings -> Developer', 'fluent-crm')
-                ],
                 'api_url' => [
                     'label'       => __('API Access URL', 'fluent-crm'),
                     'placeholder' => __('API Access URL', 'fluent-crm'),
                     'data_type'   => 'url',
                     'type'        => 'input-text',
                     'inline_help' => __('You can find Account ID Settings -> Developer -> API Access', 'fluent-crm')
+                ],
+                'api_key' => [
+                    'label'       => __('API Access Key', 'fluent-crm'),
+                    'placeholder' => __('ActiveCampaign API Token', 'fluent-crm'),
+                    'data_type'   => 'password',
+                    'type'        => 'input-text',
+                    'inline_help' => __('You can find your API key at ActiveCampaign Settings -> Developer -> API Access', 'fluent-crm')
                 ]
             ],
             'refresh_on_list_change' => false,
@@ -169,7 +169,8 @@ class ActiveCampaignMigrator extends BaseMigrator
 
         $api = $this->getApi($postedData['credential']);
 
-        $page = Arr::get($postedData, 'completed', 1);
+        // Initialize or retrieve the current offset
+        $offset = Arr::get($postedData, 'completed', 0);
 
         $tagMappings = Arr::get($postedData, 'tags', []);
 
@@ -184,18 +185,18 @@ class ActiveCampaignMigrator extends BaseMigrator
             $subscribedOnly = true;
         }
 
+        // Prepare the API parameters
         $params = [
-            'offset' => empty( $page ) ? 0 : $page + 100,
+            'offset' => $offset,
             'status' => $subscribedOnly ? '1' : '-1',
         ];
         $subscribers = $api->getContacts($params);
 
         if (is_wp_error($subscribers)) {
-
-            if ($page > 1) {
+            if ($offset > 0) {
                 return [
-                    'completed'     => 1,
-                    'total'         => 1,
+                    'completed'     => $offset,
+                    'total'         => $offset,
                     'has_more'      => false,
                     'hide_progress' => true
                 ];
@@ -227,7 +228,7 @@ class ActiveCampaignMigrator extends BaseMigrator
                 'first_name' => $subscriber['first_name'],
                 'last_name'  => $subscriber['last_name'],
                 'phone'      => $subscriber['phone'],
-                'created_at' => date('Y-m-d H:i:s', strtotime($subscriber['cdate'])),
+                'created_at' => gmdate('Y-m-d H:i:s', strtotime($subscriber['cdate'])),
                 'source'     => 'ActiveCampaign',
                 'ip'         => $subscriber['ip'],
                 'status'     => $status,
@@ -296,19 +297,16 @@ class ActiveCampaignMigrator extends BaseMigrator
             $contact = FluentCrmApi('contacts')->createOrUpdate($data);
 
             if ($subscribedOnly && $contact && $contact->status != 'subscribed') {
-                $oldStatus = $contact->status;
-                $contact->status = 'subscribed';
-                $contact->save();
-                do_action('fluentcrm_subscriber_status_to_subscribed', $contact, $oldStatus);
+                $contact->updateStatus('subscribed');
             }
         }
 
         return [
-            'completed'     => $page + 100,
-            'total'         => $page + 100,
-            'has_more'      => ! empty( $subscribers ),
+            'completed'     => $offset + 100,
+            'total'         => $offset + 100,
+            'has_more'      => !empty($subscribers),
             'hide_progress' => true,
-            'message'       => ($page + 100) . __(' contacts has been imported so far.', 'fluent-crm')
+            'message'       => ($offset + 100) . __(' contacts have been imported so far.', 'fluent-crm')
         ];
     }
 

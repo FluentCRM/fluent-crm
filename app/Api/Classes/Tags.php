@@ -8,9 +8,11 @@
  *
  * @version 1.0.0
  */
+
 namespace FluentCrm\App\Api\Classes;
 
 use FluentCrm\App\Models\Tag;
+use FluentCrm\Framework\Support\Arr;
 
 class Tags
 {
@@ -32,23 +34,24 @@ class Tags
                 continue;
             }
 
-            if(empty($tag['slug'])) {
+            if (empty($tag['slug'])) {
                 $tag['slug'] = sanitize_title($tag['title'], 'display');
             } else {
                 $tag['slug'] = sanitize_title($tag['slug'], 'display');
             }
 
-            $tag['slug']  = sanitize_text_field($tag['slug']);
+            $tag['slug'] = sanitize_text_field($tag['slug']);
 
             $tag = \FluentCrm\App\Models\Tag::updateOrCreate(
-                [
-                    'slug' => $tag['slug'],
-                    'title' => sanitize_text_field($tag['title'])
-                ],
+                array_filter([
+                    'slug'        => $tag['slug'],
+                    'title'       => sanitize_text_field($tag['title']),
+                    'description' => sanitize_textarea_field(Arr::get($tag, 'description'))
+                ]),
                 ['slug' => $tag['slug']]
             );
 
-            if($tag->wasRecentlyCreated) {
+            if ($tag->wasRecentlyCreated) {
                 do_action('fluentcrm_tag_created', $tag->id);
                 do_action('fluent_crm/tag_created', $tag);
             } else {
@@ -78,6 +81,7 @@ class Tags
             return call_user_func_array([$this->instance, $method], $params);
         }
 
-        throw new \Exception("Method {$method} does not exist.");
+        /* translators: %s: method name */
+        throw new \Exception(sprintf('Method %s does not exist.', esc_html($method)));
     }
 }

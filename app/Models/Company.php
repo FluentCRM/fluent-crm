@@ -4,6 +4,7 @@ namespace FluentCrm\App\Models;
 
 use FluentCrm\App\Models\Model;
 use FluentCrm\App\Models\Subscriber;
+use FluentCrm\Framework\Support\Arr;
 
 class Company extends Model
 {
@@ -79,8 +80,10 @@ class Company extends Model
 
     public static function boot()
     {
+        parent::boot();
+
         static::creating(function ($model) {
-            $model->hash = md5(wp_generate_uuid4() . '_' . time() . '_' . mt_rand(1000, 9999));
+            $model->hash = md5(wp_generate_uuid4() . '_' . time() . '_' . wp_rand(1000, 9999));
         });
     }
 
@@ -94,7 +97,7 @@ class Company extends Model
             $query->where(function ($query) use ($fields, $search) {
                 $query->where(array_shift($fields), 'LIKE', "%$search%");
                 foreach ($fields as $field) {
-                    $query->orWhere($field, 'LIKE', "$search%");
+                    $query->orWhere($field, 'LIKE', "%$search%");
                 }
             });
         }
@@ -104,7 +107,7 @@ class Company extends Model
 
     public function scopeOfType($query, $status)
     {
-        return $query->where('status', $status);
+        return $query->where('type', $status);
     }
 
     public function scopeOfIndustry($query, $status)
@@ -151,7 +154,24 @@ class Company extends Model
 
     public function getMetaAttribute($meta)
     {
-        return \maybe_unserialize($meta);
+        $metaData = \maybe_unserialize($meta);
+
+        if (!$metaData) {
+            return [
+                'custom_values' => []
+            ];
+        }
+
+        $metaDefaults = [
+            'custom_values' => []
+        ];
+
+        return array_merge($metaDefaults, $metaData);
+    }
+
+    public function getCustomValues()
+    {
+        return Arr::get($this->meta, 'custom_values', []);
     }
 
 }
