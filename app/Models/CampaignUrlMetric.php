@@ -55,14 +55,18 @@ class CampaignUrlMetric extends Model
 
     public function getLinksReport($campaignId)
     {
+        // Normalize &amp; → & in GROUP BY and SELECT so that duplicate fc_url_stores
+        // rows created by the old htmlspecialchars_decode mismatch are merged in reports.
+        global $wpdb;
+        $urlTable = $wpdb->prefix . 'fc_url_stores';
         $stats = static::select(
             fluentCrmDb()->raw('count(*) as total'),
-            'fc_url_stores.url',
-            'fc_url_stores.id'
+            fluentCrmDb()->raw("REPLACE({$urlTable}.url, '&amp;', '&') as url"),
+            fluentCrmDb()->raw("MIN({$urlTable}.id) as id")
         )
             ->where('fc_campaign_url_metrics.campaign_id', $campaignId)
             ->where('fc_campaign_url_metrics.type', 'click')
-            ->groupBy('fc_campaign_url_metrics.url_id')
+            ->groupBy(fluentCrmDb()->raw("REPLACE({$urlTable}.url, '&amp;', '&')"))
             ->join('fc_url_stores', 'fc_url_stores.id', '=', 'fc_campaign_url_metrics.url_id')
             ->orderBy('total', 'DESC')
             ->get()->toArray();
@@ -87,12 +91,14 @@ class CampaignUrlMetric extends Model
             }
 
             if ($campaignLinks) {
+                // Normalize campaign links to match the REPLACE'd URLs from the query
+                $campaignLinks = array_map('htmlspecialchars_decode', $campaignLinks);
+
                 foreach ($stats as $statIndex => $stat) {
                     if ($stat['total'] < 1 && !in_array($stat['url'], $campaignLinks)) {
                         unset($stats[$statIndex]);
                         continue;
                     }
-                    $stats[$statIndex]['url'] = str_replace(['&amp;'], ['&'], $stat['url']);
                     $stats[$statIndex]['url'] = esc_url_raw($stats[$statIndex]['url']);
                 }
             }
@@ -231,14 +237,17 @@ class CampaignUrlMetric extends Model
 
     public function getClickMetrics($campaignId, $subjectId)
     {
+        // Normalize &amp; → & so duplicate fc_url_stores rows are aggregated (see getLinksReport).
+        global $wpdb;
+        $urlTable = $wpdb->prefix . 'fc_url_stores';
         return static::select(
             fluentCrmDb()->raw('count(*) as total'),
-            'fc_url_stores.url'
+            fluentCrmDb()->raw("REPLACE({$urlTable}.url, '&amp;', '&') as url")
         )
             ->where('fc_campaign_url_metrics.campaign_id', $campaignId)
             ->where('fc_campaign_url_metrics.type', 'click')
             ->where('fc_campaign_emails.email_subject_id', $subjectId)
-            ->groupBy('fc_campaign_url_metrics.url_id')
+            ->groupBy(fluentCrmDb()->raw("REPLACE({$urlTable}.url, '&amp;', '&')"))
             ->join('fc_url_stores', 'fc_url_stores.id', '=', 'fc_campaign_url_metrics.url_id')
             ->join('fc_campaign_emails', 'fc_campaign_emails.subscriber_id', '=', 'fc_campaign_url_metrics.subscriber_id')
             ->orderBy('total', 'DESC')

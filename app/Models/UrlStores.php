@@ -22,6 +22,10 @@ class UrlStores extends Model
         // remove zero width space
         $longUrl = str_replace("\xE2\x80\x8B", '', $longUrl);
 
+        // Normalize: decode HTML entities before lookup to prevent duplicates
+        // caused by &amp; vs & mismatch between lookup and storage
+        $longUrl = htmlspecialchars_decode($longUrl);
+
         static $urls = [];
 
         if (isset($urls[md5($longUrl)])) {
@@ -39,7 +43,7 @@ class UrlStores extends Model
         $short = self::getNextShortUrl();
         // otherwise we have to create
         $data = [
-            'url'        => htmlspecialchars_decode($longUrl),
+            'url'        => $longUrl,
             'short'      => $short,
             'created_at' => gmdate('Y-m-d H:i:s'),
             'updated_at' => gmdate('Y-m-d H:i:s')
