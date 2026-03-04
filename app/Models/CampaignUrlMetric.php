@@ -95,7 +95,7 @@ class CampaignUrlMetric extends Model
                 $campaignLinks = array_map('htmlspecialchars_decode', $campaignLinks);
 
                 foreach ($stats as $statIndex => $stat) {
-                    if ($stat['total'] < 1 && !in_array($stat['url'], $campaignLinks)) {
+                    if ($stat['total'] === 0 || !in_array($stat['url'], $campaignLinks, true)) {
                         unset($stats[$statIndex]);
                         continue;
                     }
