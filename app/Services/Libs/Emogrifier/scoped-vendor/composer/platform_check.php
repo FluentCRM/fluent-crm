@@ -14,15 +14,12 @@ if ($issues) {
     }
     if (!ini_get('display_errors')) {
         if (PHP_SAPI === 'cli' || PHP_SAPI === 'phpdbg') {
-            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
             fwrite(STDERR, 'Composer detected issues in your platform:' . PHP_EOL.PHP_EOL . implode(PHP_EOL, $issues) . PHP_EOL.PHP_EOL);
         } elseif (!headers_sent()) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Composer-generated file, CLI/error output context
             echo 'Composer detected issues in your platform:' . PHP_EOL.PHP_EOL . str_replace('You are running '.PHP_VERSION.'.', '', implode(PHP_EOL, $issues)) . PHP_EOL.PHP_EOL;
         }
     }
     trigger_error(
-        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Composer-generated file, CLI/error output context
         'Composer detected issues in your platform: ' . implode(' ', $issues),
         E_USER_ERROR
     );

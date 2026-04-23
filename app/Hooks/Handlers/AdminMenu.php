@@ -271,25 +271,9 @@ class AdminMenu
             $url = 'https://fluentcrm.com';
             $extraHtml = '';
             if (!defined('DISABLE_WP_CRON')) {
-                $doc_url = 'https://fluentcrm.com/docs/fluentcrm-cron-job-basics-and-checklist/';
-                $extraHtml = ' ' . sprintf(
-                    wp_kses(
-                        /* translators: %1$s: Opening <a> tag linking to FluentCRM cron job docs. %2$s: Closing </a> tag. */
-                        __('Server-Side Cron Job is not enabled %1$sView Documentation%2$s.', 'fluent-crm'),
-                        array(
-                            'a' => array(
-                                'href'   => array(),
-                                'target' => array(),
-                                'rel'    => array(),
-                                'style'  => array(),
-                            )
-                        )
-                    ),
-                    '<a style="font-weight: 500;" target="_blank" rel="noopener" href="' . esc_url($doc_url) . '">',
-                    '</a>'
-                );
+                $extraHtml = ' ' . sprintf(__('Server-Side Cron Job is not enabled %1sView Documentation%2s.', 'fluent-crm'), '<a style="font-weight: 500;" target="_blank" rel="noopener" href="https://fluentcrm.com/docs/fluentcrm-cron-job-basics-and-checklist/">', '</a>');
             }
-            /* translators: %s: the FluentCRM website URL (used in the href of the link) */
+
             return sprintf(wp_kses(__('Thank you for using <a href="%s">FluentCRM</a>.', 'fluent-crm'), array('a' => array('href' => array()))), esc_url($url)) . '<span title="based on your WP timezone settings" style="margin-left: 10px;" data-timestamp="' . current_time('timestamp') . '" id="fc_server_timestamp"></span>. ' . $extraHtml;
         });
 
@@ -1138,7 +1122,6 @@ class AdminMenu
         $table_name = $wpdb->prefix . 'fc_smart_links';
         $query = $wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($table_name));
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
         if ($wpdb->get_var($query) == $table_name) {
             return true;
         }

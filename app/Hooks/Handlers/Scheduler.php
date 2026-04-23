@@ -45,7 +45,7 @@ class Scheduler
 
             // Looks like action scheduler is working just fine. Maybe we can check for some regular tasks
             // We will run the five minutes tasks for around 60% times
-            if (wp_rand(1, 100) > 40) {
+            if (mt_rand(1, 100) > 40) {
                 self::processFiveMinutes();
             }
 
@@ -245,7 +245,7 @@ class Scheduler
                 'status' => 'pending'
             ]);
 
-        $cutOutTime = gmdate('Y-m-d H:i:s', current_time('timestamp') + 360); // within 6 minutes of the future
+        $cutOutTime = date('Y-m-d H:i:s', current_time('timestamp') + 360); // within 6 minutes of the future
 
         $campaigns = Campaign::whereIn('status', ['pending-scheduled', 'processing'])
             ->withoutGlobalScope('type')
@@ -301,7 +301,7 @@ class Scheduler
         foreach (glob($dir . '/fluentcrm-*.csv') as $filename) {
             // check if file was created before last 30 minutes
             if (time() - filectime($filename) >= 1800) {
-                wp_delete_file($filename); // delete file
+                @unlink($filename); // delete file
             }
         }
     }

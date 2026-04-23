@@ -314,7 +314,6 @@ class SettingsController extends Controller
 
         global $wpdb;
         foreach ($tables as $table) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
             $wpdb->query("DROP TABLE IF EXISTS " . $wpdb->prefix . $table);
         }
         // All tables are delete now let's run the migration
@@ -403,14 +402,14 @@ class SettingsController extends Controller
                 'input_title' => __('Postal Server Bounce Handler Webhook URL', 'fluent-crm'),
                 'input_info'  => __('Please paste this URL into your Postal Server\'s Webhook settings to enable Bounce Handling with FluentCRM. Please select only MessageBounced & MessageDeliveryFailed event', 'fluent-crm')
             ],
-            'smtp2go'      => [
-                'label'       => 'SMTP2Go',
+            'smtp2go' => [
+                'label' => 'SMTP2Go',
                 'webhook_url' => get_rest_url(null, 'fluent-crm/v2/public/bounce_handler/smtp2go/handle/' . $securityCode),
-                'doc_url'     => 'https://fluentcrm.com/docs/bounce-handling-with-smtp2go/',
+                'doc_url' => 'https://fluentcrm.com/docs/bounce-handling-with-smtp2go/',
                 'input_title' => 'SMTP2Go Bounce Handler Webhook URL',
-                'input_info'  => 'Please paste this URL into your SMTP2Go\'s Webhook settings to enable Bounce Handling with FluentCRM'
+                'input_info' => 'Please paste this URL into your SMTP2Go\'s Webhook settings to enable Bounce Handling with FluentCRM'
             ],
-            'brevo'        => [
+            'brevo' => [
                 'label'       => __('Brevo (ex Sendinblue)', 'fluent-crm'),
                 'webhook_url' => get_rest_url(null, 'fluent-crm/v2/public/bounce_handler/brevo/handle/' . $securityCode),
                 'doc_url'     => 'https://fluentcrm.com/docs/bounce-handling-with-brevo/',
@@ -425,10 +424,10 @@ class SettingsController extends Controller
              *
              * This filter allows modification of the bounce handler settings.
              *
-             * @param array $bounceSettings The current bounce settings.
-             * @param string $securityCode The security code for the bounce handler.
              * @since 2.5.95
              *
+             * @param array  $bounceSettings The current bounce settings.
+             * @param string $securityCode   The security code for the bounce handler.
              */
             'bounce_settings' => apply_filters('fluent_crm/bounce_handlers', $bounceSettings, $securityCode)
         ];
@@ -501,7 +500,6 @@ class SettingsController extends Controller
         if (defined('WC_PLUGIN_FILE') && defined('FLUENTCAMPAIGN_DIR_FILE')) {
             $wooCheckoutSettings = $request->get('woo_checkout_settings');
             fluentcrm_update_option('woo_checkout_form_subscribe_settings', $wooCheckoutSettings);
-            fluentCrmSetCache('woo_checkout_form_subscribe_settings', $wooCheckoutSettings, 86400);
         }
 
         return [
@@ -651,7 +649,7 @@ class SettingsController extends Controller
         $perChunk = 10000; // Deleting 10,000 per chunk
         $hasMore = false;
 
-        $refDate = gmdate('Y-m-d 00:00:01', time() - $daysBefore * 86400);
+        $refDate = date('Y-m-d 00:00:01', time() - $daysBefore * 86400);
         if (in_array('emails', $selectedLogs)) {
 
             $campaignIds = CampaignEmail::where('created_at', '<', $refDate)
@@ -720,7 +718,6 @@ class SettingsController extends Controller
         }
 
         return [
-            /* translators: %d is the number of days; used to indicate how old the deleted logs were. */
             'message'  => sprintf(__('Logs older than %d days have been deleted successfully', 'fluent-crm'), $daysBefore),
             'has_more' => $hasMore
         ];
@@ -923,11 +920,11 @@ class SettingsController extends Controller
          * Determine the deep integration providers for FluentCRM.
          *
          * This filter allows modification of the deep integration providers used in FluentCRM such as Woocommerce, Easy Digital Downloads, etc.
-         *
-         * @param array An array of deep integration providers.
-         * @param bool $withFields Whether to include fields in the integration providers.
+         * 
          * @since 2.5.1
-         *
+         * 
+         * @param array An array of deep integration providers.
+         * @param bool  $withFields Whether to include fields in the integration providers.
          */
         $deepIntegrationProviders = apply_filters('fluentcrm_deep_integration_providers', [], $withFields);
 
@@ -948,10 +945,10 @@ class SettingsController extends Controller
              *
              * This filter allows you to modify the result of the deep integration sync for a given provider.
              *
-             * @param mixed  The result of the integration sync. Default false. Expected to be a boolean.
-             * @param array $data The data to be synced.
              * @since 2.5.1
              *
+             * @param mixed  The result of the integration sync. Default false. Expected to be a boolean.
+             * @param array  $data     The data to be synced.
              */
             $result = apply_filters('fluentcrm_deep_integration_sync_' . $provider, false, $data);
         } else {
@@ -960,10 +957,10 @@ class SettingsController extends Controller
              *
              * The dynamic portion of the hook name, `$provider`, refers to the specific integration provider.
              *
-             * @param mixed  The result of the save operation. Default false. Expected to be a boolean.
-             * @param array $data The data being saved.
              * @since 2.5.1
              *
+             * @param mixed  The result of the save operation. Default false. Expected to be a boolean.
+             * @param array  $data    The data being saved.
              */
             $result = apply_filters('fluentcrm_deep_integration_save_' . $provider, false, $data);
         }
@@ -1004,7 +1001,7 @@ class SettingsController extends Controller
         }
 
         return [
-            'message'  => __('Settings has been successfully updated', 'fluent-crm'),
+            'message'  => __('Settings has been successfully updated'),
             'settings' => $data
         ];
     }

@@ -99,13 +99,11 @@ class DeclarationBlock extends RuleSet
             if (!$mSelector instanceof Selector) {
                 if ($oList === null || !$oList instanceof KeyFrame) {
                     if (!Selector::isValid($mSelector)) {
-                        // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
                         throw new UnexpectedTokenException("Selector did not match '" . Selector::SELECTOR_VALIDATION_RX . "'.", $mSelector, "custom");
                     }
                     $this->aSelectors[$iKey] = new Selector($mSelector);
                 } else {
                     if (!KeyframeSelector::isValid($mSelector)) {
-                        // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
                         throw new UnexpectedTokenException("Selector did not match '" . KeyframeSelector::SELECTOR_VALIDATION_RX . "'.", $mSelector, "custom");
                     }
                     $this->aSelectors[$iKey] = new KeyframeSelector($mSelector);
@@ -694,7 +692,6 @@ class DeclarationBlock extends RuleSet
         $sResult = $oOutputFormat->comments($this);
         if (\count($this->aSelectors) === 0) {
             // If all the selectors have been removed, this declaration block becomes invalid
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
             throw new OutputException("Attempt to print declaration block with missing selector", $this->iLineNo);
         }
         $sResult .= $oOutputFormat->sBeforeDeclarationBlock;

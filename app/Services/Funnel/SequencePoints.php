@@ -72,12 +72,8 @@ class SequencePoints
                 }
             }
         } else {
-            $nextSequenceNumber = $this->funnelSubscriber ? $this->funnelSubscriber->next_sequence : null;
             $sequences = FunnelSequence::orderBy('sequence', 'ASC')
                 ->where('funnel_id', $this->funnel->id)
-                ->when($nextSequenceNumber, function ($q) use ($nextSequenceNumber) {
-                    $q->where('sequence', '>=', $nextSequenceNumber);
-                })
                 ->get();
         }
 
@@ -108,7 +104,7 @@ class SequencePoints
             if ($sequence->action_name == 'fluentcrm_wait_times' && !$inWaitTimes) {
                 $inWaitTimes = true;
                 $seconds = FunnelHelper::getCurrentDelayInSeconds($sequence->settings, $sequence, $this->funnelSubscriber ? $this->funnelSubscriber->id : null);
-                $this->nextSequenceExecutionTime = gmdate('Y-m-d H:i:s', current_time('timestamp') + $seconds);
+                $this->nextSequenceExecutionTime = date('Y-m-d H:i:s', current_time('timestamp') + $seconds);
             }
 
             /*

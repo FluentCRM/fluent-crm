@@ -50,7 +50,7 @@ class OrderPaidTrigger extends BaseTrigger
                 ],
                 'subscription_status_info' => [
                     'type'       => 'html',
-                    'info'       => '<b>' . __('An Automated double-optin email will be sent for new subscribers', 'fluent-crm') . '</b>',
+                    'info'       => '<b>' . __('An Automated double-optin email will be sent for new subscribers', 'fluentcampaign-pro') . '</b>',
                     'dependency' => [
                         'depends_on' => 'subscription_status',
                         'operator'   => '=',

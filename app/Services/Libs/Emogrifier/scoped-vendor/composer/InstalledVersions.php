@@ -158,7 +158,6 @@ class InstalledVersions
             return implode(' || ', $ranges);
         }
 
-        // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Composer-generated file
         throw new \OutOfBoundsException('Package "' . $packageName . '" is not installed');
     }
 
@@ -180,7 +179,6 @@ class InstalledVersions
             return $installed['versions'][$packageName]['version'];
         }
 
-        // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Composer-generated file
         throw new \OutOfBoundsException('Package "' . $packageName . '" is not installed');
     }
 
@@ -202,7 +200,6 @@ class InstalledVersions
             return $installed['versions'][$packageName]['pretty_version'];
         }
 
-        // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Composer-generated file
         throw new \OutOfBoundsException('Package "' . $packageName . '" is not installed');
     }
 
@@ -224,7 +221,6 @@ class InstalledVersions
             return $installed['versions'][$packageName]['reference'];
         }
 
-        // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Composer-generated file
         throw new \OutOfBoundsException('Package "' . $packageName . '" is not installed');
     }
 
@@ -242,7 +238,6 @@ class InstalledVersions
             return isset($installed['versions'][$packageName]['install_path']) ? $installed['versions'][$packageName]['install_path'] : null;
         }
 
-        // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
         throw new \OutOfBoundsException('Package "' . $packageName . '" is not installed');
     }
 

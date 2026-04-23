@@ -366,12 +366,12 @@ class FunnelHelper
             }, $nextDays);
 
             if (empty($nextDays)) { // if no day is selected
-                $nextDays = [gmdate('D', $timeStampNow), gmdate('D', strtotime('+1 day', $timeStampNow))];
+                $nextDays = [date('D', $timeStampNow), date('D', strtotime('+1 day', $timeStampNow))];
             }
 
             $nextTime = Arr::get($settings, 'to_day_time');
             if (!$nextTime) {
-                $nextTime = gmdate('H:i', $timeStampNow);
+                $nextTime = date('H:i', $timeStampNow);
             }
 
             $date = self::getEarliestDay($nextDays, $nextTime);
@@ -406,11 +406,11 @@ class FunnelHelper
 
                 if ($dateTime) {
                     // should be this current year's date
-                    $dateTime = gmdate('Y') . '-' . gmdate('m-d', strtotime($dateTime));
+                    $dateTime = date('Y') . '-' . date('m-d', strtotime($dateTime));
 
                     // if the date is passed, then next year
                     if (strtotime($dateTime) < current_time('timestamp')) {
-                        $dateTime = (gmdate('Y') + 1) . '-' . gmdate('m-d', strtotime($dateTime));
+                        $dateTime = (date('Y') + 1) . '-' . date('m-d', strtotime($dateTime));
                     }
                 }
             } else {
@@ -466,11 +466,11 @@ class FunnelHelper
             $timeStampsArray[] = $timestamp + ($i * 86400);
         }
 
-        $earliest = gmdate('Y-m-d ' . $time . ':s', $timestamp);
+        $earliest = date('Y-m-d ' . $time . ':s', $timestamp);
 
         foreach ($timeStampsArray as $timeStampVal) {
-            if (in_array(gmdate('D', $timeStampVal), $days)) {
-                $earliest = gmdate('Y-m-d ' . $time . ':s', $timeStampVal);
+            if (in_array(date('D', $timeStampVal), $days)) {
+                $earliest = date('Y-m-d ' . $time . ':s', $timeStampVal);
                 if (strtotime($earliest) - $timestamp > -60) {
                     return $earliest;
                 }

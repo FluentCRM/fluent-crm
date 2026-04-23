@@ -306,7 +306,7 @@ class SubscriberController extends Controller
         }
 
         return $this->sendSuccess([
-            'message'     => __('Successfully updated the ', 'fluent-crm') . _n('subscriber', 'subscribers', count($subscribers), 'fluent-crm') . '.',
+            'message'     => __('Successfully updated the ', 'fluent-crm') . _n('subscriber', 'subscribers', count($subscribers)) . '.',
             'subscribers' => Subscriber::with('tags', 'lists')->whereIn('id', $subscribers)->get()
         ]);
     }
@@ -1176,7 +1176,6 @@ class SubscriberController extends Controller
             return [
                 'last_contact_id'    => $lastContactId,
                 'completed_contacts' => count($subscriberIds),
-                /* translators: 1. Number of subscribers */
                 'message'            => sprintf(__('%d subscribers has been attached to the selected email sequence', 'fluent-crm'), count($validSubscribers))
             ];
 
@@ -1224,7 +1223,6 @@ class SubscriberController extends Controller
             return [
                 'last_contact_id'    => $lastContactId,
                 'completed_contacts' => count($subscriberIds),
-                /* translators: %d is the number of subscribers */
                 'message'            => sprintf(__('%d subscribers has been attached to the selected company', 'fluent-crm'), count($validSubscribers))
             ];
 
@@ -1272,7 +1270,6 @@ class SubscriberController extends Controller
             return [
                 'last_contact_id'    => $lastContactId,
                 'completed_contacts' => count($subscriberIds),
-                /* translators: %d is the number of subscribers */
                 'message'            => sprintf(__('%d subscribers has been detached from the selected company', 'fluent-crm'), count($validSubscribers))
             ];
 
@@ -1345,7 +1342,6 @@ class SubscriberController extends Controller
             return [
                 'last_contact_id'    => $lastContactId,
                 'completed_contacts' => count($subscriberIds),
-                /* translators: %d is the number of subscribers */
                 'message'            => sprintf(__('%d subscribers has been attached to the selected automation funnel', 'fluent-crm'), count($validSubscribers)),
                 'subscribers'        => $validSubscribers
             ];

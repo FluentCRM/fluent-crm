@@ -108,12 +108,10 @@ class CartImporter
 
         $importType = 'customers_sync';
 
-    /* translators: %s: the external commerce plugin name */
-    $importTitle = sprintf(__('Sync %s Customers Now', 'fluent-crm'), self::getPluginName());
+        $importTitle = sprintf(__('Sync %s Customers Now', 'fluent-crm'), self::getPluginName());
 
         if(defined('FLUENTCART_VERSION')) {
             $importType = 'product_tags';
-            /* translators: %s: the external commerce plugin name */
             $importTitle = sprintf(__('Import %s Customers Now', 'fluent-crm'), self::getPluginName());
         }
 
@@ -129,14 +127,12 @@ class CartImporter
             ],
             'fields' => [
                 'product_type_maps' => [
-                    'label'              => __('Please map your Product and associate FluentCRM Tags', 'fluent-crm'),
+                    'label'              => __('Please map your Product and associate FluentCRM Tags', 'fluentcampaign-pro'),
                     'type'               => 'form-many-drop-down-mapper',
-                    /* translators: %s: the external commerce plugin name */
-                    'local_label'        => sprintf(__('Select %s Product', 'fluent-crm'), self::getPluginName()),
-                    'remote_label'       => __('Select FluentCRM Tag that will be applied', 'fluent-crm'),
-                    /* translators: %s: the external commerce plugin name */
-                    'local_placeholder'  => sprintf(__('Select %s Product', 'fluent-crm'), self::getPluginName()),
-                    'remote_placeholder' => __('Select FluentCRM Tag', 'fluent-crm'),
+                    'local_label'        => sprintf(__('Select %s Product', 'fluentcampaign-pro'), self::getPluginName()),
+                    'remote_label'       => __('Select FluentCRM Tag that will be applied', 'fluentcampaign-pro'),
+                    'local_placeholder'  => sprintf(__('Select %s Product', 'fluentcampaign-pro'), self::getPluginName()),
+                    'remote_placeholder' => __('Select FluentCRM Tag', 'fluentcampaign-pro'),
                     'field_ajax_selector' => [
                         'option_key' => 'fluent_cart_products'
                     ],

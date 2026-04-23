@@ -598,7 +598,7 @@ class Campaign extends Model
 
         $priorities = $subjects->pluck('key')->toArray();
         $count = count($priorities);
-        $num = wp_rand(0, array_sum($priorities));
+        $num = mt_rand(0, array_sum($priorities));
 
         $i = $n = 0;
         while ($i < $count) {
@@ -747,7 +747,7 @@ class Campaign extends Model
             return $hash;
         }
 
-        $hash = md5(wp_rand(100, 10000) . '_' . $this->id . '_' . $this->title . '_' . time() . '_' . wp_generate_uuid4());
+        $hash = md5(mt_rand(100, 10000) . '_' . $this->id . '_' . $this->title . '_' . time() . '_' . wp_generate_uuid4());
         $hash = str_replace('e', 'd', $hash);
         fluentcrm_update_campaign_meta($this->id, '_campaign_hash', $hash);
 
@@ -810,7 +810,7 @@ class Campaign extends Model
             $timeStamp = current_time('timestamp') + 60;
         }
 
-        return gmdate('Y-m-d H:i:s', $timeStamp);
+        return date('Y-m-d H:i:s', $timeStamp);
     }
 
     public function getShareableUrl()

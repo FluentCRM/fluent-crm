@@ -229,7 +229,6 @@ class Commands
         if ($skippedContacts) {
             \WP_CLI::line(sprintf('%d contacts has been skipped', count($skippedContacts)));
 
-            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
             fwrite(STDOUT, 'Show Skipped contacts? yes/no' . ' ');
             $value = strtolower(trim(fgets(STDIN)));
 
@@ -333,7 +332,6 @@ class Commands
                 // ask if they want to resume
                 \WP_CLI::line(sprintf('Looks like you have migrated %d customers already.', $completedCount));
                 // Adding space to question and showing it.
-                // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
                 fwrite(STDOUT, 'Do you want to resume? Type YES to resume or type NO start from scratch: ' . ' ');
 
                 $result = strtolower(trim(fgets(STDIN)));
@@ -450,7 +448,6 @@ class Commands
         if ($skippedContacts) {
             \WP_CLI::line(sprintf('%d contacts has been skipped', count($skippedContacts)));
 
-            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
             fwrite(STDOUT, 'Show Skipped contacts? yes/no' . ': ');
             $value = strtolower(trim(fgets(STDIN)));
 
@@ -657,7 +654,6 @@ class Commands
         if ($skippedContacts) {
             \WP_CLI::line(sprintf('%d contacts has been skipped', count($skippedContacts)));
 
-            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
             fwrite(STDOUT, 'Show Skipped contacts? yes/no' . ': ');
             $value = strtolower(trim(fgets(STDIN)));
 
@@ -775,7 +771,6 @@ class Commands
 
         \WP_CLI::confirm('Do you really want to remove all the contacts and related data?');
 
-        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
         fwrite(STDOUT, 'Please Type "yes" if you really want to do this? yes/no' . ': ');
         $value = strtolower(trim(fgets(STDIN)));
 
@@ -809,7 +804,6 @@ class Commands
         global $wpdb;
         foreach ($tables as $table) {
             \WP_CLI::line('Droping Table: ' . $table);
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared WordPress.DB.PreparedSQL.NotPrepared
             $wpdb->query("DROP TABLE IF EXISTS " . $wpdb->prefix . $table);
         }
         $options = [

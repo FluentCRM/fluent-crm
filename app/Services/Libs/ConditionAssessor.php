@@ -181,7 +181,7 @@ class ConditionAssessor
 
                     return strtotime($sourceValue) > strtotime($dataValue);
                 case 'date_equal':
-                    return gmdate('YMD', strtotime($sourceValue)) == gmdate('YMD', strtotime($dataValue));
+                    return date('YMD', strtotime($sourceValue)) == date('YMD', strtotime($dataValue));
                 case 'days_before':
                     if (!$sourceValue || $sourceValue == '0000-00-00') {
                         return false;

@@ -126,7 +126,6 @@ class CampaignUrlMetric extends Model
         if ($openCount) {
             $formattedStatus['open'] = [
                 'total'      => $openCount,
-                /* translators: %d: number of opens */
                 'label'      => sprintf(__('Open Rate (%d)', 'fluent-crm'), $openCount),
                 'type'       => 'open',
                 'is_percent' => true,
@@ -137,7 +136,6 @@ class CampaignUrlMetric extends Model
         if ($clickCount) {
             $formattedStatus['click'] = [
                 'total'      => $clickCount,
-                /* translators: %d: number of clicks */
                 'label'      => sprintf(__('Click Rate (%d)', 'fluent-crm'), $clickCount),
                 'type'       => 'click',
                 'is_percent' => true,
@@ -158,7 +156,6 @@ class CampaignUrlMetric extends Model
         if ($unsubscribeCount) {
             $formattedStatus['unsubscribe'] = [
                 'total'      => $unsubscribeCount,
-                /* translators: %d: number of unsubscribes */
                 'label'      => sprintf(__('Unsubscribe (%d)', 'fluent-crm'), $unsubscribeCount),
                 'type'       => 'unsubscribe',
                 'is_percent' => true,

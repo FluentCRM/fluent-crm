@@ -363,7 +363,6 @@ class ImporterController extends Controller
                 'label'            => $pluginName,
                 'logo'             => $logo,
                 'disabled'         => true,
-                /* translators: %s: plugin name */
                 'disabled_message' => sprintf(__('Import %s members by member groups and member types then segment by associate tags. This is a pro feature. Please upgrade to activate this feature', 'fluent-crm'), $pluginName)
             ];
         }

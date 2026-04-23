@@ -55,14 +55,14 @@ return function ($file) {
         if (!isset($schedules['fluentcrm_every_minute'])) {
             $schedules['fluentcrm_every_minute'] = array(
                 'interval' => 60,
-                'display'  => esc_html__('Every Minute (FluentCRM)', 'fluent-crm'),
+                'display'  => esc_html__('Every Minute (FluentCRM)', 'fluentform'),
             );
         }
 
         if (!isset($schedules['fluentcrm_scheduled_five_minute_tasks'])) {
             $schedules['fluentcrm_scheduled_five_minute_tasks'] = array(
                 'interval' => 300,
-                'display'  => esc_html__('Every 5 Minutes (FluentCRM)', 'fluent-crm'),
+                'display'  => esc_html__('Every 5 Minutes (FluentCRM)', 'fluentform'),
             );
         }
 

@@ -72,7 +72,6 @@ class CampaignAnalyticsController extends Controller
                     continue;
                 }
 
-                /* translators: 1: billing first name, 2: billing last name */
                 $buyer = trim(sprintf(_x('%1$s %2$s', 'full name', 'fluent-crm'), $order->get_billing_first_name(), $order->get_billing_last_name()));
 
                 $order_timestamp = $order->get_date_created() ? $order->get_date_created()->getTimestamp() : '';
@@ -81,8 +80,8 @@ class CampaignAnalyticsController extends Controller
                     $show_date = '&ndash;';
                 } else if ($order_timestamp > strtotime('-1 day', time()) && $order_timestamp <= time()) {
                     $show_date = sprintf(
-                        /* translators: %s: human-readable time difference */
-                        _x('%s ago', '%s = human-readable time difference', 'fluent-crm'),
+                    /* translators: %s: human-readable time difference */
+                        _x('%s ago', '%s = human-readable time difference', 'woocommerce'),
                         human_time_diff($order->get_date_created()->getTimestamp(), time())
                     );
                 } else {
@@ -94,7 +93,7 @@ class CampaignAnalyticsController extends Controller
                      * @param string The date format to be used. Default is 'M j, Y'.
                      * @param string The context for the date format. Default is 'woocommerce'.
                      */
-                    $show_date = $order->get_date_created()->date_i18n(apply_filters('woocommerce_admin_order_date_format', __('M j, Y', 'fluent-crm')));
+                    $show_date = $order->get_date_created()->date_i18n(apply_filters('woocommerce_admin_order_date_format', __('M j, Y', 'woocommerce')));
                 }
 
                 $orders[] = [
@@ -145,7 +144,7 @@ class CampaignAnalyticsController extends Controller
                     $customerName = '<a href="' . esc_url(admin_url("edit.php?post_type=download&page=edd-customers&view=overview&id=$customer_id")) . '">' . $customer->name . '</a>';
                 } else {
                     $email = edd_get_payment_user_email($payment->ID);
-                    $customerName = '<a href="' . esc_url(admin_url("edit.php?post_type=download&page=edd-payment-history&s=$email")) . '">' . __('(customer missing)', 'fluent-crm') . '</a>';
+                    $customerName = '<a href="' . esc_url(admin_url("edit.php?post_type=download&page=edd-payment-history&s=$email")) . '">' . __('(customer missing)', 'easy-digital-downloads') . '</a>';
                 }
 
                 $formattedOrders[] = [

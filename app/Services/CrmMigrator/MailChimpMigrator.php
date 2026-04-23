@@ -212,9 +212,9 @@ class MailChimpMigrator extends BaseMigrator
         $fieldMaps = Arr::get($postedData, 'contact_fields', []);
 
         foreach ($subscribers as $subscriber) {
-            $created_at = gmdate('Y-m-d H:i:s');
+            $created_at = date('Y-m-d H:i:s');
             if (!empty($subscriber['timestamp_signup'])) {
-                $created_at = gmdate('Y-m-d H:i:s', strtotime($subscriber['timestamp_signup']));
+                $created_at = date('Y-m-d H:i:s', strtotime($subscriber['timestamp_signup']));
             }
 
             $data = [

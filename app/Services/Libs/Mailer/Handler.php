@@ -56,7 +56,7 @@ class Handler extends BaseHandler
         if ($this->sentCount || random_int(0, 50) > 20) { // sometimes we want to check this
             $lastChecked = fluentCrmGetOptionCache('_fcrm_last_email_process_cleanup', 600);
             if (!$lastChecked || time() - $lastChecked > 70) {
-                $dateStamp = gmdate('Y-m-d H:i:s', (current_time('timestamp') - $this->maximumProcessingTime - 30));
+                $dateStamp = date('Y-m-d H:i:s', (current_time('timestamp') - $this->maximumProcessingTime - 30));
                 CampaignEmail::where('status', 'processing')
                     ->where('updated_at', '<', $dateStamp)
                     ->update([

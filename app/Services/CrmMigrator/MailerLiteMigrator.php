@@ -205,7 +205,7 @@ class MailerLiteMigrator extends BaseMigrator
             $data = [
                 'email'      => $subscriber['email'],
                 'first_name' => $subscriber['name'],
-                'created_at' => gmdate('Y-m-d H:i:s', strtotime($subscriber['date_created'])),
+                'created_at' => date('Y-m-d H:i:s', strtotime($subscriber['date_created'])),
                 'source'     => 'MailerLite',
                 'status'     => 'subscribed',
                 'ip'         => $subscriber['signup_ip']

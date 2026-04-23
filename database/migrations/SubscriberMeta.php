@@ -20,9 +20,7 @@ class SubscriberMeta
 
         $indexPrefix = $wpdb->prefix .'fc_index_';
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $sql = "CREATE TABLE $table (
                 `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
                 `subscriber_id` BIGINT UNSIGNED NOT NULL,
@@ -37,9 +35,8 @@ class SubscriberMeta
             ) $charsetCollate;";
 
             dbDelta($sql);
-        } else{
+        } else {
 
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $indexes = $wpdb->get_results("SHOW INDEX FROM $table");
             $indexedColumns = [];
             foreach ($indexes as $index) {
@@ -47,9 +44,7 @@ class SubscriberMeta
             }
 
             if(!in_array('object_type', $indexedColumns)) {
-                // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
                 $sql = "ALTER TABLE {$table} ADD INDEX `object_type` (`object_type`);";
-                // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
                 $wpdb->query($sql);
             }
         }

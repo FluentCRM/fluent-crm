@@ -356,21 +356,18 @@ class FormElementBuilder
                 const datePickers = document.querySelectorAll('.fc-js-date-picker');
                 datePickers.forEach(picker => {
                     if (!picker.dataset.fpInitialized) {
-                        flatpickr(picker, {
-                            dateFormat: 'Y-m-d',
-                            allowInput: true
-                        });
+                        flatpickr(picker, { dateFormat: 'Y-m-d', allowInput: true });
                         picker.dataset.fpInitialized = true;
                     }
                 });
             });
         </script>
-    <?php
+        <?php
     }
 
     private function renderDateTimePickerScript()
     {
-    ?>
+        ?>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 const dateTimePickers = document.querySelectorAll('.fc-js-datetime-picker');
@@ -387,12 +384,12 @@ class FormElementBuilder
                 });
             });
         </script>
-    <?php
+        <?php
     }
 
     private function renderMultiSelectScript()
     {
-    ?>
+        ?>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 const selects = document.querySelectorAll('.fc-js-choice-multi');
@@ -416,40 +413,13 @@ class FormElementBuilder
 
     private function enqueueDatePickerAssets()
     {
-        wp_enqueue_style('flatpickr-css', FLUENTCRM_PLUGIN_URL . 'assets/libs/flatpickr/flatpickr.min.css', [], '4.6.13');
-        wp_enqueue_script('flatpickr-js', FLUENTCRM_PLUGIN_URL . 'assets/libs/flatpickr/flatpickr.min.js', [], '4.6.13', true);
+        wp_enqueue_style('flatpickr-css', 'https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css', [], '4.6.13');
+        wp_enqueue_script('flatpickr-js', 'https://cdn.jsdelivr.net/npm/flatpickr', [], '4.6.13', true);
     }
 
     private function enqueueMultiSelectAssets()
     {
-        wp_enqueue_style('choices-css', FLUENTCRM_PLUGIN_URL . 'assets/libs/choices/choices.min.css', [], '10.0.0');
-        wp_enqueue_script('choices-js', FLUENTCRM_PLUGIN_URL . 'assets/libs/choices/choices.min.js', ['jquery'], '10.0.0', true);
-
-        // Add custom CSS for dropdown positioning
-        add_action('wp_head', function () {
-        ?>
-            <style>
-                .fc_field_select-multi {
-                    overflow: inherit !important;
-                    z-index: 99999;
-                }
-
-                /* Position the choices container as relative */
-                .choices {
-                    position: relative !important;
-                    overflow: inherit !important;
-                }
-
-                /* Make dropdown absolute so it doesn't take space */
-                .choices__list.choices__list--dropdown {
-                    position: absolute !important;
-                    top: 100% !important;
-                    left: 0 !important;
-                    right: 0 !important;
-                    z-index: 999999999999999999 !important;
-                }
-            </style>
-<?php
-        });
+        wp_enqueue_style('choices-css', 'https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css', [], '10.0.0');
+        wp_enqueue_script('choices-js', 'https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js', ['jquery'], '10.0.0', true);
     }
 }

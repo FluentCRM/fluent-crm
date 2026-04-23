@@ -47,14 +47,12 @@ class Parser implements ParserInterface
     {
         foreach ($tokens as $token) {
             if ($token->isString()) {
-                // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
                 throw SyntaxErrorException::stringAsFunctionArgument();
             }
         }
         $joined = \trim(\implode('', \array_map(fn(Token $token) => $token->getValue(), $tokens)));
         $int = function ($string) {
             if (!\is_numeric($string)) {
-                // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
                 throw SyntaxErrorException::stringAsFunctionArgument();
             }
             return (int) $string;
@@ -101,7 +99,6 @@ class Parser implements ParserInterface
                 break;
             }
             if (null !== $pseudoElement) {
-                // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
                 throw SyntaxErrorException::pseudoElementFound($pseudoElement, 'not at the end of a selector');
             }
             if ($peek->isDelimiter(['+', '>', '~'])) {
@@ -132,7 +129,6 @@ class Parser implements ParserInterface
                 break;
             }
             if (null !== $pseudoElement) {
-                // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
                 throw SyntaxErrorException::pseudoElementFound($pseudoElement, 'not at the end of a selector');
             }
             if ($peek->isHash()) {
@@ -162,7 +158,6 @@ class Parser implements ParserInterface
                     if ('Pseudo[Element[*]:scope]' === $result->__toString()) {
                         $used = \count($stream->getUsed());
                         if (!(2 === $used || 3 === $used && $stream->getUsed()[0]->isWhiteSpace() || $used >= 3 && $stream->getUsed()[$used - 3]->isDelimiter([',']) || $used >= 4 && $stream->getUsed()[$used - 3]->isWhiteSpace() && $stream->getUsed()[$used - 4]->isDelimiter([',']))) {
-                            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
                             throw SyntaxErrorException::notAtTheStartOfASelector('scope');
                         }
                     }
@@ -172,17 +167,14 @@ class Parser implements ParserInterface
                 $stream->skipWhitespace();
                 if ('not' === \strtolower($identifier)) {
                     if ($insideNegation) {
-                        // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
                         throw SyntaxErrorException::nestedNot();
                     }
                     [$argument, $argumentPseudoElement] = $this->parseSimpleSelector($stream, \true, \true);
                     $next = $stream->getNext();
                     if (null !== $argumentPseudoElement) {
-                        // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
                         throw SyntaxErrorException::pseudoElementFound($argumentPseudoElement, 'inside ::not()');
                     }
                     if (!$next->isDelimiter([')'])) {
-                        // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
                         throw SyntaxErrorException::unexpectedToken('")"', $next);
                     }
                     $result = new Node\NegationNode($result, $argument);
@@ -190,7 +182,6 @@ class Parser implements ParserInterface
                     $selectors = $this->parseSelectorList($stream, \true);
                     $next = $stream->getNext();
                     if (!$next->isDelimiter([')'])) {
-                        // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
                         throw SyntaxErrorException::unexpectedToken('")"', $next);
                     }
                     $result = new Node\MatchingNode($result, $selectors);
@@ -198,7 +189,6 @@ class Parser implements ParserInterface
                     $selectors = $this->parseSelectorList($stream, \true);
                     $next = $stream->getNext();
                     if (!$next->isDelimiter([')'])) {
-                        // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
                         throw SyntaxErrorException::unexpectedToken('")"', $next);
                     }
                     $result = new Node\SpecificityAdjustmentNode($result, $selectors);
@@ -213,23 +203,19 @@ class Parser implements ParserInterface
                         } elseif ($next->isDelimiter([')'])) {
                             break;
                         } else {
-                            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
                             throw SyntaxErrorException::unexpectedToken('an argument', $next);
                         }
                     }
                     if (!$arguments) {
-                        // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
                         throw SyntaxErrorException::unexpectedToken('at least one argument', $next);
                     }
                     $result = new Node\FunctionNode($result, $identifier, $arguments);
                 }
             } else {
-                // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
                 throw SyntaxErrorException::unexpectedToken('selector', $peek);
             }
         }
         if (\count($stream->getUsed()) === $selectorStart) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
             throw SyntaxErrorException::unexpectedToken('selector', $stream->getPeek());
         }
         return [$result, $pseudoElement];
@@ -261,7 +247,6 @@ class Parser implements ParserInterface
         $stream->skipWhitespace();
         $attribute = $stream->getNextIdentifierOrStar();
         if (null === $attribute && !$stream->getPeek()->isDelimiter(['|'])) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
             throw SyntaxErrorException::unexpectedToken('"|"', $stream->getPeek());
         }
         if ($stream->getPeek()->isDelimiter(['|'])) {
@@ -289,7 +274,6 @@ class Parser implements ParserInterface
                 $operator = $next->getValue() . '=';
                 $stream->getNext();
             } else {
-                // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
                 throw SyntaxErrorException::unexpectedToken('operator', $next);
             }
         }
@@ -300,13 +284,11 @@ class Parser implements ParserInterface
             $value = new Token(Token::TYPE_STRING, (string) $value->getValue(), $value->getPosition());
         }
         if (!($value->isIdentifier() || $value->isString())) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
             throw SyntaxErrorException::unexpectedToken('string or identifier', $value);
         }
         $stream->skipWhitespace();
         $next = $stream->getNext();
         if (!$next->isDelimiter([']'])) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
             throw SyntaxErrorException::unexpectedToken('"]"', $next);
         }
         return new Node\AttributeNode($selector, $namespace, $attribute, $operator, $value->getValue());

@@ -134,7 +134,7 @@ class RedirectionHandler
 
         if (strpos($url, 'route=smart_url')) {
             // this is a smart URL
-            $url_components = wp_parse_url($url);
+            $url_components = parse_url($url);
             parse_str($url_components['query'], $params);
 
             if (!empty($params['slug'])) {
@@ -152,7 +152,7 @@ class RedirectionHandler
         }
 
         if (strpos($urlData->url, 'route=bnu')) {
-            $url_components = wp_parse_url($url);
+            $url_components = parse_url($url);
             parse_str($url_components['query'], $params);
             if (!empty($params['aid'])) {
                 $benchmarkActionId = intval($params['aid']);

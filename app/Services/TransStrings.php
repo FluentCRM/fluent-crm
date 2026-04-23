@@ -1789,7 +1789,6 @@ class TransStrings
             'Auto_Login_Label'                                                                      => __('Enable auto login (for connected wp user) when this smart links is being clicked from email', 'fluent-crm'),
             'Apply Tags when clicked (optional)'                                                    => __('Apply Tags when clicked (optional)', 'fluent-crm'),
             'Coupon Code Prefix'                                                                    => __('Coupon Code Prefix', 'fluent-crm'),
-            /* translators: %s: example coupon code prefix */
             'Coupon_Code_Prefix_help'                                                               => sprintf(__("FluentCRM will generate a random coupon code for each contact. Use a prefix to make something like '%s'.", 'fluent-crm'), 'YOUR_PREFIX-XYZHS4'),
             'Dynamic_Coupon_Usage'                                                                  => __('This dynamic coupon can be used in emails or other actions as:', 'fluent-crm'),
             'Configure from scratch'                                                                => __('Configure from scratch', 'fluent-crm'),

@@ -114,7 +114,6 @@ abstract class AbstractHtmlProcessor
     {
         if (!$this->domDocument instanceof \DOMDocument) {
             $message = self::class . '::setDomDocument() has not yet been called on ' . static::class;
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
             throw new \UnexpectedValueException($message, 1570472239);
         }
         return $this->domDocument;
@@ -136,7 +135,6 @@ abstract class AbstractHtmlProcessor
     {
         if (!$this->xPath instanceof \DOMXPath) {
             $message = self::class . '::setDomDocument() has not yet been called on ' . static::class;
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
             throw new \UnexpectedValueException($message, 1617819086);
         }
         return $this->xPath;
@@ -304,7 +302,6 @@ abstract class AbstractHtmlProcessor
                 $hasContentTypeMetaTagInHead = !$this->hasEndOfHeadElement($htmlBefore);
             } catch (\RuntimeException $exception) {
                 // If something unexpected occurs, assume the `Content-Type` that was found is valid.
-                // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Vendor library, debug message
                 \trigger_error($exception->getMessage());
                 $hasContentTypeMetaTagInHead = \true;
             }

@@ -137,13 +137,13 @@ class FunnelProcessor
             foreach ($sequencePoints->getCurrentSequences() as $sequence) {
                 $this->processSequence($subscriber, $sequence, $funnelSubscriber->id);
                 if ($sequence->action_name == 'end_this_funnel') {
-                    $this->completeFunnelSequence($funnelSubscriber);
                     $this->setFunnel($funnelSubscriber->funnel_id);
                     return;
                 }
             }
 
             $this->completeFunnelSequence($funnelSubscriber);
+
             return;
         }
 
@@ -169,7 +169,7 @@ class FunnelProcessor
         } else if (!$sequencePoints->hasNext()) {
             $this->completeFunnelSequence($funnelSubscriber);
         } else if ($nextSequence) {
-            $nextDateTime = gmdate('Y-m-d H:i:s', current_time('timestamp') + $nextSequence->delay);
+            $nextDateTime = date('Y-m-d H:i:s', current_time('timestamp') + $nextSequence->delay);
 
             if ($nextSequence->execution_date_time) {
                 $nextDateTime = $nextSequence->execution_date_time;
@@ -217,11 +217,7 @@ class FunnelProcessor
             $sequence = FunnelHelper::migrateConditionSequence($sequence);
         }
 
-        // We want to run if the funnel Metrics is just created
-        // We are making sure that the action will run only once per subscriber per sequence
-        if ($funnelMetric->wasRecentlyCreated) {
-            do_action('fluentcrm_funnel_sequence_handle_' . $sequence->action_name, $subscriber, $sequence, $funnelSubscriberId, $funnelMetric);
-        }
+        do_action('fluentcrm_funnel_sequence_handle_' . $sequence->action_name, $subscriber, $sequence, $funnelSubscriberId, $funnelMetric);
     }
 
     public function completeFunnelSequence($funnelSubscriber)
@@ -246,10 +242,10 @@ class FunnelProcessor
          * This filter allows customization of the subscriber statuses used in the funnel processing.
          * By default, it includes only the 'active' status.
          *
-         * @param array $statuses The default subscriber statuses, which is ['active'].
-         * @return array Filtered subscriber statuses.
          * @since 1.0.0
          *
+         * @param array $statuses The default subscriber statuses, which is ['active'].
+         * @return array Filtered subscriber statuses.
          */
         $statuses = apply_filters('fluent_crm/funnel_subscriber_statuses', ['active']);
 
@@ -406,18 +402,11 @@ class FunnelProcessor
             $data = wp_parse_args($data, $metricArgs);
         }
 
-        $exist = FunnelMetric::where('funnel_id', $sequence->funnel_id)
-            ->where('sequence_id', $sequence->id)
-            ->where('subscriber_id', $subscriber->id)
-            ->first();
-
-        if ($exist) {
-            $exist->fill($data);
-            $exist->save();
-            return $exist;
-        }
-
-        return Funnel::create($data);
+        return FunnelMetric::updateOrCreate($data, [
+            'funnel_id'     => $sequence->funnel_id,
+            'sequence_id'   => $sequence->id,
+            'subscriber_id' => $subscriber->id
+        ]);
     }
 
     public function initChildSequences($parent, $isMatched, $subscriber, $funnelSubscriberId, $funnelMetric)
@@ -466,10 +455,10 @@ class FunnelProcessor
 
             if ($nextSequence) {
 
-                $waitDateTimes = gmdate('Y-m-d H:i:s', current_time('timestamp') + $nextSequence->delay);
+                $waitDateTimes = date('Y-m-d H:i:s', current_time('timestamp') + $nextSequence->delay);
 
                 if ($waitTimes) {
-                    $waitDateTimes = gmdate('Y-m-d H:i:s', current_time('timestamp') + $waitTimes);
+                    $waitDateTimes = date('Y-m-d H:i:s', current_time('timestamp') + $waitTimes);
                 }
 
                 return FunnelSubscriber::where('id', $funnelSubscriberId)
@@ -499,7 +488,7 @@ class FunnelProcessor
                 ->update([
                     'next_sequence'       => $nextSequence->sequence,
                     'next_sequence_id'    => $nextSequence->id,
-                    'next_execution_time' => gmdate('Y-m-d H:i:s', strtotime(current_time('mysql')) + $waitTimes),
+                    'next_execution_time' => date('Y-m-d H:i:s', strtotime(current_time('mysql')) + $waitTimes),
                     'status'              => 'active'
                 ]);
         }

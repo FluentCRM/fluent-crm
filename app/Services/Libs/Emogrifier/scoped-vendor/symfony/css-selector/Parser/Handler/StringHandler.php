@@ -41,17 +41,14 @@ class StringHandler implements HandlerInterface
         $reader->moveForward(1);
         $match = $reader->findPattern($this->patterns->getQuotedStringPattern($quote));
         if (!$match) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
             throw new InternalErrorException(\sprintf('Should have found at least an empty match at %d.', $reader->getPosition()));
         }
         // check unclosed strings
         if (\strlen($match[0]) === $reader->getRemainingLength()) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
             throw SyntaxErrorException::unclosedString($reader->getPosition() - 1);
         }
         // check quotes pairs validity
         if ($quote !== $reader->getSubstring(1, \strlen($match[0]))) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
             throw SyntaxErrorException::unclosedString($reader->getPosition() - 1);
         }
         $string = $this->escaping->escapeUnicodeAndNewLine($match[0]);

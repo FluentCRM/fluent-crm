@@ -298,14 +298,13 @@ class OptionsController extends Controller
             // woocommerce categories
             if (defined('WC_PLUGIN_FILE')) {
                 $cat_args = array(
-                    'taxonomy'   => 'product_cat',
                     'orderby'    => 'name',
                     'order'      => 'ASC',
                     'hide_empty' => false,
                     'search'     => $search,
                     'number'     => 50
                 );
-                $product_categories = get_terms($cat_args);
+                $product_categories = get_terms('product_cat', $cat_args);
 
                 $pushedIds = [];
                 foreach ($product_categories as $category) {
@@ -323,13 +322,12 @@ class OptionsController extends Controller
 
                 if ($includedIds) {
                     $cat_args = array(
-                        'taxonomy'   => 'product_cat',
                         'orderby'    => 'name',
                         'order'      => 'ASC',
                         'hide_empty' => false,
                         'include'    => $includedIds
                     );
-                    $product_categories = get_terms($cat_args);
+                    $product_categories = get_terms('product_cat', $cat_args);
                     foreach ($product_categories as $category) {
                         $options[] = [
                             'id'    => $category->term_id,

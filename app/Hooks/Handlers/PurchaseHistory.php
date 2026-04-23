@@ -144,7 +144,6 @@ class PurchaseHistory
                 'order'   => '#' . $order->get_order_number(),
                 'date'    => esc_html(wc_format_datetime($order->get_date_created())),
                 'status'  => $order->get_status(),
-                /* translators: 1: formatted order total (with currency), 2: number of items */
                 'total'   => wp_kses_post(sprintf(_n('%1$s for %2$s item', '%1$s for %2$s items', $item_count, 'fluent-crm'), $order->get_formatted_order_total(), $item_count)),
                 'actions' => $actionsHtml
             ];

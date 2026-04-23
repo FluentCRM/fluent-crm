@@ -206,7 +206,7 @@ class ConvertKitMigrator extends BaseMigrator
             $data = [
                 'email'      => $subscriber['email_address'],
                 'first_name' => $subscriber['first_name'],
-                'created_at' => gmdate('Y-m-d H:i:s', strtotime($subscriber['created_at'])),
+                'created_at' => date('Y-m-d H:i:s', strtotime($subscriber['created_at'])),
                 'source'     => 'ConvertKit',
                 'status'     => 'subscribed'
             ];

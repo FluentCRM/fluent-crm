@@ -83,7 +83,7 @@ class Company extends Model
         parent::boot();
 
         static::creating(function ($model) {
-            $model->hash = md5(wp_generate_uuid4() . '_' . time() . '_' . wp_rand(1000, 9999));
+            $model->hash = md5(wp_generate_uuid4() . '_' . time() . '_' . mt_rand(1000, 9999));
         });
     }
 

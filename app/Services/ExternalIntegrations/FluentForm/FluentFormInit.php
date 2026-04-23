@@ -85,7 +85,7 @@ class FluentFormInit
         $html .= '</ul>';
 
         $widgets[] = [
-            'title'   => __('FluentForm Subscriptions', 'fluent-crm'),
+            'title'   => __('FluentForm Subscriptions', 'fluentcampaign-pro'),
             'content' => $html
         ];
 
@@ -97,8 +97,7 @@ class FluentFormInit
 
         if ($subscription->status == 'active') {
             if ($subscription->bill_times) {
-                /* translators: 1: total number of payments, 2: current payment count, 3: total number of payments */
-                $billingText = sprintf(esc_html__('Will be cancelled after %1$d payments. (%2$d/%3$d)', 'fluent-crm'), $subscription->bill_times, $subscription->bill_count, $subscription->bill_times);
+                $billingText = sprintf(esc_html__('Will be cancelled after %d payments. (%d/%d)', 'fluent-crm'), $subscription->bill_times, $subscription->bill_count, $subscription->bill_times);
             } else {
                 $billingText = __('Will be billed until cancelled', 'fluent-crm');
             }
@@ -115,11 +114,11 @@ class FluentFormInit
         $html .= '<a href="' . $permalink . '" target="_blank" class="fc_mepr_subscription_title">';
         $html .= '<b>' . esc_html($subscription->item_name) . '<span class="fc_dash_extrernal dashicons dashicons-external"></span></b>';
         $html .= '</a>';
-        $html .= '<span class="fc_date">' . __('Start Date: ', 'fluent-crm') . $formatted_date . '</span>';
+        $html .= '<span class="fc_date">' . __('Start Date: ', 'fluentcampaign-pro') . $formatted_date . '</span>';
         if ($subscription->status == 'active') {
-            $html .= sprintf('<span class="fc_date period_date">%s%s</span>', __('Expiry Date: ', 'fluent-crm'), $billingText);
+            $html .= sprintf('<span class="fc_date period_date">%s%s</span>', __('Expiry Date: ', 'fluentcampaign-pro'), $billingText);
         } else {
-            $html .= sprintf('<span class="fc_date period_date">%s%s</span>', __('Cancelled Date: ', 'fluent-crm'), date_i18n(get_option('date_format'), strtotime($subscription->updated_at)));
+            $html .= sprintf('<span class="fc_date period_date">%s%s</span>', __('Cancelled Date: ', 'fluentcampaign-pro'), date_i18n(get_option('date_format'), strtotime($subscription->updated_at)));
         }
         $html .= '</li>';
         return $html;

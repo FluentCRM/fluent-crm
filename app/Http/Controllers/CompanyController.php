@@ -519,7 +519,7 @@ class CompanyController extends Controller
         if (!$url) {
             return $url;
         }
-        $parsed_url = wp_parse_url($url);
+        $parsed_url = parse_url($url);
         if (!$parsed_url || empty($parsed_url['scheme'])) {
             $url = 'https://' . $url;
         }
@@ -597,7 +597,7 @@ class CompanyController extends Controller
                     $tmpFilePath = tempnam(sys_get_temp_dir(), 'tmpimg');
                     file_put_contents($tmpFilePath, $imageBody);
                     $imgSize = getimagesize($tmpFilePath);
-                    wp_delete_file($tmpFilePath);
+                    @unlink($tmpFilePath);
                     if (!$imgSize) {
                         return null;
                     }
@@ -620,7 +620,7 @@ class CompanyController extends Controller
                     return $uploadDir['baseurl'] . FLUENTCRM_UPLOAD_DIR . '/' . $filename;
                 } else {
                     // If the downloaded file is not an image, delete the file and return null
-                    wp_delete_file($filepath);
+                    @unlink($filepath);
                 }
             }
         }

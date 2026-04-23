@@ -4,7 +4,7 @@ Tags: email marketing, newsletter, crm, email newsletter, subscribers
 Requires at least: 5.0
 Tested up to: 6.8
 Requires PHP: 7.3
-Stable tag: 2.9.85
+Stable tag: 2.9.84
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -261,14 +261,6 @@ You can report any security bugs found in the source code of FluentCRM plugins t
 10. Pro Integrations
 
 == Changelog ==
-
-= 2.9.85 (Date: November 20, 2025) =
-- Optimize Code based on Plugin Check (PCP) Recommendations
-- Automation Flow and Related Database Queries Optimizations
-- WooCommerce Block Based Checkout Checkbox Support
-- Improved Data Santization & Validation - Plugin Check (PCP)
-- Language Translation Improvements
-- Other Performance Improvements & Bug Fixes
 
 = 2.9.84 (Date: October 27, 2025) =
 New: FluentCart filters added to 'Check Condition' in Automations

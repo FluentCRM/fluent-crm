@@ -34,11 +34,9 @@ class CalcFunction extends CSSFunction
         $sFunction = $oParserState->parseIdentifier();
         if ($oParserState->peek() != '(') {
             // Found ; or end of line before an opening bracket
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
             throw new UnexpectedTokenException('(', $oParserState->peek(), 'literal', $oParserState->currentLine());
         } elseif (!\in_array($sFunction, ['calc', '-moz-calc', '-webkit-calc'])) {
             // Found invalid calc definition. Example calc (...
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped 
             throw new UnexpectedTokenException('calc', $sFunction, 'literal', $oParserState->currentLine());
         }
         $oParserState->consume('(');
@@ -70,14 +68,12 @@ class CalcFunction extends CSSFunction
                 if (\in_array($oParserState->peek(), $aOperators)) {
                     if ($oParserState->comes('-') || $oParserState->comes('+')) {
                         if ($oParserState->peek(1, -1) != ' ' || !($oParserState->comes('- ') || $oParserState->comes('+ '))) {
-                            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
                             throw new UnexpectedTokenException(" {$oParserState->peek()} ", $oParserState->peek(1, -1) . $oParserState->peek(2), 'literal', $oParserState->currentLine());
                         }
                     }
                     $oCalcList->addListComponent($oParserState->consume(1));
                     $iLastComponentType = CalcFunction::T_OPERATOR;
                 } else {
-                    // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
                     throw new UnexpectedTokenException(\sprintf('Next token was expected to be an operand of type %s. Instead "%s" was found.', \implode(', ', $aOperators), $oParserState->peek()), '', 'custom', $oParserState->currentLine());
                 }
             }

@@ -18,9 +18,7 @@ class Terms
         $table = $wpdb->prefix .'fc_terms';
         $indexPrefix = $wpdb->prefix .'fc_tms_';
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $sql = "CREATE TABLE $table (
                 `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
                 `parent_id` BIGINT UNSIGNED NULL,

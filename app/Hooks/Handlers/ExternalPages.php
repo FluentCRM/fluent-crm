@@ -629,13 +629,7 @@ class ExternalPages
             'subscriber_id' => $subscriber->id,
             'type'          => 'system_log',
             'title'         => __('Unsubscribed', 'fluent-crm'),
-            /* translators: 1: IP address of the subscriber (may be anonymized), 2: unsubscribe reason */
-            'description'   => wp_kses(sprintf(__('Subscriber unsubscribed from IP Address: %1$s <br />Reason: %2$s', 'fluent-crm'),
-                    esc_html(FluentCrm()->request->getIp(fluentCrmWillAnonymizeIp())),
-                    esc_html($reason)
-                ),
-                array('br' => array())
-            )
+            'description'   => sprintf(__('Subscriber unsubscribed from IP Address: %1s <br />Reason: %2s', 'fluent-crm'), FluentCrm()->request->getIp(fluentCrmWillAnonymizeIp()), $reason)
         ]);
 
         $message = __("You've successfully unsubscribed from our email list.", 'fluent-crm');
@@ -722,9 +716,7 @@ class ExternalPages
         // Transparent 1x1 GIF as hex format
         $image = base64_decode('R0lGODlhAQABAJAAAP8AAAAAACH5BAUQAAAALAAAAAABAAEAAAICBAEAOw==');
 
-        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Intentionally outputting raw GIF bytes for the tracking pixel response
-        echo $image;
-        exit;
+        die($image);
     }
 
     public function confirmationPage()
@@ -1203,11 +1195,7 @@ class ExternalPages
             }
 
             wp_send_json_success([
-                'message' => sprintf(
-                    /* translators: %s: the new email address to which confirmation was sent */
-                    esc_html__('A confirmation email has been sent to %s. Please confirm your email address to resubscribe with changed email address', 'fluent-crm'),
-                    esc_html(sanitize_email($email))
-                )
+                'message' => sprintf(__('A confirmation email has been sent to %s. Please confirm your email address to resubscribe with changed email address', 'fluent-crm'), $email)
             ], 200);
             return;
         }
@@ -1228,11 +1216,7 @@ class ExternalPages
         if ($subscriber->status != 'subscribed') {
             $subscriber->sendDoubleOptinEmail();
             wp_send_json_success([
-                'message' => sprintf(
-                    /* translators: %s: the email address to which confirmation was sent */
-                    esc_html__('A confirmation email has been sent to %s. Please confirm your email address to resubscribe', 'fluent-crm'),
-                    esc_html(sanitize_email($email))
-                )
+                'message' => sprintf(__('A confirmation email has been sent to %s. Please confirm your email address to resubscribe', 'fluent-crm'), $email)
             ], 200);
         }
 

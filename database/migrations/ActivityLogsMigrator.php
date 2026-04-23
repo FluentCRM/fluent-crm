@@ -19,9 +19,7 @@ class ActivityLogsMigrator
 
         $indexPrefix = $wpdb->prefix . 'fc_al_';
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $sql = "CREATE TABLE $table (
                 `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
                 `object_type` VARCHAR(192) NOT NULL,

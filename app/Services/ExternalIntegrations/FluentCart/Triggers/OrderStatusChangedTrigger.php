@@ -99,20 +99,20 @@ class OrderStatusChangedTrigger extends BaseTrigger
             'from_status' => [
                 'type' => 'select',
                 'label' => __('From Order Status', 'fluent-crm'),
-                'help' => __('The current status that will trigger an action when it changes from this status to the \'To Order Status.\'', 'fluent-crm'),
+                'help' => __('The current status that will trigger an action when it changes from this status to the \'To Order Status.\'', 'fluentcampaign-pro'),
                 'options' => $formattedStatuses
             ],
             'to_status' => [
                 'type' => 'select',
                 'label' => __('To Order Status', 'fluent-crm'),
-                'help' => __('The target status that will trigger an action when the order moves from the \'From Order Status\' to this status.', 'fluent-crm'),
+                'help' => __('The target status that will trigger an action when the order moves from the \'From Order Status\' to this status.', 'fluentcampaign-pro'),
                 'options' => $formattedStatuses
             ],
             'run_multiple'  => [
                 'type'        => 'yes_no_check',
                 'label'       => '',
-                'check_label' => __('Restart the Automation Multiple times for a contact for this event. (Only enable if you want to restart automation for the same contact)', 'fluent-crm'),
-                'inline_help' => __('If you enable, then it will restart the automation for a contact if the contact already in the automation. Otherwise, It will just skip if already exist', 'fluent-crm')
+                'check_label' => __('Restart the Automation Multiple times for a contact for this event. (Only enable if you want to restart automation for the same contact)', 'fluentcampaign-pro'),
+                'inline_help' => __('If you enable, then it will restart the automation for a contact if the contact already in the automation. Otherwise, It will just skip if already exist', 'fluentcampaign-pro')
             ]
         ];
     }

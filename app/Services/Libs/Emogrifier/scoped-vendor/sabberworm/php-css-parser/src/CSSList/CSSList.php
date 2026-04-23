@@ -89,7 +89,6 @@ abstract class CSSList implements Renderable, Commentable
         }
         $oList->addComments($aComments);
         if (!$bIsRoot && !$bLenientParsing) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
             throw new SourceException("Unexpected end of document", $oParserState->currentLine());
         }
     }
@@ -107,11 +106,9 @@ abstract class CSSList implements Renderable, Commentable
             $oAtRule = self::parseAtRule($oParserState);
             if ($oAtRule instanceof Charset) {
                 if (!$bIsRoot) {
-                    // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
                     throw new UnexpectedTokenException('@charset may only occur in root document', '', 'custom', $oParserState->currentLine());
                 }
                 if (\count($oList->getContents()) > 0) {
-                    // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
                     throw new UnexpectedTokenException('@charset must be the first parseable token in a document', '', 'custom', $oParserState->currentLine());
                 }
                 $oParserState->setCharset($oAtRule->getCharset());
@@ -122,7 +119,6 @@ abstract class CSSList implements Renderable, Commentable
                 if ($oParserState->getSettings()->bLenientParsing) {
                     return DeclarationBlock::parse($oParserState);
                 } else {
-                    // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
                     throw new SourceException("Unopened {", $oParserState->currentLine());
                 }
             } else {
@@ -180,11 +176,9 @@ abstract class CSSList implements Renderable, Commentable
             }
             $oParserState->consumeUntil([';', ParserState::EOF], \true, \true);
             if ($sPrefix !== null && !\is_string($sPrefix)) {
-                // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
                 throw new UnexpectedTokenException('Wrong namespace prefix', $sPrefix, 'custom', $iIdentifierLineNum);
             }
             if (!($mUrl instanceof CSSString || $mUrl instanceof URL)) {
-                // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
                 throw new UnexpectedTokenException('Wrong namespace url of invalid type', $mUrl, 'custom', $iIdentifierLineNum);
             }
             return new CSSNamespace($mUrl, $sPrefix, $iIdentifierLineNum);
@@ -195,7 +189,6 @@ abstract class CSSList implements Renderable, Commentable
                 if ($oParserState->getSettings()->bLenientParsing) {
                     return null;
                 } else {
-                    // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
                     throw new SourceException("Unmatched brace count in media query", $oParserState->currentLine());
                 }
             }
@@ -358,7 +351,6 @@ abstract class CSSList implements Renderable, Commentable
         foreach ($mSelector as $iKey => &$mSel) {
             if (!$mSel instanceof Selector) {
                 if (!Selector::isValid($mSel)) {
-                    // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
                     throw new UnexpectedTokenException("Selector did not match '" . Selector::SELECTOR_VALIDATION_RX . "'.", $mSel, "custom");
                 }
                 $mSel = new Selector($mSel);

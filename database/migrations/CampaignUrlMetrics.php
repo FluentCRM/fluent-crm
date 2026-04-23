@@ -18,9 +18,7 @@ class CampaignUrlMetrics
 
         $table = $wpdb->prefix .'fc_campaign_url_metrics';
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $sql = "CREATE TABLE $table (
                 `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
                 `url_id` BIGINT UNSIGNED NULL,
@@ -42,7 +40,6 @@ class CampaignUrlMetrics
             dbDelta($sql);
         } else {
 
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $indexes = $wpdb->get_results("SHOW INDEX FROM $table");
             $indexedColumns = [];
             foreach ($indexes as $index) {
@@ -50,13 +47,11 @@ class CampaignUrlMetrics
             }
 
             if(!in_array('subscriber_id', $indexedColumns)) {
-                // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
                 $indexSql = "ALTER TABLE {$table} ADD INDEX `url_id` (`url_id`),
                         ADD INDEX `campaign_id` (`campaign_id`),
                         ADD INDEX `subscriber_id` (`subscriber_id`),
                         ADD INDEX `type` (`type`);";
 
-                // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
                 $wpdb->query($indexSql);
             }
         }

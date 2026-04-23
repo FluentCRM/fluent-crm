@@ -57,7 +57,6 @@ class CSSString extends PrimitiveValue
             while (!$oParserState->comes($sQuote)) {
                 $sContent = $oParserState->parseCharacter(\false);
                 if ($sContent === null) {
-                    // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
                     throw new SourceException("Non-well-formed quoted string {$oParserState->peek(3)}", $oParserState->currentLine());
                 }
                 $sResult .= $sContent;

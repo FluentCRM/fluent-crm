@@ -20,9 +20,7 @@ class Subscribers
 
         $indexPrefix = $wpdb->prefix .'fc_index_';
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $sql = "CREATE TABLE $table (
                 `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
                 `user_id` BIGINT UNSIGNED NULL,
@@ -62,10 +60,7 @@ class Subscribers
         } else {
             // change ip column from 20 to 40 to support ipv6
             $column_name = 'ip';
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-            $sql = "ALTER TABLE {$table} MODIFY {$column_name} VARCHAR(40) NULL;";
-            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            $wpdb->query($sql);
+            $wpdb->query("ALTER TABLE {$table} MODIFY {$column_name} VARCHAR(40) NULL;");
         }
     }
 }

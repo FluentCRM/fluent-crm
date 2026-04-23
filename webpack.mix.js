@@ -52,7 +52,6 @@ mix
     .copy('resources/images', 'assets/images')
     .copy('node_modules/element-ui/lib/theme-chalk/fonts', 'assets/admin/css/fonts')
     .copy('resources/sample.csv', 'assets/sample.csv')
-    .copy('resources/index.php', 'assets/index.php')
     .copy('resources/libs', 'assets/libs')
     .copy('resources/scss/fonts', 'assets/admin/css/fonts')
     .setPublicPath('assets')

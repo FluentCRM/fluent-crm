@@ -41,8 +41,8 @@ class UrlStores extends Model
         $data = [
             'url'        => htmlspecialchars_decode($longUrl),
             'short'      => $short,
-            'created_at' => gmdate('Y-m-d H:i:s'),
-            'updated_at' => gmdate('Y-m-d H:i:s')
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s')
         ];
 
         self::insert($data);
@@ -154,7 +154,6 @@ class UrlStores extends Model
     {
         $short = esc_sql($short);
         global $wpdb;
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
         return $wpdb->get_row("SELECT * FROM " . $wpdb->prefix . "fc_url_stores WHERE BINARY `short` = '" . $short . "' ORDER BY `id` DESC LIMIT 1");
     }
 }

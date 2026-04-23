@@ -48,7 +48,7 @@ if(fluentcrm_is_rtl()) {
         background: <?php echo esc_attr($contentBg); ?>;
         background-color: <?php echo esc_attr($contentBg); ?>;
         <?php if($mainFont): ?>
-            font-family: <?php echo esc_attr($mainFont); ?>;
+            font-family: <?php echo sanitize_text_field($mainFont); ?>;
         <?php endif; ?>
         padding-left: <?php echo esc_attr($contentPadding); ?>px !important;
         padding-right: <?php echo esc_attr($contentPadding); ?>px !important;
@@ -84,7 +84,7 @@ if(fluentcrm_is_rtl()) {
 
     <?php if($mainFont): ?>
     #templateFooter {
-        font-family: <?php echo esc_attr($mainFont); ?>;
+        font-family: <?php echo sanitize_text_field($mainFont); ?>;
     }
     <?php endif; ?>
 
@@ -95,7 +95,7 @@ if(fluentcrm_is_rtl()) {
         color: <?php echo esc_attr($mainColor); ?>;
         <?php endif; ?>
         <?php if($mainFont): ?>
-        font-family: <?php echo esc_attr($mainFont); ?>;
+        font-family: <?php echo sanitize_text_field($mainFont); ?>;
         <?php endif; ?>
     }
 
@@ -104,18 +104,18 @@ if(fluentcrm_is_rtl()) {
         color: <?php echo esc_attr($pColor) ?>;
         <?php endif; ?>
         <?php if ($pSize): ?>
-        font-size: <?php echo esc_attr($pSize) ?>px;
+        font-size: <?php echo sanitize_text_field($pSize) ?>px;
         <?php endif; ?>
         <?php if ($pFontFamily): ?>
-        font-family: <?php echo esc_attr($pFontFamily) ?>;
+        font-family: <?php echo sanitize_text_field($pFontFamily) ?>;
         <?php endif; ?>
         <?php if ($pLHeight): ?>
-        line-height: <?php echo esc_attr($pLHeight) ?>px;
+        line-height: <?php echo sanitize_text_field($pLHeight) ?>px;
         <?php endif; ?>
     }
     .fcTextContentBody h1, .fcTextContentBody h2, .fcTextContentBody h3, .fcTextContentBody h4, .fcTextContentBody h5, .fcTextContentBody h6 {
         <?php if($hFont): ?>
-        font-family: <?php echo esc_attr($hFont); ?>;
+        font-family: <?php echo sanitize_text_field($hFont); ?>;
         <?php endif; ?>
         <?php if($hColor): ?>
         color: <?php echo esc_attr($hColor); ?>;

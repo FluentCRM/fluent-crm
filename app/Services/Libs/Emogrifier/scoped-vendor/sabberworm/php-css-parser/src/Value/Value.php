@@ -86,7 +86,6 @@ abstract class Value implements Renderable
             $aStack = $aNewStack;
         }
         if (!isset($aStack[0])) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
             throw new UnexpectedTokenException(" {$oParserState->peek()} ", $oParserState->peek(1, -1) . $oParserState->peek(2), 'literal', $oParserState->currentLine());
         }
         return $aStack[0];

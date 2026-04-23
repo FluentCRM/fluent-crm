@@ -226,7 +226,7 @@ class DripMigrator extends BaseMigrator
                 'state'          => $subscriber['state'],
                 'postal_code'    => $subscriber['zip'],
                 'phone'          => $subscriber['phone'],
-                'created_at'     => gmdate('Y-m-d H:i:s', strtotime($subscriber['created_at'])),
+                'created_at'     => date('Y-m-d H:i:s', strtotime($subscriber['created_at'])),
                 'source'         => 'Drip',
                 'ip'             => $subscriber['ip_address'],
                 'country'        => Arr::get($subscriber, 'country'),

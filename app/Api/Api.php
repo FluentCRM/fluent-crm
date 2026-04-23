@@ -49,8 +49,7 @@ final class Api
         try {
             return $this->app[$this->key($key)];
         } catch(\Exception $e) {
-            /* translators: %s: requested FluentCRM API module key */
-            throw new \Exception(sprintf(esc_html__("The '%s' doesn't exist in FluentCrmApi.", 'fluent-crm'), esc_html($key)));
+            throw new \Exception("The '$key' doesn't exist in FluentCrmApi.");
         }
     }
 }

@@ -20,9 +20,7 @@ class CampaignEmails
 
         $indexPrefix = $wpdb->prefix . 'fc_cam_';
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $sql = "CREATE TABLE $table (
                 `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
                 `campaign_id` BIGINT UNSIGNED NULL,
@@ -54,7 +52,6 @@ class CampaignEmails
 
             dbDelta($sql);
         } else {
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $indexes = $wpdb->get_results("SHOW INDEX FROM $table");
             $indexedColumns = [];
             foreach ($indexes as $index) {
@@ -62,17 +59,14 @@ class CampaignEmails
             }
 
             if(!in_array('scheduled_at', $indexedColumns)) {
-                // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
                 $wpdb->query("ALTER TABLE {$table} ADD INDEX `scheduled_at` (`scheduled_at`);");
             }
 
             if(!in_array('updated_at', $indexedColumns)) {
-                // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
                 $wpdb->query("ALTER TABLE {$table} ADD INDEX {$indexPrefix}_updated_at (`updated_at`);");
             }
 
             if(!in_array('email_hash', $indexedColumns)) {
-                // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
                 $wpdb->query("ALTER TABLE {$table} ADD INDEX `{$indexPrefix}_emtidx` (`email_hash`);");
             }
         }

@@ -39,8 +39,7 @@ if (!function_exists('dd')) {
     {
         foreach (func_get_args() as $arg) {
             echo "<pre>";
-            // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
-            print_r($arg);
+            print_r($arg); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
             echo "</pre>";
         }
         die;
@@ -115,7 +114,7 @@ function fluentCrmGetTimezoneString()
     }
 
     // Guess timezone string manually
-    $isDst = gmdate('I');
+    $isDst = date('I');
     foreach (timezone_abbreviations_list() as $abbr) {
         foreach ($abbr as $city) {
             if ($city['dst'] == $isDst && $city['offset'] == $utcOffset) {
@@ -1123,7 +1122,7 @@ function fluentcrm_get_crm_profile_html($userIdOrEmail, $checkPermission = true,
                 <?php if ($lifeTimeValue): ?>
                     <div style="margin-bottom: 10px;" class="fc_stats">
                         <span
-                            style="color: #56960b; border-color: #d9e7c9; border-radius: 3px;"><?php esc_html_e('Lifetime Value', 'fluent-crm'); ?>: <?php echo esc_html($lifeTimeValue); ?></span>
+                            style="color: #56960b; border-color: #d9e7c9; border-radius: 3px;"><?php _e('Lifetime Value', 'fluent-crm'); ?>: <?php echo esc_html($lifeTimeValue); ?></span>
                     </div>
                 <?php endif; ?>
             </div>
@@ -1444,7 +1443,7 @@ function fluentCrmGetContactSecureHash($contactId)
         return $exist->value;
     }
 
-    $hash = md5(wp_rand(100, 10000) . '_' . wp_generate_uuid4() . '_' . $contactId . '_' . '_' . time());
+    $hash = md5(mt_rand(100, 10000) . '_' . wp_generate_uuid4() . '_' . $contactId . '_' . '_' . time());
 
     $hash = str_replace('e', 'd', $hash);
 
@@ -1470,7 +1469,7 @@ function fluentCrmGetContactManagedHash($contactId)
         if (time() - strtotime($exist->updated_at) > $cutOutTime) {
             $hash = md5(wp_generate_uuid4() . '_' . $contactId . '_' . '_' . time()) . '__' . $contactId;
             $exist->value = $hash;
-            $exist->updated_at = gmdate('Y-m-d H:i:s');
+            $exist->updated_at = date('Y-m-d H:i:s');
             $exist->save();
             return $hash;
         }

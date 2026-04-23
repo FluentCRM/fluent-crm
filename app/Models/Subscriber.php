@@ -1544,15 +1544,15 @@ class Subscriber extends Model
             case 'days_before':
                 $daysToSeconds = intval($filter['value']) * 24 * 60 * 60;
                 $filter['operator'] = '<';
-                $filter['value'] = gmdate('Y-m-d', current_time('timestamp') - $daysToSeconds);
+                $filter['value'] = date('Y-m-d', current_time('timestamp') - $daysToSeconds);
                 break;
 
             case 'days_within':
                 $daysToSeconds = intval($filter['value']) * 24 * 60 * 60;
                 $filter['operator'] = 'BETWEEN';
                 $filter['value'] = [
-                    gmdate('Y-m-d 00:00:01', current_time('timestamp') - $daysToSeconds),
-                    gmdate('Y-m-d') . ' 23:59:59'
+                    date('Y-m-d 00:00:01', current_time('timestamp') - $daysToSeconds),
+                    date('Y-m-d') . ' 23:59:59'
                 ];
                 break;
         }
@@ -2399,7 +2399,7 @@ class Subscriber extends Model
             return $hash;
         }
 
-        $hash = md5(wp_rand(100, 10000) . '_' . $this->id . '_' . $this->email . '_' . time());
+        $hash = md5(mt_rand(100, 10000) . '_' . $this->id . '_' . $this->email . '_' . time());
 
         $hash = str_replace('e', 'd', $hash);
 

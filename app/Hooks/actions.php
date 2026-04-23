@@ -170,8 +170,7 @@ add_shortcode('fluentcrm_pref', function ($atts, $content) {
 });
 
 add_shortcode('fluentcrm_content', function ($atts, $content) {
-    $result = (new \FluentCrm\App\Hooks\Handlers\PrefFormHandler())->handleDynamicContentShortCode($atts, $content);
-    return wp_kses_post($result);
+    return (new \FluentCrm\App\Hooks\Handlers\PrefFormHandler())->handleDynamicContentShortCode($atts, $content);
 });
 
 // require the CLI
@@ -181,7 +180,7 @@ if (defined('WP_CLI') && WP_CLI) {
 
 add_action('admin_notices', function () {
     if (defined('FLUENTCAMPAIGN_FRAMEWORK_VERSION') && FLUENTCAMPAIGN_FRAMEWORK_VERSION < 3) {
-        echo '<div class="fc_notice notice notice-error fc_notice_error"><h3>Update FluentCRM Pro Plugin</h3><p>Your are using out-dated version of FluentCRM Pro. <a href="' . esc_url(admin_url('plugins.php?s=fluentcampaign=pro&plugin_status=all&fluentcrm_pro_check_update=' . time())) . '">' . esc_html__('Please update FluentCRM Pro to latest version', 'fluent-crm') . '</a>.</p></div>';
+        echo '<div class="fc_notice notice notice-error fc_notice_error"><h3>Update FluentCRM Pro Plugin</h3><p>Your are using out-dated version of FluentCRM Pro. <a href="' . admin_url('plugins.php?s=fluentcampaign=pro&plugin_status=all&fluentcrm_pro_check_update=' . time()) . '">' . __('Please update FluentCRM Pro to latest version', 'fluent-crm') . '</a>.</p></div>';
     }
 });
 
@@ -199,5 +198,7 @@ add_action('wp_ajax_fluentcrm_renew_rest_nonce', function () {
         'time'  => time()
     ], 200);
 });
+
+
 
 

@@ -228,7 +228,7 @@ class ActiveCampaignMigrator extends BaseMigrator
                 'first_name' => $subscriber['first_name'],
                 'last_name'  => $subscriber['last_name'],
                 'phone'      => $subscriber['phone'],
-                'created_at' => gmdate('Y-m-d H:i:s', strtotime($subscriber['cdate'])),
+                'created_at' => date('Y-m-d H:i:s', strtotime($subscriber['cdate'])),
                 'source'     => 'ActiveCampaign',
                 'ip'         => $subscriber['ip'],
                 'status'     => $status,

@@ -346,7 +346,6 @@ class CssInliner extends AbstractHtmlProcessor
         $query = '//*[@style]';
         $matches = $this->getXPath()->query($query);
         if (!$matches instanceof \DOMNodeList) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
             throw new \RuntimeException('XPatch query failed: ' . $query, 1618577797);
         }
         return $matches;
@@ -1012,10 +1011,8 @@ class CssInliner extends AbstractHtmlProcessor
         $pregLastError = \preg_last_error();
         $message = 'PCRE regex execution error `' . (string) ($pcreErrorConstantNames[$pregLastError] ?? $pregLastError) . '`';
         if ($this->debug) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library, debug message
             throw new \RuntimeException($message, 1592870147);
         }
-        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Vendor library, debug message
         \trigger_error($message);
     }
 }

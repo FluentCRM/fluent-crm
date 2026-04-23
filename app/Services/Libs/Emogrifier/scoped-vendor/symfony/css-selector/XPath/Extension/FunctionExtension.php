@@ -40,7 +40,6 @@ class FunctionExtension extends AbstractExtension
         try {
             [$a, $b] = Parser::parseSeries($function->getArguments());
         } catch (SyntaxErrorException $e) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
             throw new ExpressionErrorException(\sprintf('Invalid series: "%s".', \implode('", "', $function->getArguments())), 0, $e);
         }
         $xpath->addStarPrefix();
@@ -105,7 +104,6 @@ class FunctionExtension extends AbstractExtension
         $arguments = $function->getArguments();
         foreach ($arguments as $token) {
             if (!($token->isString() || $token->isIdentifier())) {
-                // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
                 throw new ExpressionErrorException('Expected a single string or identifier for :contains(), got ' . \implode(', ', $arguments));
             }
         }
@@ -119,7 +117,6 @@ class FunctionExtension extends AbstractExtension
         $arguments = $function->getArguments();
         foreach ($arguments as $token) {
             if (!($token->isString() || $token->isIdentifier())) {
-                // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Vendor library
                 throw new ExpressionErrorException('Expected a single string or identifier for :lang(), got ' . \implode(', ', $arguments));
             }
         }
